@@ -6,7 +6,6 @@ from OpenGL.GL import *
 import OpenGL.GL.shaders
 from matplotlib import cm  # for colormaps
 import os
-import matplotlib.pyplot as plt
 from matplotlib.colors import ListedColormap, LinearSegmentedColormap
 
 #import sys
@@ -54,11 +53,12 @@ def suit_plotflatmap(data=[], flat_dir="", surf="FLAT.surf.gii", under="SUIT.sha
         surf: surface gifti file
         under: underlay gifti file
         undermap: matplotlib colormap used for underlay - see matplotlib for more
-        undermap_norm: default normalization values for "gray" underlay cmap
+        underscale: the scaling of the underlay color. [min, max] between -1 and 1
         threshold: intensities of positive overlay that is displayed (0 to 1 where 1 is all intensities shown)
-        cmap: matplotlib colormap for overlay
+        cmap: matplotlib colormap for overlay. see matplotlib for more colormaps.
         borders: txt file containing coordinates (x,y,z) of the border pixels 
         alpha: transparency of the overlay
+        overlay_type: label, func, rgb
     Output:
         Renders the flatmap using pyopengl
     """
@@ -82,21 +82,18 @@ def suit_plotflatmap(data=[], flat_dir="", surf="FLAT.surf.gii", under="SUIT.sha
     overlay_color, indx = load_overlay(data, numVert, cmap, cscale, threshold, overlay_type)
     
     # Combine underlay and overlay
-    layer = blend_underlay_overlay(underlay_color, overlay_color, indx)
+    layer = blend_underlay_overlay(underlay_color, overlay_color, indx, alpha)
 
     # prepare layer for rendering
     layer_render = np.concatenate((surf_vertices, layer), axis=1)
     layer_render = np.concatenate((layer_render, np.reshape(np.repeat(alpha, layer_render.shape[0]), (layer_render.shape[0], 1))), axis=1)
     layer_render = np.array(layer_render.flatten(), dtype=np.float32)
 
-    COL(indx) = alpha.*OCOL(indx)+(1-alpha)*COL(indx); # Set opacacy of overlay 
-
-
     # Determine borders
     borders_render = load_borders(borders_file, surf_vertices)
 
     # Render with PyOpenGL
-    render(surf_faces, layer_render, [], borders_render)
+    render(surf_faces, layer_render, borders_render)
 
 
 def load_topo(filename):
@@ -121,8 +118,8 @@ def load_underlay(underlay_file, numVert, underscale, undermap):
     Input:
         underlay_file: the underlay file name with path. (eg. "SUIT.shape.gii")
         numVert: number of vertices of the flatmap.
-        undermap: the colormap for the underlay
         underscale: the scaling of the underlay color. [min, max] between -1 and 1
+        undermap: the colormap for the underlay
     Returns: the flatten buffer data for underlay
         underlay_color: the underlay color itself, shape (N, 3)
     """
@@ -165,6 +162,7 @@ def load_overlay(data, numVert, cmap, cscale, threshold, overlay_type):
         cmap: the colormap for the overlay
         cscale: the scaling of the overlay cmap. [min, max] between -1 and 1
         threshold: intensities of positive overlay that is displayed (0 to 1 where 1 is all intensities shown)
+        overlay_type: label, func, rgb
     Returns: 
         overlay_color: the overlay data for rendering. shape: flatten
         indx: list of indices in overlay_color where the positive overlay will be rendered
@@ -226,16 +224,38 @@ def load_overlay(data, numVert, cmap, cscale, threshold, overlay_type):
 
     return overlay_color, indx
 
-def blend_underlay_overlay(underlay_color, overlay_color, indx):
+def blend_underlay_overlay(underlay_color, overlay_color, indx, alpha):
+
+    """
+    # ---- Blend Underlay with Overlay ----
+        Blends the underlay and overlay using alpha blending.
+    Input:
+        underlay_color: array holding the rgb values for each underlay vertice
+        overlay_color: array holding the rgb values for each overlay vertice
+        indx: array of indices in overlay_color that we want as the positive overlay (areas greater than threshold)
+        alpha: transparency value for the positive overlay
+    Returns: 
+        An array with the blended colors.
+    """
 
     if not indx:
         return underlay_render;
     else:
-        underlay_color[indx] = overlay_color[indx]
+        # alpha blending using porter and duff eqns
+        # out_alpha = src_alpha + dst_alpha(1-src_alpha)
+        # out_rgb = (src_rgb*src_alpha + dst_rgb*dst_alpha(1-src_alpha))/out_alpha
+        # if out_alpha = 0 then out_rgb = 0
+        out_rgb = (overlay_color[indx]*alpha + underlay_color[indx] * (1-alpha))
+        underlay_color[indx] = out_rgb
 
     return underlay_color;
 
 def default_cmap():
+
+    """
+    Returns: A matplotlib registered cmap based on the default matlab cmap colors (parula cmap)
+    """
+
     # define parula colormap (default matlab cmap)
     cm_data = [[0.2081, 0.1663, 0.5292], [0.2116238095, 0.1897809524, 0.5776761905], 
     [0.212252381, 0.2137714286, 0.6269714286], [0.2081, 0.2386, 0.6770857143], 
@@ -283,7 +303,7 @@ def default_cmap():
 
     return parula_map
 
-def load_borders(border_file, surf_vertices, alpha=1):
+def load_borders(border_file, surf_vertices):
     """
     # ---- Making borders buffer ----
         Look up the vertices coord to find which node is the border and make it black color for rendering
@@ -299,7 +319,7 @@ def load_borders(border_file, surf_vertices, alpha=1):
     border = genfromtxt(border_file, delimiter=',')/100
     bcolor = np.array([[0.0, 0.0, 0.0], ] * border.shape[0]) # set border default color (black)
     border_render = np.concatenate((border, bcolor), axis = 1)
-    border_render = np.concatenate((border_render, np.reshape(np.repeat(alpha, border_render.shape[0]), (border_render.shape[0], 1))), axis=1)
+    border_render = np.concatenate((border_render, np.reshape(np.repeat(1, border_render.shape[0]), (border_render.shape[0], 1))), axis=1)
     border_render = np.array(border_render.flatten(), dtype=np.float32)
 
     return border_render
@@ -322,49 +342,16 @@ def render_underlay(underlay, faces, shader):
     EBO = glGenBuffers(1)
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO)
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, faces.shape[0]*4, faces, GL_STATIC_DRAW)
-    position = glGetAttribLocation(shader, "position")
     
-    #glVertexAttribPointer(position, 3, GL_FLOAT, GL_FALSE, 28, ctypes.c_void_p(0))
+    position = glGetAttribLocation(shader, "position")
     glVertexAttribPointer(position, 3, GL_FLOAT, GL_FALSE, 28, ctypes.c_void_p(0))
-
     glEnableVertexAttribArray(position)
 
     color = glGetAttribLocation(shader, "color")
-    
-    #glVertexAttribPointer(color, 4, GL_FLOAT, GL_FALSE, 28, ctypes.c_void_p(12))
     glVertexAttribPointer(color, 4, GL_FLOAT, GL_FALSE, 28, ctypes.c_void_p(12))
-
     glEnableVertexAttribArray(color)
+
     glDrawElements(GL_TRIANGLES, faces.shape[0], GL_UNSIGNED_INT, None)
-
-def render_overlays(overlays_buffer, faces, shader):
-    """
-    # ---- Rendering overlays contrast ----
-    Input:
-        overlays_buffer: the vertices coordinates buffers (flatten)
-        faces: the flatmap vertices drawing order (faces)
-        shader: the compiled shader program by opengl pipeline
-    Returns:
-        Indexed drawing overlay to the scene
-    """
-
-    for overlay in overlays_buffer:
-        VBO = glGenBuffers(1)
-        glBindBuffer(GL_ARRAY_BUFFER, VBO)
-        glBufferData(GL_ARRAY_BUFFER, overlay.shape[0] * 4, overlay, GL_STATIC_DRAW)
-
-        EBO = glGenBuffers(1)
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO)
-        glBufferData(GL_ELEMENT_ARRAY_BUFFER, faces.shape[0] * 4, faces, GL_STATIC_DRAW)
-
-        position = glGetAttribLocation(shader, "position")
-        glVertexAttribPointer(position, 3, GL_FLOAT, GL_FALSE, 28, ctypes.c_void_p(0))
-        glEnableVertexAttribArray(position)
-
-        color = glGetAttribLocation(shader, "color")
-        glVertexAttribPointer(color, 4, GL_FLOAT, GL_FALSE, 28, ctypes.c_void_p(12))
-        glEnableVertexAttribArray(color)
-        glDrawElements(GL_TRIANGLES, faces.shape[0], GL_UNSIGNED_INT, None)
 
 def render_borders(borders_buffer, shader):
     """
@@ -391,7 +378,7 @@ def render_borders(borders_buffer, shader):
     glPointSize(3)
     glDrawArrays(GL_POINTS, 0, int(borders_buffer.shape[0] / 7))
 
-def render(vertices_index, underlay, overlays, borders):
+def render(vertices_index, underlay, borders):
     """
     # ---- The main entry of the OpenGL rendering ----
     Input:
@@ -432,7 +419,6 @@ def render(vertices_index, underlay, overlays, borders):
 
     # rendering objects
     render_underlay(underlay, vertices_index, shader)  # -- the underlay rendering
-    render_overlays(overlays, vertices_index, shader)  # -- the overlays rendering
     render_borders(borders, shader)  # -- border buffer object
 
     glDisable(GL_BLEND)  # Disable gl blending from this point
@@ -610,3 +596,32 @@ if __name__ == "__main__":
 
     # apply new cmap
     #cmap = cm.get_cmap("newcmap", numVert)
+
+#def render_overlays(overlays_buffer, faces, shader):
+#     """
+#     # ---- Rendering overlays contrast ----
+#     Input:
+#         overlays_buffer: the vertices coordinates buffers (flatten)
+#         faces: the flatmap vertices drawing order (faces)
+#         shader: the compiled shader program by opengl pipeline
+#     Returns:
+#         Indexed drawing overlay to the scene
+#     """
+
+#     for overlay in overlays_buffer:
+#         VBO = glGenBuffers(1)
+#         glBindBuffer(GL_ARRAY_BUFFER, VBO)
+#         glBufferData(GL_ARRAY_BUFFER, overlay.shape[0] * 4, overlay, GL_STATIC_DRAW)
+
+#         EBO = glGenBuffers(1)
+#         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO)
+#         glBufferData(GL_ELEMENT_ARRAY_BUFFER, faces.shape[0] * 4, faces, GL_STATIC_DRAW)
+
+#         position = glGetAttribLocation(shader, "position")
+#         glVertexAttribPointer(position, 3, GL_FLOAT, GL_FALSE, 28, ctypes.c_void_p(0))
+#         glEnableVertexAttribArray(position)
+
+#         color = glGetAttribLocation(shader, "color")
+#         glVertexAttribPointer(color, 4, GL_FLOAT, GL_FALSE, 28, ctypes.c_void_p(12))
+#         glEnableVertexAttribArray(color)
+#         glDrawElements(GL_TRIANGLES, faces.shape[0], GL_UNSIGNED_INT, None)
