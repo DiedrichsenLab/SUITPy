@@ -41,7 +41,7 @@ fragment_shader = """
 def plot(data=[], surf="", underlay="", undermap="", underscale = [-1, 0.5], threshold=[], cmap="", borders="", cscale = [], alpha=1, overlay_type = "func"):
     """
     Plots the flatmap using PyOpenGL
-
+    
     Input:
         data (str)
             Full filepath of the surface data gifti file (required)
@@ -100,8 +100,9 @@ def plot(data=[], surf="", underlay="", undermap="", underscale = [-1, 0.5], thr
     render(surf_faces, layer_render, borders_render)
 
 def load_topo(filename):
-    """Load data using nibabel. Returns the topology of the flatmap.
-
+    """
+    Load data using nibabel. Returns the topology of the flatmap.
+    
     Input:
         filename (str)
             The full filepath of the surface file (eg. "FLAT.surf.gii")
@@ -414,7 +415,7 @@ def render_underlay(underlay, faces, shader):
     glVertexAttribPointer(color, 4, GL_FLOAT, GL_FALSE, 28, ctypes.c_void_p(12))
     glEnableVertexAttribArray(color)
 
-    glDrawElements(GL_TRIANGLES, faces.shape[0], GL_UNSIGNED_int, None)
+    glDrawElements(GL_TRIANGLES, faces.shape[0], GL_UNSIGNED_INT, None)
 
 def render_borders(borders_buffer, shader):
     """
@@ -440,7 +441,7 @@ def render_borders(borders_buffer, shader):
     glVertexAttribPointer(b_color, 4, GL_FLOAT, GL_FALSE, 28, ctypes.c_void_p(12))
     glEnableVertexAttribArray(b_color)
     glPointSize(3)
-    glDrawArrays(GL_POintS, 0, int(borders_buffer.shape[0] / 7))
+    glDrawArrays(GL_POINTS, 0, int(borders_buffer.shape[0] / 7))
 
 def render(vertices_index, underlay, borders):
     """
