@@ -7,6 +7,7 @@ import OpenGL.GL.shaders
 from matplotlib import cm  # for colormaps
 import os
 from matplotlib.colors import ListedColormap, LinearSegmentedColormap, rgb_to_hsv, hsv_to_rgb
+import pathlib
 
 """
 Initialize vertex shader and fragment shader program
@@ -37,45 +38,49 @@ fragment_shader = """
     }
     """
 
-def suit_plotflatmap(data=[], flat_dir="", surf="FLAT.surf.gii", under="SUIT.shape.gii", undermap="", \
-    underscale = [-1, 0.5], threshold=[], cmap="", borders='borders.txt', cscale = [], alpha=1, overlay_type = "func"):
+def plot(data=[], surf="", underlay="", undermap="", underscale = [-1, 0.5], threshold=[], cmap="", borders="", cscale = [], alpha=1, overlay_type = "func"):
     """
-    # Plotting data onto suit flatmap
-    Input:
-        data (DATA TYPE)
-            description
-        data: surface data gifti file (required)
-        flat_dir: path of the directory where surface, underlay, border files are stored (default = os.getcwd() + "/data/")
-        surf: surface gifti file as a string (default = "FLAT.surf.gii" located in data folder)
-        under: underlay gifti file as a string (default = "SUIT.shape.gii" located in data folder)
-        undermap: matplotlib colormap used for underlay, see matplotlib for more (defaults to gray surface cmap)
-        underscale: the scaling of the underlay color. [min, max] between -1 and 1 (default = [-1, 0.5])
-        threshold: threshold of positive overlay that is displayed, ranges from 0 to 1 (default = [1])
-        cscale: the scaling of the overlay cmap. [min, max] between -1 and 1
-        cmap: matplotlib colormap for overlay, see matplotlib for more colormaps. (default = "parula")
-        borders: txt file containing coordinates (x,y,z) of the border pixels (default = "borders.txt")
-        alpha: alpha blending of overlay and underlay (default = 1)
-        overlay_type: label, func, rgb (default = "func")
-    Output:
-        Renders the flatmap using pyopengl
-    """
+    Plots the flatmap using PyOpenGL
 
-    # Determine the directory
-    if flat_dir == "":
-        flat_dir = os.getcwd() + "/data/"
+    Input:
+        data (str)
+            Full filepath of the surface data gifti file (required)
+        surf (str)
+            Full filepath of the surface file for flatmap (default: FLAT.surf.gii in SUIT pkg)
+        underlay (str)
+            Full filepath of the file determining underlay coloring (default: SUIT.shape.gii in SUIT pkg)
+        undermap (str)
+            Matplotlib colormap used for underlay (default: gray)
+        underscale (int array)
+            Colorscale [min, max] for the underlay (default: [-1, 0.5])
+        threshold (int array)
+            Threshold for functional overlay, valid input values from -1 to 1  (default: [-1])
+        cmap (str)
+            Matplotlib colormap used for overlay (default: parula in SUIT pkg)
+        borders (str)
+            Full filepath of the borders txt file (default: borders.txt in SUIT pkg)
+        cscale (int array)
+            Colorscale [min, max] for the overlay, valid input values from -1 to 1 (default: [overlay.max, overlay.min])
+        alpha (int)
+            Opacity of the overlay (default: 1)
+        overlay_type (str)
+            'func': funtional activation 'label': categories 'rgb': RGB values (default: func)
+    """
 
     # default directory 
-    
-    surface_file = flat_dir + surf + "";
-    underlay_file = flat_dir + under + "";
-    borders_file = flat_dir + borders + "";
+    if not surf:
+        surf = str(pathlib.Path(__file__).parent.absolute()) + "/data/FLAT.surf.gii"
+    if not underlay:
+        underlay = str(pathlib.Path(__file__).parent.absolute()) + "/data/SUIT.shape.gii"
+    if not borders:
+        borders = str(pathlib.Path(__file__).parent.absolute()) + "/data/borders.txt"
 
     # load topology
-    surf_vertices, surf_faces = load_topo(surface_file)
+    surf_vertices, surf_faces = load_topo(surf)
     numVert = surf_vertices.shape[0]
 
     # Determine underlay and assign color
-    underlay_color = load_underlay(underlay_file, numVert, underscale, undermap)
+    underlay_color = load_underlay(underlay, numVert, underscale, undermap)
 
     # Determine overlay and assign color
     overlay_color, indx = load_overlay(data, numVert, cmap, cscale, threshold, overlay_type)
@@ -89,19 +94,17 @@ def suit_plotflatmap(data=[], flat_dir="", surf="FLAT.surf.gii", under="SUIT.sha
     layer_render = np.array(layer_render.flatten(), dtype=np.float32)
 
     # Determine borders
-    borders_render = load_borders(borders_file, surf_vertices)
+    borders_render = load_borders(borders, surf_vertices)
 
     # Render with PyOpenGL
     render(surf_faces, layer_render, borders_render)
 
 def load_topo(filename):
-    """
-    # ---- Topology ---- Load data using nibabel
+    """Load data using nibabel. Returns the topology of the flatmap.
+
     Input:
-        filename: the filename with path. (eg. "FLAT.surf.gii")
-    Returns: the topology of the flatmap
-        vertices: the coordinates of the vertices, shape: (N, 3)
-        faces: the vertices connectivity info used for indexed drawing. shape: flatten
+        filename (str)
+            The full filepath of the surface file (eg. "FLAT.surf.gii")
     """
     gifti_image = nb.load(filename)  
     vertices = gifti_image.darrays[0].data / 100
@@ -111,15 +114,17 @@ def load_topo(filename):
 
 def load_underlay(underlay_file, numVert, underscale, undermap):
     """
-    # ---- Load Underlay ----
-        Load vertices coordinates and combine with underlay color to make underlay data
+    Load vertices coordinates and combine with underlay color to make underlay data. Returns the underlay_color data.
+    
     Input:
-        underlay_file: the underlay file name with path. (eg. "SUIT.shape.gii")
-        numVert: number of vertices of the flatmap.
-        underscale: the scaling of the underlay color. [min, max] between -1 and 1
-        undermap: the colormap for the underlay
-    Returns: the flatten buffer data for underlay
-        underlay_color: the underlay color itself, shape (N, 3)
+        underlay_file (str)
+            The full filepath of the underlay file (eg. "SUIT.shape.gii")
+        numVert (int)
+            Number of vertices of the flatmap
+        underscale (int array)
+            The scaling of the underlay color. [min, max] between -1 and 1.
+        undermap (str)
+            The Matplotlib colormap for the underlay
     """
 
     # load underlay 
@@ -151,19 +156,21 @@ def load_underlay(underlay_file, numVert, underscale, undermap):
 def load_overlay(data, numVert, cmap, cscale, threshold, overlay_type):
 
     """
-    # ---- Load Overlay ----
-        Load vertices coordinates and combine with overlay color (converted to selected cmap value)
-        to make overlays data for rendering
+    Returns overlay data for rendering. Returns list of indices in overlay_color where the positive overlay will be rendered.
+    
     Input:
-        data: surface data gifti file
-        numVert: number of vertices of the flatmap.
-        cmap: the colormap for the overlay
-        cscale: the scaling of the overlay cmap. [min, max] between -1 and 1
-        threshold: intensities of positive overlay that is displayed (0 to 1 where 1 is all intensities shown)
-        overlay_type: label, func, rgb
-    Returns: 
-        overlay_color: the overlay data for rendering. shape: flatten
-        indx: list of indices in overlay_color where the positive overlay will be rendered
+        data (str)
+            Full filepath for the surface data gifti file
+        numVert (int)
+            Number of vertices of the flatmap.
+        cmap (str)
+            The Matplotlib colormap for the overlay
+        cscale (int array)
+            The scaling of the overlay cmap. [min, max] between -1 and 1
+        threshold (int array)
+            Threshold for functional overlay, valid input values from -1 to 1  (default: [-1])        
+        overlay_type (str)
+            'func': funtional activation 'label': categories 'rgb': RGB values (default: func)
     """
 
     # if input data is empty, return an array of NaNs
@@ -255,15 +262,17 @@ def load_overlay(data, numVert, cmap, cscale, threshold, overlay_type):
 def blend_underlay_overlay(underlay_color, overlay_color, indx, alpha):
 
     """
-    # ---- Blend Underlay with Overlay ----
-        Blends the underlay and overlay using alpha blending.
+    Blends the underlay and overlay using alpha blending.
+    
     Input:
-        underlay_color: array holding the rgb values for each underlay vertice
-        overlay_color: array holding the rgb values for each overlay vertice
-        indx: array of indices in overlay_color that we want as the positive overlay (areas greater than threshold)
-        alpha: transparency value for the positive overlay
-    Returns: 
-        An array with the blended colors.
+        underlay_color (int array)
+            Array holding the rgb values for each underlay vertice
+        overlay_color (int array)
+            Array holding the rgb values for each overlay vertice
+        indx (int array)
+            Array of indices in overlay_color that we want as the positive overlay (areas greater than threshold)
+        alpha (int)
+            Opacity of the overlay (default: 1)
     """
 
     if not indx:
@@ -281,7 +290,8 @@ def blend_underlay_overlay(underlay_color, overlay_color, indx, alpha):
 def default_cmap():
 
     """
-    Returns: A matplotlib registered cmap based on the default matlab cmap colors (parula cmap)
+    Returns: 
+        A matplotlib registered cmap based on the default matlab cmap colors (parula cmap)
     """
 
     # define parula colormap (default matlab cmap)
@@ -356,13 +366,13 @@ def default_cmap():
 
 def load_borders(border_file, surf_vertices):
     """
-    # ---- Making borders buffer ----
-        Look up the vertices coord to find which node is the border and make it black color for rendering
+    Look up the vertices coord to find which node is the border and make it black color for rendering. Returns the border_data array.
+
     Input:
-        border_file: the border files name with path. (eg. "data/borders.txt")
-        surf_vertices: the vertices coordinates of the flatmap. shape (N, 3)
-    Returns: the borders data for rendering
-        borders: the borders data for rendering. shape: list(borders#, )
+        border_file (str)
+            The border filepath. (eg. "data/borders.txt")
+        surf_vertices (int array)
+            Array of the vertices coordinates of the flatmap. shape (N, 3)
     """
 
     borders = []
@@ -377,13 +387,15 @@ def load_borders(border_file, surf_vertices):
 
 def render_underlay(underlay, faces, shader):
     """
-    # ---- Rendering underlay contrast ----
+    Renders the underlay
+
     Input:
-        underlay: the vertices coordinates buffer of the flatmap for the underlay
-        vertices_index: the flatmap vertices drawing order (faces)
-        shader: the compiled shader program by opengl pipeline
-    Returns:
-        Indexed drawing underlay to the scene
+        underlay (int array)
+            The vertices coordinates buffer of the flatmap for the underlay
+        vertices_index (int array)
+            The flatmap vertices drawing order (faces)
+        shader (shader)
+            The compiled shader program by opengl pipeline
     """
     
     VBO = glGenBuffers(1)
@@ -402,16 +414,17 @@ def render_underlay(underlay, faces, shader):
     glVertexAttribPointer(color, 4, GL_FLOAT, GL_FALSE, 28, ctypes.c_void_p(12))
     glEnableVertexAttribArray(color)
 
-    glDrawElements(GL_TRIANGLES, faces.shape[0], GL_UNSIGNED_INT, None)
+    glDrawElements(GL_TRIANGLES, faces.shape[0], GL_UNSIGNED_int, None)
 
 def render_borders(borders_buffer, shader):
     """
-    # ---- Rendering borders ----
+    Renders borders
+
     Input:
-        borders_buffer: the border buffers objects (flatten)
-        shader: the compiled shader program by opengl pipeline
-    Returns:
-        Indexed drawing selected borders to the scene
+        borders_buffer (int array)
+            The border buffers objects (flatten)
+        shader (shader)
+            The compiled shader program by opengl pipeline
     """
 
     #for border_info in borders_buffer:
@@ -427,18 +440,21 @@ def render_borders(borders_buffer, shader):
     glVertexAttribPointer(b_color, 4, GL_FLOAT, GL_FALSE, 28, ctypes.c_void_p(12))
     glEnableVertexAttribArray(b_color)
     glPointSize(3)
-    glDrawArrays(GL_POINTS, 0, int(borders_buffer.shape[0] / 7))
+    glDrawArrays(GL_POintS, 0, int(borders_buffer.shape[0] / 7))
 
 def render(vertices_index, underlay, borders):
     """
-    # ---- The main entry of the OpenGL rendering ----
+    OpenGL rendering
+
     Input:
-        vertices_index: the flatmap vertices drawing order (faces)
-        borders: the border buffers objects (flatten) shape list(N, )
-        underlay: the underlay buffers object
-        overlays: the overlays buffer object (flatten), shape list(N, )
-    Returns:
-        Draw the scene
+        vertices_index (int array)
+            The flatmap vertices drawing order (faces)
+        borders (int array)
+            The border buffers objects (flatten) shape list(N, )
+        underlay (int array)
+            The underlay buffers object
+        overlays (int array)
+            The overlays buffer object (flatten), shape list(N, )
     """
 
     # initialize glfw
@@ -486,6 +502,6 @@ def window_resize(window, width, height):
     glViewport(0, 0, width, height)
 
 if __name__ == "__main__":
-    suit_plotflatmap("data/Wiestler_2011_motor_z.gii", cscale=[1,2], threshold=[-1])
+    plot("data/Wiestler_2011_motor_z.gii", cscale=[1,2])
     #suit_plotflatmap("data/HCP_WM_BODY_vs_REST.gii", cmap='hot', threshold=[0.25], cscale=[0,2])
     #suit_plotflatmap("data/Buckner_7Networks.gii", overlay_type="label", cmap="data/labels_cmap.txt")
