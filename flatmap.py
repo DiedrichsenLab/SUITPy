@@ -46,7 +46,8 @@ fragment_shader = """
     }
     """
 
-def plot(data=[], surf="", underlay="", undermap="", underscale = [-1, 0.5], threshold=[], cmap="", borders="", cscale = [], alpha=1, overlay_type = "func", output_file="output/file.jpg"):
+
+def plot(data=[], surf="", underlay="", undermap="", underscale=[-1, 0.5], threshold=[], cmap="", borders="", cscale=[], alpha=1, overlay_type="func", output_file="output/file.jpg"):
     """
     Plots the flatmap using PyOpenGL
     
@@ -110,6 +111,7 @@ def plot(data=[], surf="", underlay="", undermap="", underscale = [-1, 0.5], thr
     # Render with PyOpenGL
     render(surf_faces, layer_render, borders_render, output_file)
 
+
 def load_topo(filename):
     """
     Load data using nibabel. Returns the topology of the flatmap.
@@ -123,6 +125,7 @@ def load_topo(filename):
     faces = gifti_image.darrays[1].data.flatten()
 
     return vertices, faces
+
 
 def load_underlay(underlay_file, numVert, underscale, undermap):
     """
@@ -144,18 +147,18 @@ def load_underlay(underlay_file, numVert, underscale, undermap):
     underlay_data = underlay.darrays[0].data # underlay.cdata, (25935, 1)
 
     # scale underlay color
-    underlay_data[:] = ((underlay_data[:] - underscale[0]) / (underscale[1] - underscale[0]))
-    underlay_data[underlay_data<(-1)]=-1
-    underlay_data[underlay_data>1]=1
+    underlay_data = ((underlay_data - underscale[0]) / (underscale[1] - underscale[0]))
+    underlay_data[underlay_data < (-1)] = -1
+    underlay_data[underlay_data > 1] = 1
 
     # load default cmap
-    if (undermap == ""):
+    if undermap == "":
         underlay_color = np.repeat(underlay_data, 3)
         underlay_color = np.reshape(underlay_color, (len(underlay_data), 3))
     # else load given cmap
     else:
         try:
-            underlay_cmap = cm.get_cmap(undermap, numVert);
+            underlay_cmap = cm.get_cmap(undermap, numVert)
             underlay_color = underlay_cmap(underlay_data)
         except:
             raise Exception("Please enter a valid cmap or leave blank for default cmap. See matplotlib for more cmaps.");
@@ -165,8 +168,8 @@ def load_underlay(underlay_file, numVert, underscale, undermap):
     
     return underlay_color
 
-def load_overlay(data, numVert, cmap, cscale, threshold, overlay_type):
 
+def load_overlay(data, numVert, cmap, cscale, threshold, overlay_type):
     """
     Returns overlay data for rendering. Returns list of indices in overlay_color where the positive overlay will be rendered.
     
@@ -196,35 +199,35 @@ def load_overlay(data, numVert, cmap, cscale, threshold, overlay_type):
     overlay_data = overlay.darrays[0].data
 
     # check that overlay data is the right np.array shape
-    if (len(overlay_data) != numVert):
+    if len(overlay_data) != numVert:
         raise Exception('Input data must be an array of size numVertices * 1')
 
     # load default cmap
-    if (not cmap):
+    if not cmap:
         overlay_cmap = default_cmap()
     # else, load given cmap
     else: 
         # Txt file with colors for type=labels
-        if (cmap.endswith(".txt")):
+        if cmap.endswith(".txt"):
             overlay_cmap = default_cmap()
-            label_colors = np.loadtxt(cmap)/255
+            label_colors = np.loadtxt(cmap)  # Here, we always use 0-1 scale RGB colors
         else:
             try:
-                overlay_cmap = cm.get_cmap(cmap, numVert);
+                overlay_cmap = cm.get_cmap(cmap, numVert)
             except:
-                raise Exception("Please enter a valid cmap or param blank for default cmap. See matplotlib for more cmaps.");
+                raise Exception("Please enter a valid cmap or param blank for default cmap. See matplotlib for more cmaps.")
 
     indx = []
 
     # determine overlay type
-    if (overlay_type == 'label'):
+    if overlay_type == 'label':
         overlay_data = overlay_data /100
-        indx = np.nonzero((overlay_data[:] > -1) & (overlay_data[:] <= 1))
+        indx = np.nonzero((overlay_data > -1) & (overlay_data <= 1))
 
         overlay_color = overlay_cmap(overlay_data)
         overlay_color = overlay_color[:, 0:3]
 
-        if (cmap.endswith(".txt")):
+        if cmap.endswith(".txt"):
             unique_val = np.unique(overlay_color, axis=0)
             unique_val = unique_val[1:]
 
@@ -235,32 +238,30 @@ def load_overlay(data, numVert, cmap, cscale, threshold, overlay_type):
             for i in range(count):
                 overlay_color = np.where(overlay_color==unique_val[i], label_colors[i], overlay_color)
 
-
-    elif (overlay_type == 'func'):
+    elif overlay_type == 'func':
         if (not cscale) or (np.any(np.isnan(cscale))):
             cscale = [np.nanmin(overlay_data), np.nanmax(overlay_data)]
 
         # scale overlay color
-        overlay_data[:] = (overlay_data[:] - cscale[0]) / (cscale[1] - cscale[0])
-        overlay_data[overlay_data<-1] = 0
-        overlay_data[overlay_data>1] = 1
-
+        overlay_data = (overlay_data - cscale[0]) / (cscale[1] - cscale[0])
+        overlay_data[overlay_data < -1] = 0
+        overlay_data[overlay_data > 1] = 1
 
         # check that threshold value is valid
-        if (threshold):
-            if ((threshold[0] > 1) | (threshold[0] < -1)):
+        if threshold:
+            if (threshold[0] > 1) | (threshold[0] < -1):
                 raise Exception('Threshold value must be between 0 and 1.')
             else:
                 # find indices where overlay_data is greater than threshold (returns an array)
-                indx = np.nonzero((overlay_data[:] > threshold[0]))
+                indx = np.nonzero((overlay_data > threshold[0]))
         else:
-            indx = np.nonzero((overlay_data[:] > -1) & (overlay_data[:] <= 1))
+            indx = np.nonzero((overlay_data > -1) & (overlay_data <= 1))
         
         # apply overlay color
         overlay_color = overlay_cmap(overlay_data)  
         overlay_color = overlay_color[:, 0:3]
 
-    elif (overlay_type == 'rgb'):
+    elif overlay_type == 'rgb':
         overlay_data = overlay_data
         # apply overlay color
         overlay_color = overlay_cmap(overlay_data)  
@@ -268,11 +269,10 @@ def load_overlay(data, numVert, cmap, cscale, threshold, overlay_type):
     else:
         raise Exception("Unknown overlay type. Must be 'label', 'func'm or 'rgb'.")
 
-
     return overlay_color, indx
 
-def blend_underlay_overlay(underlay_color, overlay_color, indx, alpha):
 
+def blend_underlay_overlay(underlay_color, overlay_color, indx, alpha):
     """
     Blends the underlay and overlay using alpha blending.
     
@@ -288,7 +288,7 @@ def blend_underlay_overlay(underlay_color, overlay_color, indx, alpha):
     """
 
     if not indx:
-        return underlay_color;
+        return underlay_color
     else:
         # alpha blending using porter and duff eqns
         # out_alpha = src_alpha + dst_alpha(1-src_alpha)
@@ -297,7 +297,8 @@ def blend_underlay_overlay(underlay_color, overlay_color, indx, alpha):
         out_rgb = (overlay_color[indx]*alpha + underlay_color[indx] * (1-alpha))
         underlay_color[indx] = out_rgb
 
-    return underlay_color;
+    return underlay_color
+
 
 def default_cmap():
 
@@ -376,6 +377,7 @@ def default_cmap():
 
     return parula_map
 
+
 def load_borders(border_file, surf_vertices):
     """
     Look up the vertices coord to find which node is the border and make it black color for rendering. Returns the border_data array.
@@ -396,6 +398,7 @@ def load_borders(border_file, surf_vertices):
     border_render = np.array(border_render.flatten(), dtype=np.float32)
 
     return border_render
+
 
 def render_underlay(underlay, faces, shader):
     """
@@ -428,6 +431,7 @@ def render_underlay(underlay, faces, shader):
 
     glDrawElements(GL_TRIANGLES, faces.shape[0], GL_UNSIGNED_INT, None)
 
+
 def render_borders(borders_buffer, shader):
     """
     Renders borders
@@ -438,7 +442,6 @@ def render_borders(borders_buffer, shader):
         shader (shader)
             The compiled shader program by opengl pipeline
     """
-
     #for border_info in borders_buffer:
     BBO = glGenBuffers(1)
     glBindBuffer(GL_ARRAY_BUFFER, BBO)
@@ -453,6 +456,7 @@ def render_borders(borders_buffer, shader):
     glEnableVertexAttribArray(b_color)
     glPointSize(3)
     glDrawArrays(GL_POINTS, 0, int(borders_buffer.shape[0] / 7))
+
 
 def render(vertices_index, layer, borders, output_file):
     """
@@ -501,8 +505,7 @@ def render(vertices_index, layer, borders, output_file):
     render_borders(borders, shader)  # -- border buffer object
 
     # save window to jpg
-    render_to_jpg(output_file);
-
+    render_to_jpg(output_file)
 
     glDisable(GL_BLEND)  # Disable gl blending from this point
     glDepthMask(GL_TRUE)
@@ -521,6 +524,7 @@ def render(vertices_index, layer, borders, output_file):
 
     glfw.terminate()
 
+
 def render_to_jpg(output_file):
     """
     Save PyOpenGL render as image
@@ -538,10 +542,12 @@ def render_to_jpg(output_file):
 
     image.save(output_file)
 
+
 def window_resize(window, width, height):
     glViewport(0, 0, width, height)
 
+
 if __name__ == "__main__":
-    plot("data/Wiestler_2011_motor_z.gii", cscale=[0,2])
+    #plot("data/Wiestler_2011_motor_z.gii", cscale=[0, 2])
     #suit_plotflatmap("data/HCP_WM_BODY_vs_REST.gii", cmap='hot', threshold=[0.25], cscale=[0,2])
-    #suit_plotflatmap("data/Buckner_7Networks.gii", overlay_type="label", cmap="data/labels_cmap.txt")
+    plot("data/Buckner_7Networks.gii", overlay_type="label", cmap="data/Buckner_7Networks_cmap.txt")
