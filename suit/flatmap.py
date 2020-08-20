@@ -8,6 +8,8 @@ from matplotlib import cm  # for colormaps
 import os
 from matplotlib.colors import ListedColormap, LinearSegmentedColormap, rgb_to_hsv, hsv_to_rgb
 import pathlib
+from PIL import Image
+
 
 """
 Initialize vertex shader and fragment shader program
@@ -38,7 +40,7 @@ fragment_shader = """
     }
     """
 
-def plot(data=[], surf="", underlay="", undermap="", underscale = [-1, 0.5], threshold=[], cmap="", borders="", cscale = [], alpha=1, overlay_type = "func"):
+def plot(data=[], surf="", underlay="", undermap="", underscale = [-1, 0.5], threshold=[], cmap="", borders="", cscale = [], alpha=1, overlay_type = "func", output_file="output/file.jpg"):
     """
     Plots the flatmap using PyOpenGL
     
@@ -65,6 +67,8 @@ def plot(data=[], surf="", underlay="", undermap="", underscale = [-1, 0.5], thr
             Opacity of the overlay (default: 1)
         overlay_type (str)
             'func': funtional activation 'label': categories 'rgb': RGB values (default: func)
+        output_file (str)
+            Full filepath of the location to store outputted screenshot (default: 'output/file.jpg') 
     """
 
     # default directory 
@@ -97,7 +101,7 @@ def plot(data=[], surf="", underlay="", undermap="", underscale = [-1, 0.5], thr
     borders_render = load_borders(borders, surf_vertices)
 
     # Render with PyOpenGL
-    render(surf_faces, layer_render, borders_render)
+    render(surf_faces, layer_render, borders_render, output_file)
 
 def load_topo(filename):
     """
@@ -443,7 +447,7 @@ def render_borders(borders_buffer, shader):
     glPointSize(3)
     glDrawArrays(GL_POINTS, 0, int(borders_buffer.shape[0] / 7))
 
-def render(vertices_index, underlay, borders):
+def render(vertices_index, layer, borders, output_file):
     """
     OpenGL rendering
 
@@ -452,10 +456,10 @@ def render(vertices_index, underlay, borders):
             The flatmap vertices drawing order (faces)
         borders (int array)
             The border buffers objects (flatten) shape list(N, )
-        underlay (int array)
-            The underlay buffers object
-        overlays (int array)
-            The overlays buffer object (flatten), shape list(N, )
+        layer (int array)
+            The blended overlay and underlay buffers object
+        output_file (str)
+            The filepath for the output image
     """
 
     # initialize glfw
@@ -486,23 +490,53 @@ def render(vertices_index, underlay, borders):
     glDepthMask(GL_FALSE)
 
     # rendering objects
-    render_underlay(underlay, vertices_index, shader)  # -- the underlay rendering
+    render_underlay(layer, vertices_index, shader)  # -- the underlay rendering
     render_borders(borders, shader)  # -- border buffer object
+
+    # save window to jpg
+    render_to_jpg(output_file);
+
 
     glDisable(GL_BLEND)  # Disable gl blending from this point
     glDepthMask(GL_TRUE)
 
     glfw.swap_buffers(window)
 
+
+    # FILE   *out = fopen(tga_file, "w");
+    # short  TGAhead[] = {0, 2, 0, 0, 0, 0, WIDTH, HEIGHT, 24};
+    # fwrite(&TGAhead, sizeof(TGAhead), 1, out);
+    # fwrite(buffer, 3 * WIDTH * HEIGHT, 1, out);
+    # fclose(out);
+
     while not glfw.window_should_close(window):
         glfw.poll_events()
 
     glfw.terminate()
 
+def render_to_jpg(output_file, format="JPEG"):
+    """
+    Save PyOpenGL render as image
+
+    Input:
+        output_file (str)
+            The filepath for the output image
+        format (str)
+            Image type (default: jpeg)
+    """
+    x, y, width, height = glGetDoublev(GL_VIEWPORT)
+    width, height = int(width), int(height)
+    glPixelStorei(GL_PACK_ALIGNMENT, 1)
+    data = glReadPixels(x, y, width, height, GL_RGB, GL_UNSIGNED_BYTE)
+    image = Image.frombytes("RGB", (width, height), data)
+    image = image.transpose(Image.FLIP_TOP_BOTTOM)
+
+    image.save(output_file, format)
+
 def window_resize(window, width, height):
     glViewport(0, 0, width, height)
 
 if __name__ == "__main__":
-    plot("data/Wiestler_2011_motor_z.gii", cscale=[1,2])
+    plot("data/Wiestler_2011_motor_z.gii", cscale=[0,2])
     #suit_plotflatmap("data/HCP_WM_BODY_vs_REST.gii", cmap='hot', threshold=[0.25], cscale=[0,2])
     #suit_plotflatmap("data/Buckner_7Networks.gii", overlay_type="label", cmap="data/labels_cmap.txt")

@@ -134,7 +134,7 @@
 
 <dl class="py function">
 <dt id="flatmap.plot">
-<code class="sig-prename descclassname">flatmap.</code><code class="sig-name descname">plot</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">data</span><span class="o">=</span><span class="default_value">[]</span></em>, <em class="sig-param"><span class="n">surf</span><span class="o">=</span><span class="default_value">''</span></em>, <em class="sig-param"><span class="n">underlay</span><span class="o">=</span><span class="default_value">''</span></em>, <em class="sig-param"><span class="n">undermap</span><span class="o">=</span><span class="default_value">''</span></em>, <em class="sig-param"><span class="n">underscale</span><span class="o">=</span><span class="default_value">[- 1, 0.5]</span></em>, <em class="sig-param"><span class="n">threshold</span><span class="o">=</span><span class="default_value">[]</span></em>, <em class="sig-param"><span class="n">cmap</span><span class="o">=</span><span class="default_value">''</span></em>, <em class="sig-param"><span class="n">borders</span><span class="o">=</span><span class="default_value">''</span></em>, <em class="sig-param"><span class="n">cscale</span><span class="o">=</span><span class="default_value">[]</span></em>, <em class="sig-param"><span class="n">alpha</span><span class="o">=</span><span class="default_value">1</span></em>, <em class="sig-param"><span class="n">overlay_type</span><span class="o">=</span><span class="default_value">'func'</span></em><span class="sig-paren">)</span><a class="headerlink" href="#flatmap.plot" title="Permalink to this definition">¶</a></dt>
+<code class="sig-prename descclassname">flatmap.</code><code class="sig-name descname">plot</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">data</span><span class="o">=</span><span class="default_value">[]</span></em>, <em class="sig-param"><span class="n">surf</span><span class="o">=</span><span class="default_value">''</span></em>, <em class="sig-param"><span class="n">underlay</span><span class="o">=</span><span class="default_value">''</span></em>, <em class="sig-param"><span class="n">undermap</span><span class="o">=</span><span class="default_value">''</span></em>, <em class="sig-param"><span class="n">underscale</span><span class="o">=</span><span class="default_value">[- 1, 0.5]</span></em>, <em class="sig-param"><span class="n">threshold</span><span class="o">=</span><span class="default_value">[]</span></em>, <em class="sig-param"><span class="n">cmap</span><span class="o">=</span><span class="default_value">''</span></em>, <em class="sig-param"><span class="n">borders</span><span class="o">=</span><span class="default_value">''</span></em>, <em class="sig-param"><span class="n">cscale</span><span class="o">=</span><span class="default_value">[]</span></em>, <em class="sig-param"><span class="n">alpha</span><span class="o">=</span><span class="default_value">1</span></em>, <em class="sig-param"><span class="n">overlay_type</span><span class="o">=</span><span class="default_value">'func'</span></em>, <em class="sig-param"><span class="n">output_file</span><span class="o">=</span><span class="default_value">'output/file.jpg'</span></em><span class="sig-paren">)</span><a class="headerlink" href="#flatmap.plot" title="Permalink to this definition">¶</a></dt>
 <dd><p>Plots the flatmap using PyOpenGL</p>
 <dl class="simple">
 <dt>Input:</dt><dd><dl class="simple">
@@ -160,6 +160,8 @@
 </dd>
 <dt>overlay_type (str)</dt><dd><p>‘func’: funtional activation ‘label’: categories ‘rgb’: RGB values (default: func)</p>
 </dd>
+<dt>output_file (str)</dt><dd><p>Full filepath of the location to store outputted screenshot (default: ‘output/file.jpg’)</p>
+</dd>
 </dl>
 </dd>
 </dl>
@@ -167,7 +169,7 @@
 
 <dl class="py function">
 <dt id="flatmap.render">
-<code class="sig-prename descclassname">flatmap.</code><code class="sig-name descname">render</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">vertices_index</span></em>, <em class="sig-param"><span class="n">underlay</span></em>, <em class="sig-param"><span class="n">borders</span></em><span class="sig-paren">)</span><a class="headerlink" href="#flatmap.render" title="Permalink to this definition">¶</a></dt>
+<code class="sig-prename descclassname">flatmap.</code><code class="sig-name descname">render</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">vertices_index</span></em>, <em class="sig-param"><span class="n">layer</span></em>, <em class="sig-param"><span class="n">borders</span></em>, <em class="sig-param"><span class="n">output_file</span></em><span class="sig-paren">)</span><a class="headerlink" href="#flatmap.render" title="Permalink to this definition">¶</a></dt>
 <dd><p>OpenGL rendering</p>
 <dl class="simple">
 <dt>Input:</dt><dd><dl class="simple">
@@ -175,9 +177,9 @@
 </dd>
 <dt>borders (int array)</dt><dd><p>The border buffers objects (flatten) shape list(N, )</p>
 </dd>
-<dt>underlay (int array)</dt><dd><p>The underlay buffers object</p>
+<dt>layer (int array)</dt><dd><p>The blended overlay and underlay buffers object</p>
 </dd>
-<dt>overlays (int array)</dt><dd><p>The overlays buffer object (flatten), shape list(N, )</p>
+<dt>output_file (str)</dt><dd><p>The filepath for the output image</p>
 </dd>
 </dl>
 </dd>
@@ -193,6 +195,21 @@
 <dt>borders_buffer (int array)</dt><dd><p>The border buffers objects (flatten)</p>
 </dd>
 <dt>shader (shader)</dt><dd><p>The compiled shader program by opengl pipeline</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="flatmap.render_to_jpg">
+<code class="sig-prename descclassname">flatmap.</code><code class="sig-name descname">render_to_jpg</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">output_file</span></em>, <em class="sig-param"><span class="n">format</span><span class="o">=</span><span class="default_value">'JPEG'</span></em><span class="sig-paren">)</span><a class="headerlink" href="#flatmap.render_to_jpg" title="Permalink to this definition">¶</a></dt>
+<dd><p>Save PyOpenGL render as image</p>
+<dl class="simple">
+<dt>Input:</dt><dd><dl class="simple">
+<dt>output_file (str)</dt><dd><p>The filepath for the output image</p>
+</dd>
+<dt>format (str)</dt><dd><p>Image type (default: jpeg)</p>
 </dd>
 </dl>
 </dd>
