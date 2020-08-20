@@ -1,3 +1,9 @@
+"""
+Created on Wed May  1 09:20:41 2019
+ 
+@author joern.diedrichsen@googlemail.com, Aug 2020 (Python conversion: eliu72, dzhi1993)
+"""
+
 import math
 import nibabel as nb
 import numpy as np
@@ -68,7 +74,8 @@ def plot(data=[], surf="", underlay="", undermap="", underscale = [-1, 0.5], thr
         overlay_type (str)
             'func': funtional activation 'label': categories 'rgb': RGB values (default: func)
         output_file (str)
-            Full filepath of the location to store outputted screenshot (default: 'output/file.jpg') 
+            Full filepath of the location to store outputted screenshot. Writes to JPG, PNG, PDF, GIF types. 
+            See https://pillow.readthedocs.io/en/stable/handbook/image-file-formats.html for more formats. (default: 'output/file.jpg') 
     """
 
     # default directory 
@@ -514,15 +521,13 @@ def render(vertices_index, layer, borders, output_file):
 
     glfw.terminate()
 
-def render_to_jpg(output_file, format="JPEG"):
+def render_to_jpg(output_file):
     """
     Save PyOpenGL render as image
 
     Input:
         output_file (str)
             The filepath for the output image
-        format (str)
-            Image type (default: jpeg)
     """
     x, y, width, height = glGetDoublev(GL_VIEWPORT)
     width, height = int(width), int(height)
@@ -531,7 +536,7 @@ def render_to_jpg(output_file, format="JPEG"):
     image = Image.frombytes("RGB", (width, height), data)
     image = image.transpose(Image.FLIP_TOP_BOTTOM)
 
-    image.save(output_file, format)
+    image.save(output_file)
 
 def window_resize(window, width, height):
     glViewport(0, 0, width, height)

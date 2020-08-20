@@ -5,6 +5,11 @@
 
 Welcome to SUITPy's documentation!
 ==================================
+SUIT is a toolbox dedicated to the analysis of imaging data of the human cerebellum.
+It is written to support a number of different analysis techniques, such as fMRI group analysis, lesion-symptom mapping, and VBM. 
+All techniques share a number of initial similar steps, including the isolation of the cerebellum from the rest of the brain, normalization to the atlas template, and reslicing of the data into atlas space.
+
+
 
 .. toctree::
    :maxdepth: 2

@@ -5,7 +5,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>SUITPy Documentation &#8212; SUITPy 2020 documentation</title>
+    <title>Flatmap Module &#8212; SUITPy 2020 documentation</title>
     <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
     <script id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
@@ -32,8 +32,12 @@
 
           <div class="body" role="main">
             
-  <div class="section" id="module-flatmap">
-<span id="suitpy-documentation"></span><h1>SUITPy Documentation<a class="headerlink" href="#module-flatmap" title="Permalink to this headline">¶</a></h1>
+  <div class="section" id="flatmap-module">
+<h1>Flatmap Module<a class="headerlink" href="#flatmap-module" title="Permalink to this headline">¶</a></h1>
+<p>As part of the SUIT toolbox, we have developed a flat representation of the human cerebellum that can be used to visualise imaging data after volume-based normalisation and averaging across subjects.
+To explore the flatmap in more detail, check out our online cerebellar atlas viewer at <a class="reference external" href="http://www.diedrichsenlab.org/imaging/AtlasViewer/index.html">http://www.diedrichsenlab.org/imaging/AtlasViewer/index.html</a>.</p>
+<span class="target" id="module-flatmap"></span><p>Created on Wed May  1 09:20:41 2019</p>
+<p>&#64;author <a class="reference external" href="mailto:joern&#46;diedrichsen&#37;&#52;&#48;googlemail&#46;com">joern<span>&#46;</span>diedrichsen<span>&#64;</span>googlemail<span>&#46;</span>com</a>, Aug 2020 (Python conversion: eliu72, dzhi1993)</p>
 <dl class="py function">
 <dt id="flatmap.blend_underlay_overlay">
 <code class="sig-prename descclassname">flatmap.</code><code class="sig-name descname">blend_underlay_overlay</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">underlay_color</span></em>, <em class="sig-param"><span class="n">overlay_color</span></em>, <em class="sig-param"><span class="n">indx</span></em>, <em class="sig-param"><span class="n">alpha</span></em><span class="sig-paren">)</span><a class="headerlink" href="#flatmap.blend_underlay_overlay" title="Permalink to this definition">¶</a></dt>
@@ -160,7 +164,8 @@
 </dd>
 <dt>overlay_type (str)</dt><dd><p>‘func’: funtional activation ‘label’: categories ‘rgb’: RGB values (default: func)</p>
 </dd>
-<dt>output_file (str)</dt><dd><p>Full filepath of the location to store outputted screenshot (default: ‘output/file.jpg’)</p>
+<dt>output_file (str)</dt><dd><p>Full filepath of the location to store outputted screenshot. Writes to JPG, PNG, PDF, GIF types. 
+See <a class="reference external" href="https://pillow.readthedocs.io/en/stable/handbook/image-file-formats.html">https://pillow.readthedocs.io/en/stable/handbook/image-file-formats.html</a> for more formats. (default: ‘output/file.jpg’)</p>
 </dd>
 </dl>
 </dd>
@@ -203,13 +208,11 @@
 
 <dl class="py function">
 <dt id="flatmap.render_to_jpg">
-<code class="sig-prename descclassname">flatmap.</code><code class="sig-name descname">render_to_jpg</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">output_file</span></em>, <em class="sig-param"><span class="n">format</span><span class="o">=</span><span class="default_value">'JPEG'</span></em><span class="sig-paren">)</span><a class="headerlink" href="#flatmap.render_to_jpg" title="Permalink to this definition">¶</a></dt>
+<code class="sig-prename descclassname">flatmap.</code><code class="sig-name descname">render_to_jpg</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">output_file</span></em><span class="sig-paren">)</span><a class="headerlink" href="#flatmap.render_to_jpg" title="Permalink to this definition">¶</a></dt>
 <dd><p>Save PyOpenGL render as image</p>
 <dl class="simple">
 <dt>Input:</dt><dd><dl class="simple">
 <dt>output_file (str)</dt><dd><p>The filepath for the output image</p>
-</dd>
-<dt>format (str)</dt><dd><p>Image type (default: jpeg)</p>
 </dd>
 </dl>
 </dd>
@@ -254,7 +257,7 @@
 <h3>Navigation</h3>
 <p class="caption"><span class="caption-text">Contents:</span></p>
 <ul class="current">
-<li class="toctree-l1 current"><a class="current reference internal" href="#">SUITPy Documentation</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Flatmap Module</a></li>
 </ul>
 
 <div class="relations">
