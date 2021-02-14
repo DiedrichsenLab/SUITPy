@@ -1,1 +1,1 @@
-from .flatmap import plot
+import SUITPy.flatmap as flatmap
