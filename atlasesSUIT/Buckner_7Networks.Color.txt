@@ -1,0 +1,7 @@
+1_7Networks   120  18 134  
+2_7Networks     70 130 180   
+3_7Networks    0 118  14 
+4_7Networks    196  58 250
+5_7Networks   220 248 164
+6_7Networks   230 148  34
+7_7Networks    205  62  78
