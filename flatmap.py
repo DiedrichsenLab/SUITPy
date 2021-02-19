@@ -237,7 +237,7 @@ def make_func_gifti(data,anatomical_struct='Cerebellum',column_names=[]):
             data=np.float32(data[:, i]),
             intent='NIFTI_INTENT_NONE',
             datatype='NIFTI_TYPE_FLOAT32',
-            meta=nb.gifti.GiftiMetaData.from_dict({'Name': columnNames[i]})
+            meta=nb.gifti.GiftiMetaData.from_dict({'Name': column_names[i]})
         )
         D.append(d)
 
