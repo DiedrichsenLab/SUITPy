@@ -220,7 +220,7 @@ def make_func_gifti(data,anatomical_struct='Cerebellum',column_names=[]):
             column_names.append("col_{:02d}".format(i+1))
 
     C = nb.gifti.GiftiMetaData.from_dict({
-    'AnatomicalStructurePrimary': anatomicalStruct,
+    'AnatomicalStructurePrimary': anatomical_struct,
     'encoding': 'XML_BASE64_GZIP'})
 
     E = nb.gifti.gifti.GiftiLabel()
