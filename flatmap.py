@@ -18,6 +18,7 @@ import scipy.stats as ss
 import matplotlib
 from matplotlib.patches import Polygon
 from matplotlib.collections import PatchCollection
+from matplotlib.colors import ListedColormap
 import warnings
 
 _base_dir = os.path.dirname(os.path.abspath(__file__))
@@ -90,7 +91,7 @@ def coords_to_voxelidxs(coords,volDef):
 
 
 def vol_to_surf(volumes, space = 'SUIT', ignoreZeros=0,  depths=[0,0.2,0.4,0.6,0.8,1.0],
-            stats=lambda X:np.nanmean(X,axis=0),outerSurfGifti=None, innerSurfGifti=None):
+            stats='nanmean',outerSurfGifti=None, innerSurfGifti=None):
     """
     Maps volume data onto a surface, defined by inner and outer surface.
     Function enables mapping of volume-based data onto the vertices of a
@@ -197,6 +198,13 @@ def vol_to_surf(volumes, space = 'SUIT', ignoreZeros=0,  depths=[0,0.2,0.4,0.6,0
                 data[p,:] = X[indices[p,:,0],indices[p,:,1],indices[p,:,2]]
                 outside = (indices[p,:,:]<0).any(axis=1) # These are vertices outside the volume
                 data[p,outside] = np.nan
+
+            # Determine the right statistics - if function - call it
+            if stats=='nanmean':
+                mapped_data[:,v] = np.nanmean(data,axis=0)
+            elif stats=='mode':
+                mapped_data[:,v],_ = ss.mode(data,axis=0)
+            elif callable(stats):
                 mapped_data[:,v] = stats(data)
 
     return mapped_data
@@ -339,6 +347,24 @@ def get_gifti_column_names(G):
                 names.append(G.darrays[n].meta.data[i].value)
     return names
 
+def get_gifti_colortable(G):
+    """
+    Returns the RGBA color table from a label gifti.
+    INPUT:
+    G:				Nibabel gifti object
+
+    OUTPUT:
+    A:			     np.ndarray N x 4 of RGB values
+
+    @author: jdiedrichsen
+    """
+    labels = G.labeltable.labels
+    N = len(labels)
+    colors = np.zeros((N,4))
+    for i in range(N):
+        colors[i,:]=labels[i].rgba
+    return colors
+
 def get_gifti_anatomical_struct(G):
     """
     Returns the primary anatomical structure for a gifti object.
@@ -360,12 +386,12 @@ def get_gifti_anatomical_struct(G):
 
 def plot(data, surf = None, underlay = os.path.join(_surf_dir,'SUIT.shape.gii'),
         undermap = 'Greys', underscale = [-1, 0.5], overlay_type = 'func', threshold = None,
-        cmap = 'jet', cscale = None, borders = os.path.join(_surf_dir,'borders.txt'), alpha = 1.0,
+        cmap = None, cscale = None, borders = os.path.join(_surf_dir,'borders.txt'), alpha = 1.0,
         outputfile = None, render='matplotlib'):
     """
     Visualised cerebellar cortical acitivty on a flatmap in a matlab window
     INPUT:
-        data (np.array)
+        data (np.array, giftiImage, or name of gifti file)
             Data to be plotted, should be a 28935x1 vector
         surf (str or giftiImage)
             surface file for flatmap (default: FLAT.surf.gii in SUIT pkg)
@@ -378,10 +404,10 @@ def plot(data, surf = None, underlay = os.path.join(_surf_dir,'SUIT.shape.gii'),
         overlay_type (str)
             'func': functional activation 'label': categories 'rgb': RGB values (default: func)
         threshold (scalar or array-like)
-            Threshold for functional overlay. If one value is given, it is used as a positive threshold. 
-            If two values are given, an positive and negative threshold is used. 
+            Threshold for functional overlay. If one value is given, it is used as a positive threshold.
+            If two values are given, an positive and negative threshold is used.
         cmap (str)
-            Matplotlib colormap used for overlay (default: parula in SUIT pkg)
+            Matplotlib colormap used for overlay (defaults to 'jet' if none given)
         borders (str)
             Full filepath of the borders txt file (default: borders.txt in SUIT pkg)
         cscale (int array)
@@ -392,7 +418,7 @@ def plot(data, surf = None, underlay = os.path.join(_surf_dir,'SUIT.shape.gii'),
             Name / path to file to save figure (default None)
         render (str)
             Renderer for graphic display 'matplot' / 'opengl'. Dafault is matplotlib
-    OUTPUT: 
+    OUTPUT:
         ax (matplotlib.axis)
             If render is matplotlib, the function returns the axis
     """
@@ -410,86 +436,104 @@ def plot(data, surf = None, underlay = os.path.join(_surf_dir,'SUIT.shape.gii'),
         underlay = nb.load(underlay).darrays[0].data
     underlay_color = _map_color(faces, underlay, underscale, undermap)
 
-    # Load overlay and assign color
-    if type(data) is not np.ndarray:
-        data = nb.load(data).darrays[0].data
-    # If 2d-array, take the first column only 
-    if data.ndim>1: 
+    # Load the overlay if it's a string
+    if type(data) is str:
+        data = nb.load(data)
+
+    # If it is a giftiImage, figure out colormap
+    if type(data) is nb.gifti.gifti.GiftiImage:
+        if overlay_type == 'label':
+            cmap = get_gifti_colortable(data)
+            data = data.darrays[0].data
+
+    # If 2d-array, take the first column only
+    if data.ndim>1:
         data = data[:,0]
+    # depending on data type - type cast into int
+    if overlay_type=='label':
+        i = np.isnan(data)
+        data = data.astype(int)
+        data[i]=0
+
+    # map the overlay to the faces
     overlay_color  = _map_color(faces, data, cscale, cmap, threshold)
-    
+
     # Combine underlay and overlay: For Nan overlay, let underlay shine through
     face_color = underlay_color * (1-alpha) + overlay_color * alpha
     i = np.isnan(face_color.sum(axis=1))
     face_color[i,:]=underlay_color[i,:]
     face_color[i,3]=1.0
 
-    if borders is not None: 
+    # If present, get the borders
+    if borders is not None:
         borders = np.genfromtxt(borders, delimiter=',')
 
     # Render with Matplotlib
     ax = _render_matplotlib(vertices, faces, face_color, borders)
     return ax
 
-def _map_color(faces, data, scale, cmap='jet', threshold = None):
+def _map_color(faces, data, scale, cmap=None, threshold = None):
     """
-    Maps data from vertices to faces, scales the values, and  
+    Maps data from vertices to faces, scales the values, and
     then looks up the RGB values in the color map
-    
+
     Input:
         data (1d-np-array)
             Numpy Array of values to scale. If integer, if it is not scaled
         scale (array like)
             (min,max) of the scaling of the data
         cmap (str, or matplotlib.colors.Colormap)
-            The Matplotlib colormap 
+            The Matplotlib colormap
         threshold (array like)
             (lower, upper) threshold for data display -
              only data x<lower and x>upper will be plotted
             if one value is given (-inf) is assumed for the lower
     """
 
-    # When continuous data, scale and threshold 
-    if data.dtype.kind == 'f':  
-
-
+    # When continuous data, scale and threshold
+    if data.dtype.kind == 'f':
         # if threshold is given, threshold the data
-        if threshold is not None: 
-            if np.isscalar(threshold): 
+        if threshold is not None:
+            if np.isscalar(threshold):
                 threshold=np.array([-np.inf,threshold])
             data[np.logical_and(data>threshold[0], data<threshold[1])]=np.nan
 
-        # if scale not given, find it 
-        if scale is None: 
+        # if scale not given, find it
+        if scale is None:
             scale = np.array([np.nanmin(data), np.nanmax(data)])
 
         # Scale the data
         data = ((data - scale[0]) / (scale[1] - scale[0]))
 
-    # Map the values from vertices to faces and integrate 
+    # Map the values from vertices to faces and integrate
     numFaces = faces.shape[0]
     face_value = np.zeros((3,numFaces),dtype = data.dtype)
     for i in range(3):
         face_value[i,:] = data[faces[:,i]]
 
     if data.dtype.kind == 'i':
-        face_value = ss.mode(face_value,axis=0)
+        face_value,_ = ss.mode(face_value,axis=0)
+        face_value = face_value.reshape((numFaces,))
     else:
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", category=RuntimeWarning)
             face_value = np.nanmean(face_value, axis=0)
 
-    # Get the color map 
+    # Get the color map
     if type(cmap) is str:
         cmap = plt.get_cmap(cmap)
-    
-    # Map the color 
+    elif type(cmap) is np.ndarray:
+        cmap = ListedColormap(cmap)
+    elif cmap is None:
+        cmap = plt.get_cmap('jet')
+
+    # Map the color
     color_data = cmap(face_value)
-    
-    # Set missing data 0 for int or NaN for float to NaN 
-    if data.dtype.kind == 'f': 
+
+    # Set missing data 0 for int or NaN for float to NaN
+    if data.dtype.kind == 'f':
         color_data[np.isnan(face_value),:]=np.nan
-    elif data.dtype.kind == 'i': 
+    elif data.dtype.kind == 'i':
         color_data[face_value==0,:]=np.nan
     return color_data
 
@@ -507,15 +551,15 @@ def load_borders(border_file, surf_vertices):
 
 def _render_matplotlib(vertices,faces,face_color, borders):
     """
-    Render the data in matplotlib: This is segmented to allow for openGL renderer 
+    Render the data in matplotlib: This is segmented to allow for openGL renderer
 
     Input:
         vertices (np.ndarray)
-            Array of vertices 
+            Array of vertices
         faces (nd.array)
-            Array of Faces 
+            Array of Faces
         face_color (nd.array)
-            RGBA array of color and alpha of all vertices 
+            RGBA array of color and alpha of all vertices
     """
     patches = []
     for i in range(faces.shape[0]):
@@ -523,9 +567,10 @@ def _render_matplotlib(vertices,faces,face_color, borders):
         patches.append(polygon)
     p = PatchCollection(patches)
     p.set_facecolor(face_color)
+    p.set_linewidth(0.0)
 
     # Get the current axis and plot it
-    ax = plt.gca() 
+    ax = plt.gca()
     ax.add_collection(p)
     xrang = [np.nanmin(vertices[:,0]),np.nanmax(vertices[:,0])]
     yrang = [np.nanmin(vertices[:,1]),np.nanmax(vertices[:,1])]
@@ -534,10 +579,10 @@ def _render_matplotlib(vertices,faces,face_color, borders):
     ax.set_ylim(yrang[0],yrang[1])
     ax.axis('equal')
     ax.axis('off')
-    
-    if borders is not None: 
-        ax.plot(borders[:,0],borders[:,1],color='k', 
-                marker='.', linestyle=None, 
+
+    if borders is not None:
+        ax.plot(borders[:,0],borders[:,1],color='k',
+                marker='.', linestyle=None,
                 markersize=2,linewidth=0)
     plt.show()
     return ax
