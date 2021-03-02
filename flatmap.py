@@ -90,8 +90,8 @@ def coords_to_voxelidxs(coords,volDef):
     return ijk
 
 
-def vol_to_surf(volumes, space = 'SUIT', ignoreZeros=0,  depths=[0,0.2,0.4,0.6,0.8,1.0],
-            stats='nanmean',outerSurfGifti=None, innerSurfGifti=None):
+def vol_to_surf(volumes, space = 'SUIT', ignoreZeros=0, 
+                depths=[0,0.2,0.4,0.6,0.8,1.0],stats='nanmean',outerSurfGifti=None, innerSurfGifti=None):
     """
     Maps volume data onto a surface, defined by inner and outer surface.
     Function enables mapping of volume-based data onto the vertices of a
@@ -537,18 +537,6 @@ def _map_color(faces, data, scale, cmap=None, threshold = None):
         color_data[face_value==0,:]=np.nan
     return color_data
 
-def load_borders(border_file, surf_vertices):
-    """
-    Look up the vertices coord to find which node is the border and make it black color for rendering. Returns the border_data array.
-
-    Input:
-        border_file (str)
-            The border filepath. (eg. "data/borders.txt")
-        surf_vertices (int array)
-            Array of the vertices coordinates of the flatmap. shape (N, 3)
-    """
-
-
 def _render_matplotlib(vertices,faces,face_color, borders):
     """
     Render the data in matplotlib: This is segmented to allow for openGL renderer
@@ -586,3 +574,4 @@ def _render_matplotlib(vertices,faces,face_color, borders):
                 markersize=2,linewidth=0)
     plt.show()
     return ax
+
