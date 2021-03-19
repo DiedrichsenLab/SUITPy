@@ -165,6 +165,9 @@ def vol_to_surf(volumes, space = 'SUIT', ignoreZeros=0,
         if type(volumes[i]) is nb.Nifti2Image:
             Vols.append(volumes[i])
             firstGood = i
+        elif type(volumes[i]) is nb.Nifti1Image:
+            Vols.append(volumes[i])
+            firstGood = i
         else:
             try:
                 a = nb.load(volumes[i])
