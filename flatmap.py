@@ -162,10 +162,7 @@ def vol_to_surf(volumes, space = 'SUIT', ignoreZeros=0,
 
     # Make a list of the files to be mapped
     for i in range(len(volumes)):
-        if type(volumes[i]) is nb.Nifti2Image:
-            Vols.append(volumes[i])
-            firstGood = i
-        elif type(volumes[i]) is nb.Nifti1Image:
+        if (type(volumes[i]) is nb.Nifti2Image) or (type(volumes[i]) is nb.Nifti1Image):
             Vols.append(volumes[i])
             firstGood = i
         else:
