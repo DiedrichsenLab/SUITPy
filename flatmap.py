@@ -268,8 +268,12 @@ def make_label_gifti(data,anatomical_struct='Cerebellum',label_names=[],column_n
              numVert x numCol data
         anatomical_struct (string):
             Anatomical Structure for the Meta-data default= 'CortexLeft'
+        label_names (list): 
+            List of strings for label names
         column_names (list):
             List of strings for names for columns
+        label_RGBA (list):
+            List of rgba vectors
     OUTPUTS:
         gifti (label GiftiImage)
 
@@ -317,7 +321,7 @@ def make_label_gifti(data,anatomical_struct='Cerebellum',label_names=[],column_n
             data=np.float32(data[:, i]),
             intent='NIFTI_INTENT_LABEL',
             datatype='NIFTI_TYPE_INT32',
-            meta=nb.gifti.GiftiMetaData.from_dict({'Name': columnNames[i]})
+            meta=nb.gifti.GiftiMetaData.from_dict({'Name': column_names[i]})
         )
         D.append(d)
 
