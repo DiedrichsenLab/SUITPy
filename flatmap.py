@@ -308,7 +308,7 @@ def make_label_gifti(data,anatomical_struct='Cerebellum',label_names=[],column_n
         'encoding': 'XML_BASE64_GZIP'})
 
     E = nb.gifti.gifti.GiftiLabel()
-    E.key = np.arange(label_names)
+    E.key = np.arange(numLabels)
     E.label= label_names
     E.red = label_RGBA[:,0]
     E.green = label_RGBA[:,1]
@@ -316,7 +316,7 @@ def make_label_gifti(data,anatomical_struct='Cerebellum',label_names=[],column_n
     E.alpha = label_RGBA[:,3]
 
     D = list()
-    for i in range(Q):
+    for i in range(numCols):
         d = nb.gifti.GiftiDataArray(
             data=np.float32(data[:, i]),
             intent='NIFTI_INTENT_LABEL',
