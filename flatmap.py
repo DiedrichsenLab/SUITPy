@@ -121,9 +121,8 @@ def vol_to_surf(volumes, space = 'SUIT', ignoreZeros=0,
             DEFAULT: [0.0,0.2,0.4,0.6,0.8,1.0]
         stats (lambda function):
             function that calculates the Statistics to be evaluated.
-            lambda X: np.nanmean(X,axis=0) default and used for activation data
-            lambda X: scipy.stats.mode(X,axis=0) used when discrete labels are sampled.
-            The most frequent label is assigned.
+            'nanmean': default and used for activation data
+            'mode': used when discrete labels are sampled. The most frequent label is assigned.
         outerSurfGifti (string or nibabel.GiftiImage):
             optional pial surface, filename or loaded gifti object, overwrites space
         innerSurfGifti (string or nibabel.GiftiImage):
@@ -267,7 +266,7 @@ def make_label_gifti(data,anatomical_struct='Cerebellum',label_names=[],column_n
         data (np.array):
              numVert x numCol data
         anatomical_struct (string):
-            Anatomical Structure for the Meta-data default= 'CortexLeft'
+            Anatomical Structure for the Meta-data default= 'Cerebellum'
         label_names (list): 
             List of strings for label names
         column_names (list):
@@ -284,7 +283,7 @@ def make_label_gifti(data,anatomical_struct='Cerebellum',label_names=[],column_n
     # Create naming and coloring if not specified in varargin
     # Make columnNames if empty
     if len(column_names) == 0:
-        for i in range(numLabels):
+        for i in range(numCols):
             column_names.append("col_{:02d}".format(i+1))
 
     # Determine color scale if empty
@@ -325,7 +324,7 @@ def make_label_gifti(data,anatomical_struct='Cerebellum',label_names=[],column_n
         d = nb.gifti.GiftiDataArray(
             data=np.float32(data[:, i]),
             intent='NIFTI_INTENT_LABEL',
-            datatype='NIFTI_TYPE_INT32',
+            datatype='NIFTI_TYPE_INT16',
             meta=nb.gifti.GiftiMetaData.from_dict({'Name': column_names[i]})
         )
         D.append(d)
