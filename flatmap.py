@@ -566,6 +566,7 @@ def _render_matplotlib(vertices,faces,face_color, borders):
     p.set_linewidth(0.0)
 
     # Get the current axis and plot it
+    plt.figure(figsize=(8,8))
     ax = plt.gca()
     ax.add_collection(p)
     xrang = [np.nanmin(vertices[:,0]),np.nanmax(vertices[:,0])]
