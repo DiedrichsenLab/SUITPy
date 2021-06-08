@@ -109,8 +109,8 @@ def vol_to_surf(volumes, space = 'SUIT', ignoreZeros=0,
     @author joern.diedrichsen@googlemail.com, Feb 2019 (Python conversion: switt)
 
     INPUTS:
-        volumes (list):
-            List of filenames, or nibable.NiftiImage to be mapped
+        volumes (list or nib obj):
+            List of filenames/nib objs, or nib obj to be mapped
         space (string):
             Normalization space: 'SUIT' (default), 'FSL', 'SPM'
     OPTIONAL:
@@ -157,7 +157,7 @@ def vol_to_surf(volumes, space = 'SUIT', ignoreZeros=0,
     # Make a list of the files to be mapped
     Vols = []
     if type(volumes) is not list:
-        raise(NameError('Volumes must be a list'))
+        volumes = [volumes]
 
     # Make a list of the files to be mapped
     for i in range(len(volumes)):
