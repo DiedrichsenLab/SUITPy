@@ -1,7 +1,0 @@
-252 248 167 #120  18 134 	#purple, yellow  
-252 208 167 #70 130 180 	#ugly blue, orange 
-182 167 252 #0 118  14  	#green , tan
-215 252 167 #196  58 250	#purple, green 
-252 167 167 #220 248 164 	#light green, red
-167 252 232 #230 148  34	#orange, blue
-167 230 252 #205  62  78	#red , purple
