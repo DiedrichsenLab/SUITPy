@@ -395,7 +395,7 @@ def get_gifti_anatomical_struct(G):
 def plot(data, surf = None, underlay = os.path.join(_surf_dir,'SUIT.shape.gii'),
         undermap = 'Greys', underscale = [-1, 0.5], overlay_type = 'func', threshold = None,
         cmap = None, cscale = None, borders = os.path.join(_surf_dir,'borders.txt'), alpha = 1.0,
-        outputfile = None, render='matplotlib'):
+        outputfile = None, render='matplotlib',new_figure = False):
     """
     Visualised cerebellar cortical acitivty on a flatmap in a matlab window
     INPUT:
@@ -426,6 +426,8 @@ def plot(data, surf = None, underlay = os.path.join(_surf_dir,'SUIT.shape.gii'),
             Name / path to file to save figure (default None)
         render (str)
             Renderer for graphic display 'matplot' / 'opengl'. Dafault is matplotlib
+        new_figure (bool)
+            By default, flatmap.plot renders the color map into matplotlib's current axis. It new_figure is set to True is will create a new figure 
     OUTPUT:
         ax (matplotlib.axis)
             If render is matplotlib, the function returns the axis
@@ -477,7 +479,7 @@ def plot(data, surf = None, underlay = os.path.join(_surf_dir,'SUIT.shape.gii'),
         borders = np.genfromtxt(borders, delimiter=',')
 
     # Render with Matplotlib
-    ax = _render_matplotlib(vertices, faces, face_color, borders)
+    ax = _render_matplotlib(vertices, faces, face_color, borders, new_figure)
     return ax
 
 def _map_color(faces, data, scale, cmap=None, threshold = None):
@@ -545,7 +547,7 @@ def _map_color(faces, data, scale, cmap=None, threshold = None):
         color_data[face_value==0,:]=np.nan
     return color_data
 
-def _render_matplotlib(vertices,faces,face_color, borders):
+def _render_matplotlib(vertices, faces, face_color, borders, new_figure):
     """
     Render the data in matplotlib: This is segmented to allow for openGL renderer
 
@@ -556,6 +558,8 @@ def _render_matplotlib(vertices,faces,face_color, borders):
             Array of Faces
         face_color (nd.array)
             RGBA array of color and alpha of all vertices
+        new_figure (bool)
+            Create new Figure or render in currrent axis? 
     """
     patches = []
     for i in range(faces.shape[0]):
@@ -566,7 +570,8 @@ def _render_matplotlib(vertices,faces,face_color, borders):
     p.set_linewidth(0.0)
 
     # Get the current axis and plot it
-    plt.figure(figsize=(8,8))
+    if new_figure:
+        fig = plt.figure(figsize=(7,7))
     ax = plt.gca()
     ax.add_collection(p)
     xrang = [np.nanmin(vertices[:,0]),np.nanmax(vertices[:,0])]
