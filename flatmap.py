@@ -19,6 +19,9 @@ import matplotlib
 from matplotlib.patches import Polygon
 from matplotlib.collections import PatchCollection
 from matplotlib.colors import ListedColormap
+from matplotlib.cm import ScalarMappable, get_cmap
+from matplotlib.colorbar import make_axes
+from matplotlib.colors import Normalize
 import warnings
 
 _base_dir = os.path.dirname(os.path.abspath(__file__))
@@ -392,10 +395,10 @@ def get_gifti_anatomical_struct(G):
             anatStruct.append(G._meta.data[i].value)
     return anatStruct
 
-def plot(data, surf = None, underlay = os.path.join(_surf_dir,'SUIT.shape.gii'),
-        undermap = 'Greys', underscale = [-1, 0.5], overlay_type = 'func', threshold = None,
-        cmap = None, cscale = None, borders = os.path.join(_surf_dir,'borders.txt'), alpha = 1.0,
-        outputfile = None, render='matplotlib',new_figure = False):
+def plot(data, surf=None, underlay=os.path.join(_surf_dir,'SUIT.shape.gii'),
+        undermap='Greys', underscale=[-1, 0.5], overlay_type='func', threshold=None,
+        cmap=None, cscale=None, borders=os.path.join(_surf_dir,'borders.txt'), alpha=1.0,
+        outputfile=None, render='matplotlib',new_figure=False, colorbar=False, cbar_tick_format="%.2g"):
     """
     Visualised cerebellar cortical acitivty on a flatmap in a matlab window
     INPUT:
@@ -428,6 +431,12 @@ def plot(data, surf = None, underlay = os.path.join(_surf_dir,'SUIT.shape.gii'),
             Renderer for graphic display 'matplot' / 'opengl'. Dafault is matplotlib
         new_figure (bool)
             By default, flatmap.plot renders the color map into matplotlib's current axis. It new_figure is set to True is will create a new figure 
+        colorbar (bool)
+            By default, colorbar is not plotted into matplotlib's current axis (or new figure if new_figure is set to True)
+        cbar_tick_format : str, optional
+            Controls how to format the tick labels of the colorbar.
+            Ex: use "%i" to display as integers.
+            Default='%.2g' for scientific notation.
     OUTPUT:
         ax (matplotlib.axis)
             If render is matplotlib, the function returns the axis
@@ -444,7 +453,7 @@ def plot(data, surf = None, underlay = os.path.join(_surf_dir,'SUIT.shape.gii'),
     # Load underlay and assign color
     if type(underlay) is not np.ndarray:
         underlay = nb.load(underlay).darrays[0].data
-    underlay_color = _map_color(faces, underlay, underscale, undermap)
+    underlay_color,_,_ = _map_color(faces, underlay, underscale, undermap)
 
     # Load the overlay if it's a string
     if type(data) is str:
@@ -454,6 +463,8 @@ def plot(data, surf = None, underlay = os.path.join(_surf_dir,'SUIT.shape.gii'),
     if type(data) is nb.gifti.gifti.GiftiImage:
         if overlay_type == 'label':
             cmap = get_gifti_colortable(data)
+            labels = data.labeltable
+            label_names = list(labels.get_labels_as_dict().values())
             data = data.darrays[0].data
 
     # If 2d-array, take the first column only
@@ -466,7 +477,7 @@ def plot(data, surf = None, underlay = os.path.join(_surf_dir,'SUIT.shape.gii'),
         data[i]=0
 
     # map the overlay to the faces
-    overlay_color  = _map_color(faces, data, cscale, cmap, threshold)
+    overlay_color, cmap, cscale = _map_color(faces, data, cscale, cmap, threshold)
 
     # Combine underlay and overlay: For Nan overlay, let underlay shine through
     face_color = underlay_color * (1-alpha) + overlay_color * alpha
@@ -480,6 +491,14 @@ def plot(data, surf = None, underlay = os.path.join(_surf_dir,'SUIT.shape.gii'),
 
     # Render with Matplotlib
     ax = _render_matplotlib(vertices, faces, face_color, borders, new_figure)
+
+    # set up colorbar
+    if colorbar:
+        if overlay_type=='label':
+            cbar = _colorbar_label(ax, cmap, cscale, cbar_tick_format, label_names)
+        elif overlay_type=='func':
+            cbar = _colorbar_func(ax, cmap, cscale, cbar_tick_format)
+    
     return ax
 
 def _map_color(faces, data, scale, cmap=None, threshold = None):
@@ -515,6 +534,10 @@ def _map_color(faces, data, scale, cmap=None, threshold = None):
         # Scale the data
         data = ((data - scale[0]) / (scale[1] - scale[0]))
 
+    elif data.dtype.kind == 'i':
+        if scale is None:
+            scale = np.array([np.nanmin(data), np.nanmax(data)])
+
     # Map the values from vertices to faces and integrate
     numFaces = faces.shape[0]
     face_value = np.zeros((3,numFaces),dtype = data.dtype)
@@ -545,7 +568,55 @@ def _map_color(faces, data, scale, cmap=None, threshold = None):
         color_data[np.isnan(face_value),:]=np.nan
     elif data.dtype.kind == 'i':
         color_data[face_value==0,:]=np.nan
-    return color_data
+
+    return color_data, cmap, scale
+
+def _colorbar_label(ax, cmap, cscale, cbar_tick_format, label_names):
+    """adds colorbar to figure
+    """
+    # check if there is a 0 label and adjust colorbar accordingly
+    if cscale[0]==0:
+        cmap.N = cmap.N-1
+        label_names = label_names[1:]
+    # set up colorbar
+    cax, kw = make_axes(ax, location='right', fraction=.15,
+                        shrink=.5, pad=.0, aspect=10.)
+    norm = Normalize(vmin=cscale[0], vmax=cscale[1])
+    ticks = np.arange(1,len(label_names)+1)+0.5
+    bounds = np.arange(1,len(label_names)+2)
+    proxy_mappable = ScalarMappable(cmap=cmap, norm=norm)
+    cbar = plt.colorbar(
+        proxy_mappable, cax=cax, ticks=ticks,
+        boundaries=bounds, spacing='proportional',
+        format=cbar_tick_format, orientation='vertical')
+
+    cbar.ax.set_yticklabels(label_names)
+
+    return cbar
+
+def _colorbar_func(ax, cmap, cscale, cbar_tick_format):
+    """adds colorbar to figure
+    """
+    nb_ticks = 5
+    # ...unless we are dealing with integers with a small range
+    # in this case, we reduce the number of ticks
+    if cbar_tick_format == "%i" and cscale[1] - cscale[0] < nb_ticks:
+        ticks = np.arange(cscale[0], cscale[1] + 1)
+    else:
+        ticks = np.linspace(cscale[0], cscale[1], nb_ticks)
+    
+    # set up colorbar
+    cax, kw = make_axes(ax, location='right', fraction=.15,
+                        shrink=.5, pad=.0, aspect=10.)
+    bounds = np.linspace(cscale[0], cscale[1], cmap.N)
+    norm = Normalize(vmin=cscale[0], vmax=cscale[1])
+    proxy_mappable = ScalarMappable(cmap=cmap, norm=norm)
+    cbar = plt.colorbar(
+        proxy_mappable, cax=cax, ticks=ticks,
+        boundaries=bounds, spacing='proportional',
+        format=cbar_tick_format, orientation='vertical')
+
+    return cbar
 
 def _render_matplotlib(vertices, faces, face_color, borders, new_figure):
     """
