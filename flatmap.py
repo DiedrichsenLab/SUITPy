@@ -453,7 +453,7 @@ def plot(data, surf=None, underlay=os.path.join(_surf_dir,'SUIT.shape.gii'),
     # Load underlay and assign color
     if type(underlay) is not np.ndarray:
         underlay = nb.load(underlay).darrays[0].data
-    underlay_color,_,_ = _map_color(faces, underlay, underscale, undermap)
+    underlay_color,_,_ = _map_color(faces=faces, data=underlay, cscale=underscale, cmap=undermap)
 
     # Load the overlay if it's a string
     if type(data) is str:
@@ -501,7 +501,7 @@ def plot(data, surf=None, underlay=os.path.join(_surf_dir,'SUIT.shape.gii'),
     
     return ax
 
-def _map_color(faces, data, scale, cmap=None, threshold = None):
+def _map_color(faces, data, cscale=None, cmap=None, threshold=None):
     """
     Maps data from vertices to faces, scales the values, and
     then looks up the RGB values in the color map
@@ -509,7 +509,7 @@ def _map_color(faces, data, scale, cmap=None, threshold = None):
     Input:
         data (1d-np-array)
             Numpy Array of values to scale. If integer, if it is not scaled
-        scale (array like)
+        cscale (array like)
             (min,max) of the scaling of the data
         cmap (str, or matplotlib.colors.Colormap)
             The Matplotlib colormap
@@ -528,15 +528,15 @@ def _map_color(faces, data, scale, cmap=None, threshold = None):
             data[np.logical_and(data>threshold[0], data<threshold[1])]=np.nan
 
         # if scale not given, find it
-        if scale is None:
-            scale = np.array([np.nanmin(data), np.nanmax(data)])
+        if cscale is None:
+            cscale = np.array([np.nanmin(data), np.nanmax(data)])
 
-        # Scale the data
-        data = ((data - scale[0]) / (scale[1] - scale[0]))
+        # scale the data
+        data = ((data - cscale[0]) / (cscale[1] - cscale[0]))
 
     elif data.dtype.kind == 'i':
-        if scale is None:
-            scale = np.array([np.nanmin(data), np.nanmax(data)])
+        if cscale is None:
+            cscale = np.array([np.nanmin(data), np.nanmax(data)])
 
     # Map the values from vertices to faces and integrate
     numFaces = faces.shape[0]
@@ -569,7 +569,7 @@ def _map_color(faces, data, scale, cmap=None, threshold = None):
     elif data.dtype.kind == 'i':
         color_data[face_value==0,:]=np.nan
 
-    return color_data, cmap, scale
+    return color_data, cmap, cscale
 
 def _colorbar_label(ax, cmap, cscale, cbar_tick_format, label_names):
     """adds colorbar to figure
