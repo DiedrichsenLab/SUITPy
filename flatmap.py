@@ -450,11 +450,6 @@ def plot(data, surf=None, underlay=os.path.join(_surf_dir,'SUIT.shape.gii'),
     vertices = flatsurf.darrays[0].data
     faces    = flatsurf.darrays[1].data
 
-    # Load underlay and assign color
-    if type(underlay) is not np.ndarray:
-        underlay = nb.load(underlay).darrays[0].data
-    underlay_color,_,_ = _map_color(faces=faces, data=underlay, cscale=underscale, cmap=undermap)
-
     # Load the overlay if it's a string
     if type(data) is str:
         data = nb.load(data)
@@ -478,6 +473,11 @@ def plot(data, surf=None, underlay=os.path.join(_surf_dir,'SUIT.shape.gii'),
 
     # map the overlay to the faces
     overlay_color, cmap, cscale = _map_color(faces, data, cscale, cmap, threshold)
+
+    # Load underlay and assign color
+    if type(underlay) is not np.ndarray:
+        underlay = nb.load(underlay).darrays[0].data
+    underlay_color,_,_ = _map_color(faces=faces, data=underlay, cscale=underscale, cmap=undermap)
 
     # Combine underlay and overlay: For Nan overlay, let underlay shine through
     face_color = underlay_color * (1-alpha) + overlay_color * alpha
