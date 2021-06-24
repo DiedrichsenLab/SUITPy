@@ -467,8 +467,7 @@ def plot(data, surf=None, underlay=os.path.join(_surf_dir,'SUIT.shape.gii'),
             label_names = list(labels.get_labels_as_dict().values())
             data = data.darrays[0].data
         elif overlay_type == 'func':
-            data = data.darrays[0].data
-            
+            data = data.darrays[0].data   
 
     # If 2d-array, take the first column only
     if data.ndim>1:
