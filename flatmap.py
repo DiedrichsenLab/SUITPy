@@ -454,7 +454,7 @@ def plot(data, surf = None, underlay = os.path.join(_surf_dir,'SUIT.shape.gii'),
     if type(data) is nb.gifti.gifti.GiftiImage:
         if overlay_type == 'label':
             cmap = get_gifti_colortable(data)
-            data = data.darrays[0].data
+        data = data.darrays[0].data
 
     # If 2d-array, take the first column only
     if data.ndim>1:
