@@ -478,12 +478,12 @@ def plot(data, surf=None, underlay=os.path.join(_surf_dir,'SUIT.shape.gii'),
         data_arr[i]=0
 
     # map the overlay to the faces
-    overlay_color, cmap, cscale, threshold = _map_color(faces=faces, data=data_arr, cscale=cscale, cmap=cmap, threshold=threshold)
+    overlay_color, cmap, cscale = _map_color(faces=faces, data=data_arr, cscale=cscale, cmap=cmap)
 
     # Load underlay and assign color
     if type(underlay) is not np.ndarray:
         underlay = nb.load(underlay).darrays[0].data
-    underlay_color,_,_,_ = _map_color(faces=faces, data=underlay, cscale=underscale, cmap=undermap)
+    underlay_color,_,_ = _map_color(faces=faces, data=underlay, cscale=underscale, cmap=undermap)
 
     # Combine underlay and overlay: For Nan overlay, let underlay shine through
     face_color = underlay_color * (1-alpha) + overlay_color * alpha
@@ -503,7 +503,7 @@ def plot(data, surf=None, underlay=os.path.join(_surf_dir,'SUIT.shape.gii'),
         if overlay_type=='label':
             cbar = _colorbar_label(ax, cmap, cscale, cbar_tick_format, label_names)
         elif overlay_type=='func':
-            cbar = _colorbar_func(ax, cmap, cscale, cbar_tick_format, threshold)
+            cbar = _colorbar_func(ax, cmap, cscale, cbar_tick_format)
     
     return ax
 
@@ -575,7 +575,7 @@ def _map_color(faces, data, cscale=None, cmap=None, threshold=None):
     elif data.dtype.kind == 'i':
         color_data[face_value==0,:]=np.nan
 
-    return color_data, cmap, cscale, threshold
+    return color_data, cmap, cscale
 
 def _colorbar_label(ax, cmap, cscale, cbar_tick_format, label_names):
     """adds colorbar to figure
@@ -600,7 +600,7 @@ def _colorbar_label(ax, cmap, cscale, cbar_tick_format, label_names):
 
     return cbar
 
-def _colorbar_func(ax, cmap, cscale, cbar_tick_format, threshold):
+def _colorbar_func(ax, cmap, cscale, cbar_tick_format):
     """adds colorbar to figure
     """
     nb_ticks = 5
