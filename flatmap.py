@@ -478,7 +478,7 @@ def plot(data, surf=None, underlay=os.path.join(_surf_dir,'SUIT.shape.gii'),
         data_arr[i]=0
 
     # map the overlay to the faces
-    overlay_color, cmap, cscale = _map_color(faces=faces, data=data_arr, cscale=cscale, cmap=cmap)
+    overlay_color, cmap, cscale = _map_color(faces=faces, data=data_arr, cscale=cscale, cmap=cmap, threshold=threshold)
 
     # Load underlay and assign color
     if type(underlay) is not np.ndarray:
