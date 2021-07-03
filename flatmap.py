@@ -21,12 +21,11 @@ from matplotlib.collections import PatchCollection
 from matplotlib.colors import ListedColormap
 from matplotlib.cm import ScalarMappable, get_cmap
 from matplotlib.colorbar import make_axes
-from matplotlib.colors import Normalize
+from matplotlib.colors import Normalize, LinearSegmentedColormap
 import warnings
 
 _base_dir = os.path.dirname(os.path.abspath(__file__))
 _surf_dir = os.path.join(_base_dir, 'surfaces')
-
 
 def affine_transform(x1,x2,x3,M):
     """
@@ -91,7 +90,6 @@ def coords_to_voxelidxs(coords,volDef):
     for i in range(3):
         ijk[i,ijk[i,:]>=volDef.shape[i]]=-1
     return ijk
-
 
 def vol_to_surf(volumes, space = 'SUIT', ignoreZeros=0, 
                 depths=[0,0.2,0.4,0.6,0.8,1.0],stats='nanmean',outerSurfGifti=None, innerSurfGifti=None):
@@ -337,7 +335,6 @@ def make_label_gifti(data,anatomical_struct='Cerebellum',label_names=[],column_n
     gifti.labeltable.labels.extend(E_all)
     return gifti
 
-
 def get_gifti_column_names(G):
     """
     Returns the column names from a functional gifti file.
@@ -398,7 +395,7 @@ def get_gifti_anatomical_struct(G):
 def plot(data, surf=None, underlay=os.path.join(_surf_dir,'SUIT.shape.gii'),
         undermap='Greys', underscale=[-1, 0.5], overlay_type='func', threshold=None,
         cmap=None, cscale=None, borders=os.path.join(_surf_dir,'borders.txt'), alpha=1.0,
-        outputfile=None, render='matplotlib',new_figure=False, colorbar=False, cbar_tick_format="%.2g"):
+        outputfile=None, render='matplotlib', new_figure=False, colorbar=False, cbar_tick_format="%.2g"):
     """
     Visualised cerebellar cortical acitivty on a flatmap in a matlab window
     INPUT:
@@ -460,24 +457,33 @@ def plot(data, surf=None, underlay=os.path.join(_surf_dir,'SUIT.shape.gii'),
             cmap = get_gifti_colortable(data)
             labels = data.labeltable
             label_names = list(labels.get_labels_as_dict().values())
-        data = data.darrays[0].data
+        data_arr = data.darrays[0].data
+
+    # If it's a nd array, create label names
+    if type(data) is np.ndarray:
+        if overlay_type=='label':
+            label_names = []
+            regions = np.unique(data)
+            for i in np.arange(len(regions)):
+                label_names.append(f'label-{i}')
+        data_arr = np.copy(data)
 
     # If 2d-array, take the first column only
-    if data.ndim>1:
-        data = data[:,0]
+    if data_arr.ndim>1:
+        data_arr = data_arr[:,0]
     # depending on data type - type cast into int
     if overlay_type=='label':
-        i = np.isnan(data)
-        data = data.astype(int)
-        data[i]=0
+        i = np.isnan(data_arr)
+        data_arr = data_arr.astype(int)
+        data_arr[i]=0
 
     # map the overlay to the faces
-    overlay_color, cmap, cscale = _map_color(faces, data, cscale, cmap, threshold)
+    overlay_color, cmap, cscale, threshold = _map_color(faces=faces, data=data_arr, cscale=cscale, cmap=cmap, threshold=threshold)
 
     # Load underlay and assign color
     if type(underlay) is not np.ndarray:
         underlay = nb.load(underlay).darrays[0].data
-    underlay_color,_,_ = _map_color(faces=faces, data=underlay, cscale=underscale, cmap=undermap)
+    underlay_color,_,_,_ = _map_color(faces=faces, data=underlay, cscale=underscale, cmap=undermap)
 
     # Combine underlay and overlay: For Nan overlay, let underlay shine through
     face_color = underlay_color * (1-alpha) + overlay_color * alpha
@@ -497,7 +503,7 @@ def plot(data, surf=None, underlay=os.path.join(_surf_dir,'SUIT.shape.gii'),
         if overlay_type=='label':
             cbar = _colorbar_label(ax, cmap, cscale, cbar_tick_format, label_names)
         elif overlay_type=='func':
-            cbar = _colorbar_func(ax, cmap, cscale, cbar_tick_format)
+            cbar = _colorbar_func(ax, cmap, cscale, cbar_tick_format, threshold)
     
     return ax
 
@@ -525,7 +531,7 @@ def _map_color(faces, data, cscale=None, cmap=None, threshold=None):
         if threshold is not None:
             if np.isscalar(threshold):
                 threshold=np.array([-np.inf,threshold])
-            data[np.logical_and(data>threshold[0], data<threshold[1])]=np.nan
+            data[~np.logical_and(data>threshold[0], data<threshold[1])]=np.nan
 
         # if scale not given, find it
         if cscale is None:
@@ -569,7 +575,7 @@ def _map_color(faces, data, cscale=None, cmap=None, threshold=None):
     elif data.dtype.kind == 'i':
         color_data[face_value==0,:]=np.nan
 
-    return color_data, cmap, cscale
+    return color_data, cmap, cscale, threshold
 
 def _colorbar_label(ax, cmap, cscale, cbar_tick_format, label_names):
     """adds colorbar to figure
@@ -594,7 +600,7 @@ def _colorbar_label(ax, cmap, cscale, cbar_tick_format, label_names):
 
     return cbar
 
-def _colorbar_func(ax, cmap, cscale, cbar_tick_format):
+def _colorbar_func(ax, cmap, cscale, cbar_tick_format, threshold):
     """adds colorbar to figure
     """
     nb_ticks = 5
@@ -610,6 +616,7 @@ def _colorbar_func(ax, cmap, cscale, cbar_tick_format):
                         shrink=.5, pad=.0, aspect=10.)
     bounds = np.linspace(cscale[0], cscale[1], cmap.N)
     norm = Normalize(vmin=cscale[0], vmax=cscale[1])
+
     proxy_mappable = ScalarMappable(cmap=cmap, norm=norm)
     cbar = plt.colorbar(
         proxy_mappable, cax=cax, ticks=ticks,
