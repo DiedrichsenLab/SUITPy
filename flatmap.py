@@ -394,7 +394,7 @@ def get_gifti_anatomical_struct(G):
 
 def plot(data, surf=None, underlay=os.path.join(_surf_dir,'SUIT.shape.gii'),
         undermap='Greys', underscale=[-1, 0.5], overlay_type='func', threshold=None,
-        cmap=None, cscale=None, borders=os.path.join(_surf_dir,'borders.txt'), alpha=1.0,
+        cmap=None, label_names=None, cscale=None, borders=os.path.join(_surf_dir,'borders.txt'), alpha=1.0,
         outputfile=None, render='matplotlib', new_figure=False, colorbar=False, cbar_tick_format="%.2g"):
     """
     Visualised cerebellar cortical acitivty on a flatmap in a matlab window
@@ -416,6 +416,8 @@ def plot(data, surf=None, underlay=os.path.join(_surf_dir,'SUIT.shape.gii'),
             If two values are given, an positive and negative threshold is used.
         cmap (str)
             Matplotlib colormap used for overlay (defaults to 'jet' if none given)
+        label_names (list)
+            labelnames for *.label.gii (default is None)
         borders (str)
             Full filepath of the borders txt file (default: borders.txt in SUIT pkg)
         cscale (int array)
@@ -455,12 +457,13 @@ def plot(data, surf=None, underlay=os.path.join(_surf_dir,'SUIT.shape.gii'),
     if type(data) is nb.gifti.gifti.GiftiImage:
         if overlay_type == 'label':
             cmap = get_gifti_colortable(data)
-            labels = data.labeltable
-            label_names = list(labels.get_labels_as_dict().values())
+            if label_names is None:
+                labels = data.labeltable
+                label_names = list(labels.get_labels_as_dict().values())
         data_arr = data.darrays[0].data
 
     # If it's a nd array, create label names
-    if type(data) is np.ndarray:
+    if type(data) is np.ndarray and label_names is None:
         if overlay_type=='label':
             label_names = []
             regions = np.unique(data)
