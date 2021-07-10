@@ -463,8 +463,8 @@ def plot(data, surf=None, underlay=os.path.join(_surf_dir,'SUIT.shape.gii'),
         data_arr = data.darrays[0].data
 
     # If it's a nd array, create label names
-    if type(data) is np.ndarray and label_names is None:
-        if overlay_type=='label':
+    if type(data) is np.ndarray:
+        if overlay_type=='label' and label_names is None:
             label_names = []
             regions = np.unique(data)
             for i in np.arange(len(regions)):
