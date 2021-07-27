@@ -1,0 +1,10 @@
+pytest>=3.9
+pytest-cov
+coverage
+joblib
+pandas
+matplotlib
+nibabel
+numpy
+cython
+requests
