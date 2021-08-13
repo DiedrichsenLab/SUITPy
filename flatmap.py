@@ -281,6 +281,9 @@ def make_label_gifti(data,anatomical_struct='Cerebellum',label_names=[],column_n
     numVerts, numCols = data.shape
     numLabels = len(np.unique(data))
 
+    # check for 0 labels
+    zero_label = 0 in data
+
     # Create naming and coloring if not specified in varargin
     # Make columnNames if empty
     if len(column_names) == 0:
@@ -296,11 +299,16 @@ def make_label_gifti(data,anatomical_struct='Cerebellum',label_names=[],column_n
         label_RGBA = np.zeros([numLabels,4])
         for i in range(numLabels):
             label_RGBA[i] = color[i]
+        if zero_label:
+            label_RGBA = np.vstack([[0,0,0,1], label_RGBA[1:,]])
 
     # Create label names
     if len(label_names) == 0:
+        idx = 0
+        if not zero_label:
+            idx = 1
         for i in range(numLabels):
-            label_names.append("label-{:02d}".format(i+1))
+            label_names.append("label-{:02d}".format(i + idx))
 
     # Create label.gii structure
     C = nb.gifti.GiftiMetaData.from_dict({
@@ -462,13 +470,8 @@ def plot(data, surf=None, underlay=os.path.join(_surf_dir,'SUIT.shape.gii'),
                 label_names = list(labels.get_labels_as_dict().values())
         data_arr = data.darrays[0].data
 
-    # If it's a nd array, create label names
+    # If it's a nd array, copy `data` arr
     if type(data) is np.ndarray:
-        if overlay_type=='label' and label_names is None:
-            label_names = []
-            regions = np.unique(data)
-            for i in np.arange(len(regions)):
-                label_names.append(f'label-{i}')
         data_arr = np.copy(data)
 
     # If 2d-array, take the first column only
@@ -479,6 +482,18 @@ def plot(data, surf=None, underlay=os.path.join(_surf_dir,'SUIT.shape.gii'),
         i = np.isnan(data_arr)
         data_arr = data_arr.astype(int)
         data_arr[i]=0
+
+    # create label names if they don't exist
+    if overlay_type=='label' and label_names is None:
+        numLabels = len(np.unique(data_arr))
+        label_names = []
+        # check for 0 labels
+        zero_label = 0 in data_arr
+        idx = 1
+        if zero_label:
+            idx = 0
+        for i in range(numLabels):
+            label_names.append("label-{:02d}".format(i + idx))
 
     # map the overlay to the faces
     overlay_color, cmap, cscale = _map_color(faces=faces, data=data_arr, cscale=cscale, cmap=cmap, threshold=threshold)
