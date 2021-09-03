@@ -11,12 +11,97 @@ import shutil
 import nibabel as nb
 import numpy as np
 from numpy.lib import recfunctions
-from sklearn.utils import Bunch
 
-from .utils import _get_dataset_dir, _fetch_files, _get_dataset_descr
-from .._utils import check_niimg, fill_doc
+from .utils import _get_dataset_dir, _fetch_files, _get_dataset_descr, _fetch_file
+from .._utils import fill_doc
 
-_TALAIRACH_LEVELS = ['hemisphere', 'lobe', 'gyrus', 'tissue', 'ba']
+@fill_doc
+def fetch_king_2019(data='atl', space='SUIT', data_dir=None, 
+                    base_url=None, resume=True, verbose=1,
+                    ):
+    
+    """"Download and return file names for the King et al. (2019) atlas
+    or contrast images set by `data`
+
+    The provided images are in `space` (SUIT or MNI)
+
+    Parameters
+    ----------
+    data : str, optional
+        Options are 'atl', 'con'
+        Default='atl'
+    space : str, optional
+        Options are 'SUIT', 'MNI'
+    %(data_dir)s
+    base_url : string, optional
+        base_url of files to download (None results in default base_url).
+    %(resume)s
+    %(verbose)s
+    Returns
+    -------
+    data : data dict
+        Dictionary, contains keys:
+        - files: list of string. 
+            Absolute paths of downloaded files on disk.
+        - description: A short description of `data` and some references.
+    References
+    ----------
+    .. footbibliography::
+    Notes
+    -----
+     For more details, see
+    https://github.com/DiedrichsenLab/cerebellar_atlases/tree/master/King_2019
+    Licence: MIT.
+    """
+    valid_spaces = ['SUIT', 'MNI']
+    valid_data = ['atl', 'con']
+
+    if space not in valid_spaces:
+        raise ValueError(f'Requested {space} not available. Valid options: {valid_spaces}')
+
+    if data not in valid_data:
+        raise ValueError(f'Requested {data} not available. Valid options: {valid_data}')
+
+    if base_url is None:
+        base_url = ('https://github.com/DiedrichsenLab/cerebellar_atlases/tree/master/King_2019')
+
+    # files = []
+    # labels_file_template = 'Schaefer2018_{}Parcels_{}Networks_order.txt'
+    # img_file_template = ('Schaefer2018_{}Parcels_'
+    #                      '{}Networks_order_FSLMNI152_{}mm.nii.gz')
+    # for f in [labels_file_template.format(n_rois, yeo_networks),
+    #           img_file_template.format(n_rois, yeo_networks, resolution_mm)]:
+    #     files.append((f, base_url + f, {}))
+
+    dataset_name = 'king_2019'
+    data_dir = _get_dataset_dir(dataset_name, data_dir=data_dir,
+                                verbose=verbose)
+
+    atlas_description = _fetch_file(url=base_url + '/atlas_description.csv', data_dir=data_dir)
+                                
+    file = _fetch_files(data_dir, files, resume=resume, verbose=verbose)
+
+    data_files = np.genfromtxt(file, usecols=1, dtype="S", delimiter="\t")
+    fdescr = _get_dataset_descr(dataset_name)
+
+    return {'files': data_files, 
+            'description': fdescr}
+
+@fill_doc
+def fetch_buckner_2011():
+    pass
+
+@fill_doc
+def fetch_diedrichsen_2009():
+    pass
+
+@fill_doc
+def fetch_ji_2019():
+    pass
+
+@fill_doc
+def fetch_xue_2021():
+    pass
 
 @fill_doc
 def fetch_atlas_schaefer_2018(n_rois=400, yeo_networks=7, resolution_mm=1,
@@ -57,9 +142,7 @@ def fetch_atlas_schaefer_2018(n_rois=400, yeo_networks=7, resolution_mm=1,
     .. footbibliography::
     Notes
     -----
-    Release v0.14.3 of the Schaefer 2018 parcellation is used by
-    default. Versions prior to v0.14.3 are known to contain erroneous region
-    label names. For more details, see
+     For more details, see
     https://github.com/ThomasYeoLab/CBIG/blob/master/stable_projects/brain_parcellation/Schaefer2018_LocalGlobal/Parcellations/Updates/Update_20190916_README.md
     Licence: MIT.
     """
