@@ -333,7 +333,7 @@ def make_label_gifti(data,anatomical_struct='Cerebellum',label_names=[],column_n
         d = nb.gifti.GiftiDataArray(
             data=np.float32(data[:, i]),
             intent='NIFTI_INTENT_LABEL',
-            datatype='NIFTI_TYPE_INT16',
+            datatype='NIFTI_TYPE_UINT8',
             meta=nb.gifti.GiftiMetaData.from_dict({'Name': column_names[i]})
         )
         D.append(d)
