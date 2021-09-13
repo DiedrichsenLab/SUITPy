@@ -35,8 +35,6 @@ def list_required_packages():
                               in _VERSION_GLOBALS['REQUIRED_MODULE_METADATA']
                               ]
     for package in required_packages_orig:
-        if package.startswith('sklearn'):
-            package = package.replace('sklearn', 'scikit-learn')
         required_packages.append(package)
     return required_packages
 
@@ -49,8 +47,8 @@ DISTNAME = 'SUITPy'
 DESCRIPTION = 'Mapping and plotting cerebellar fMRI data in Python'
 with open('README.rst') as fp:
     LONG_DESCRIPTION = fp.read()
-MAINTAINER = 'Joern Diedrichsen'
-MAINTAINER_EMAIL = 'jdiedric@uwo.ca'
+MAINTAINER = 'Maedbh King'
+MAINTAINER_EMAIL = 'maedbhking@berkeley.edu'
 URL = 'http://SUITPy.github.io'
 LICENSE = 'MIT'
 DOWNLOAD_URL = 'http://SUITPy.github.io'
