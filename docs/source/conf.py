@@ -12,17 +12,16 @@
 #
 import os
 import sys
-sys.path.insert(0, 'C:\\Users\\Elaine Liu\\Documents\\Elaine\\Jobs\\WUSRI\\surfAnalysis_project\\test\\SUITPy\\suit')
 
 
 # -- Project information -----------------------------------------------------
 
 project = 'SUITPy'
-copyright = '2020, Elaine Liu'
-author = 'Elaine Liu'
+copyright = '2020, Diedrichsenlab'
+author = 'Diedrichsenlab'
 
 # The full version, including alpha/beta/rc tags
-release = '2020'
+release = 'v.1.0'
 
 
 # -- General configuration ---------------------------------------------------
@@ -30,7 +29,8 @@ release = '2020'
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
-extensions = ['recommonmark', 'sphinx.ext.autodoc']
+extensions = ['myst_parser', 'sphinx.ext.autodoc']
+
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -51,4 +51,4 @@ html_theme = 'alabaster'
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
-html_static_path = ['_static']
+# html_static_path = ['_static']

@@ -3,23 +3,28 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Welcome to SUITPy's documentation!
-==================================
-SUIT is a toolbox dedicated to the analysis of imaging data of the human cerebellum.
-It is written to support a number of different analysis techniques, such as fMRI group analysis, lesion-symptom mapping, and VBM. 
-All techniques share a number of initial similar steps, including the isolation of the cerebellum from the rest of the brain, normalization to the atlas template, and reslicing of the data into atlas space.
-
-
+SUITPy Documentation
+====================
+SUITPy is a Python toolbox dedicated to the analysis of imaging data of the human cerebellum. It provides a subset og the original Matlab version of the SUIT toolbox for Matlab (https://github.com/jdiedrichsen/suit).  
+Currently, only mapping of volume data to the flatmap and display of the flatmap are implemented. 
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
    :caption: Contents:
 
-   code
+   flatmap
+
+Important links
+---------------
+
+- SUIT website: http://diedrichsenlab.org/imaging/suit.htm
+- Repository of the Python version: https://github.com/diedrichsenlab/SUITPy
+- Repository of the Matlab version: https://github.com/jdiedrichsen/SUIT
+
 
 
 Indices and tables
-==================
+------------------
 
 * :ref:`genindex`
 * :ref:`modindex`
