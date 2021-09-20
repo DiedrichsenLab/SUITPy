@@ -1,6 +1,6 @@
 #! /usr/bin/env python
 
-descr = """A set of python modules for cerebellar neuroimaging..."""
+descr = """A python package for cerebellar neuroimaging..."""
 
 import sys
 import os
