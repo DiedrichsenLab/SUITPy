@@ -1,26 +1,6 @@
 
 	.. -*- mode: rst -*-
 
-.. image:: https://img.shields.io/pypi/v/nilearn.svg
-    :target: https://pypi.org/project/nilearn/
-    :alt: Pypi Package
-
-.. image:: https://img.shields.io/pypi/pyversions/nilearn.svg
-    :target: https://pypi.org/project/nilearn/
-    :alt: PyPI - Python Version
-
-.. image:: https://github.com/nilearn/nilearn/workflows/build/badge.svg?branch=main&event=push
-   :target: https://github.com/nilearn/nilearn/actions
-   :alt: Github Actions Build Status
-
-.. image:: https://codecov.io/gh/nilearn/nilearn/branch/main/graph/badge.svg
-   :target: https://codecov.io/gh/nilearn/nilearn
-   :alt: Coverage Status
-
-.. image:: https://dev.azure.com/Parietal/Nilearn/_apis/build/status/nilearn.nilearn?branchName=main
-   :target: https://dev.azure.com/Parietal/Nilearn/_apis/build/status/nilearn.nilearn?branchName=main
-   :alt: Azure Build Status
-
 SUITPy
 
 Analysis and visualization of cerebellar imaging data.
@@ -34,7 +14,7 @@ Important links
 
 - SUIT website: http://diedrichsenlab.org/imaging/SUIT.htm
 - Official source code repository: https://github.com/SUITPy/
-- HTML documentation (stable release): http://SUITPy.github.io/
+- HTML documentation (stable release): https://suitpy.readthedocs.io/
 
 Dependencies
 ============
@@ -60,13 +40,7 @@ a command prompt::
     pip install -U --user SUITPy
 
 More detailed instructions are available at
-http://SUITPy.github.io/introduction.html#installation.
-
-Development
-===========
-
-Detailed instructions on how to contribute are available at
-http://SUITPy.github.io/development.html
+https://suitpy.readthedocs.io/en/latest/install.html
 
 
 Licence and Acknowledgements
