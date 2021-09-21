@@ -3,7 +3,7 @@ cython
 flake8
 lxml
 mkl
-sphinx
+sphinx>=1.4
 sphinx-gallery
 sphinxcontrib-bibtex
 sphinx-copybutton
@@ -14,3 +14,5 @@ pandas
 nibabel
 joblib
 matplotlib
+ipykernel
+nbsphinx
