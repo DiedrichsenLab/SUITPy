@@ -5,15 +5,15 @@ The flatmap module of the SUIT toolbox contains a flat representation of the hum
 
 .. image:: suit_flat_1.jpg
 
-The surface representation of the cerebellum is a group surface, designed to display functional data that has been averaged across participants in volumetric group space. It does not rely on reconstructions of individual surfaces. While latter is the best practice for the neocortex, unfolding the cerebellar surface of individual subjects is very hard and requires anatomical scans of very high resolution and quality.
+The surface representation of the cerebellum is a group surface, designed to display functional data that has been averaged across participants in volumetric group space. The first step is a normalization of the data into a group space, either the SUIT space (using the Matlab version of the SUIT toolbox) or MNI space (we recommend FSL's FNIRT function). 
 
 .. image:: suit_flat_2.jpg
 
-Thus there are three steps involved:
+.. toctree::
+   :maxdepth: 2
 
-* Normalise data to a group space
-* Map the data to the surface
-* Display the data
+   notebooks/flatmap_example
+
 
 For more details, see:
 
@@ -23,8 +23,3 @@ For more details, see:
 Did you know?
 -------------
 We also have an online version of our cerebellar atlases. Check it out at http://www.diedrichsenlab.org/imaging/AtlasViewer/index.html.
-
-
-
-.. automodule:: flatmap
-   :members:

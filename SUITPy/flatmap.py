@@ -30,17 +30,26 @@ _surf_dir = os.path.join(_base_dir, 'surfaces')
 def affine_transform(x1,x2,x3,M):
     """
     Returns affine transform of x
-    INPUT:
-        x1 (np-array): X-coordinate of original
-        x2 (np-array): Y-coordinate of original
-        x3 (np-array): Z-coordinate of original
-        M (2d-array): 4x4 transformation matrix
 
-    OUTPUT:
-        x1 (np-array): X-coordinate of transform
-        x2 (np-array): Y-coordinate of transform
-        x3 (np-array): Z-coordinate of transform
-        transformed coordinates: same form as x1,x2,x3
+    Args:
+        x1 (np-array):
+            X-coordinate of original
+        x2 (np-array): 
+            Y-coordinate of original
+        x3 (np-array): 
+            Z-coordinate of original
+        M (2d-array): 
+            4x4 transformation matrix
+
+    Returns:
+        x1 (np-array): 
+            X-coordinate of transform
+        x2 (np-array): 
+            Y-coordinate of transform
+        x3 (np-array): 
+            Z-coordinate of transform
+        transformed coordinates: 
+            same form as x1,x2,x3
     """
     y1 = np.multiply(M[0,0],x1) + np.multiply(M[0,1],x2) + np.multiply(M[0,2],x3) + M[0,3]
     y2 = np.multiply(M[1,0],x1) + np.multiply(M[1,1],x2) + np.multiply(M[1,2],x3) + M[1,3]
@@ -51,13 +60,13 @@ def coords_to_voxelidxs(coords,volDef):
     """
     Maps coordinates to linear voxel indices
 
-    INPUT:
+    Args:
         coords (3*N matrix or 3xPxQ array):
             (x,y,z) coordinates
         voldef (nibabel object):
             Nibabel object with attributes .affine (4x4 voxel to coordinate transformation matrix from the images to be sampled (1-based)) and shape (1x3 volume dimension in voxels)
 
-    OUTPUT:
+    Returns:
         linidxsrs (N-array or PxQ matrix):
             Linear voxel indices
     """
@@ -102,19 +111,17 @@ def vol_to_surf(volumes, space = 'SUIT', ignoreZeros=0,
     locations between white an gray matter surface. Set 'depths' to 0 to
     sample only along the white matter surface, and to 0.5 to sample along
     the mid-gray surface.
-
     The averaging across the sampled points for each vertex is dictated by
     the variable 'stats'. For functional activation, use 'mean' or
     'nanmean'. For discrete label data, use 'mode'.
 
     @author joern.diedrichsen@googlemail.com, Feb 2019 (Python conversion: switt)
 
-    INPUTS:
+    Args:
         volumes (list or nib obj):
             List of filenames/nib objs, or nib obj to be mapped
         space (string):
             Normalization space: 'SUIT' (default), 'FSL', 'SPM'
-    OPTIONAL:
         ignoreZeros (bool):
             Should zeros be ignored in mapping? DEFAULT:  False
         depths (array-like):
@@ -128,7 +135,8 @@ def vol_to_surf(volumes, space = 'SUIT', ignoreZeros=0,
             optional pial surface, filename or loaded gifti object, overwrites space
         innerSurfGifti (string or nibabel.GiftiImage):
             White surface, filename or loaded gifti object, overwrites space
-    OUTPUT:
+
+    Returns:
         mapped_data (numpy.array):
             A Data array for the mapped data
     """
@@ -214,14 +222,14 @@ def make_func_gifti(data,anatomical_struct='Cerebellum',column_names=[]):
     Generates a function GiftiImage from a numpy array
        @author joern.diedrichsen@googlemail.com, Feb 2019 (Python conversion: switt)
 
-    INPUTS:
+    Args:
         data (np.array):
              numVert x numCol data
         anatomical_struct (string):
             Anatomical Structure for the Meta-data default= 'CortexLeft'
         column_names (list):
             List of strings for names for columns
-    OUTPUTS:
+    Returns:
         FuncGifti (functional GiftiImage)
     """
     numVerts, numCols = data.shape
@@ -263,7 +271,7 @@ def make_label_gifti(data,anatomical_struct='Cerebellum',label_names=[],column_n
     Generates a label GiftiImage from a numpy array
        @author joern.diedrichsen@googlemail.com, Feb 2019 (Python conversion: switt)
 
-    INPUTS:
+    Args:
         data (np.array):
              numVert x numCol data
         anatomical_struct (string):
@@ -274,7 +282,7 @@ def make_label_gifti(data,anatomical_struct='Cerebellum',label_names=[],column_n
             List of strings for names for columns
         label_RGBA (list):
             List of rgba vectors
-    OUTPUTS:
+    Returns:
         gifti (label GiftiImage)
 
     """
@@ -347,13 +355,15 @@ def get_gifti_column_names(G):
     """
     Returns the column names from a functional gifti file.
 
-    INPUT:
-    G:				Nibabel gifti object
+    Args:
+        G (gifti image):
+            Nibabel Gifti image 
 
-    OUTPUT:
-    names:			List of column names from gifti object attribute data arrays
+    Returns:
+        names (list):
+            List of column names from gifti object attribute data arrays
 
-    @author: jdiedrichsen (Python conversion: switt)
+    @author: jdiedrichsen 
     """
     N = len(G.darrays)
     names = []
@@ -366,13 +376,14 @@ def get_gifti_column_names(G):
 def get_gifti_colortable(G):
     """
     Returns the RGBA color table from a label gifti.
-    INPUT:
-    G:				Nibabel gifti object
 
-    OUTPUT:
-    A:			     np.ndarray N x 4 of RGB values
+    Args:
+        G (gifti image):
+            Nibabel Gifti image 
 
-    @author: jdiedrichsen
+    Returns:
+        A (np.ndarray):
+            N x 4 of RGB values
     """
     labels = G.labeltable.labels
     N = len(labels)
@@ -385,11 +396,14 @@ def get_gifti_anatomical_struct(G):
     """
     Returns the primary anatomical structure for a gifti object.
 
-    INPUT:
-    G:				Nibabel gifti object
+    Args:
+        G (gifti image):
+            Nibabel Gifti image 
 
-    OUTPUT:
-    anatStruct:		AnatomicalStructurePrimary attribute from gifti object
+
+    Returns:
+        anatStruct (string):
+            AnatomicalStructurePrimary attribute from gifti object
 
     @author: jdiedrichsen (Python conversion: switt)
     """
@@ -405,13 +419,14 @@ def plot(data, surf=None, underlay=os.path.join(_surf_dir,'SUIT.shape.gii'),
         cmap=None, label_names=None, cscale=None, borders=os.path.join(_surf_dir,'borders.txt'), alpha=1.0,
         outputfile=None, render='matplotlib', new_figure=False, colorbar=False, cbar_tick_format="%.2g"):
     """
-    Visualised cerebellar cortical acitivty on a flatmap in a matlab window
-    INPUT:
-        data (np.array, giftiImage, or name of gifti file)
+    Visualised cerebellar cortical acmake tivty on a flatmap in a matlab window
+
+    Args:
+        data (np.array, giftiImage, or name of gifti file):
             Data to be plotted, should be a 28935x1 vector
-        surf (str or giftiImage)
+        surf (str or giftiImage):
             surface file for flatmap (default: FLAT.surf.gii in SUIT pkg)
-        underlay (str, giftiImage, or np-array)
+        underlay (str, giftiImage, or np-array):
             Full filepath of the file determining underlay coloring (default: SUIT.shape.gii in SUIT pkg)
         undermap (str)
             Matplotlib colormap used for underlay (default: gray)
@@ -425,7 +440,7 @@ def plot(data, surf=None, underlay=os.path.join(_surf_dir,'SUIT.shape.gii'),
         cmap (str)
             Matplotlib colormap used for overlay (defaults to 'jet' if none given)
         label_names (list)
-            labelnames for *.label.gii (default is None)
+            labelnames for .label.gii (default is None)
         borders (str)
             Full filepath of the borders txt file (default: borders.txt in SUIT pkg)
         cscale (int array)
@@ -444,7 +459,7 @@ def plot(data, surf=None, underlay=os.path.join(_surf_dir,'SUIT.shape.gii'),
             Controls how to format the tick labels of the colorbar.
             Ex: use "%i" to display as integers.
             Default='%.2g' for scientific notation.
-    OUTPUT:
+    Returns:
         ax (matplotlib.axis)
             If render is matplotlib, the function returns the axis
     """
@@ -530,7 +545,7 @@ def _map_color(faces, data, cscale=None, cmap=None, threshold=None):
     Maps data from vertices to faces, scales the values, and
     then looks up the RGB values in the color map
 
-    Input:
+    Args:
         data (1d-np-array)
             Numpy Array of values to scale. If integer, if it is not scaled
         cscale (array like)
@@ -647,7 +662,7 @@ def _render_matplotlib(vertices, faces, face_color, borders, new_figure):
     """
     Render the data in matplotlib: This is segmented to allow for openGL renderer
 
-    Input:
+    Args:
         vertices (np.ndarray)
             Array of vertices
         faces (nd.array)

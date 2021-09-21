@@ -12,9 +12,10 @@ Currently, only mapping of volume data to the flatmap and display of the flatmap
    :maxdepth: 1
    :caption: Contents:
 
-   install
-   flatmap
-   datasets
+   install.rst
+   flatmap.rst
+   datasets.rst
+   reference.rst
 
 Important links
 ---------------
