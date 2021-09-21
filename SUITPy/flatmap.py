@@ -226,7 +226,7 @@ def make_func_gifti(data,anatomical_struct='Cerebellum',column_names=[]):
         data (np.array):
              numVert x numCol data
         anatomical_struct (string):
-            Anatomical Structure for the Meta-data default= 'CortexLeft'
+            Anatomical Structure for the Meta-data default= 'Cerebellum'
         column_names (list):
             List of strings for names for columns
     Returns:
