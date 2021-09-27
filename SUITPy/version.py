@@ -1,6 +1,8 @@
 # *- encoding: utf-8 -*-
 """
 SUITPy version, required package versions, and utilities for checking
+
+@author: maedbhking
 """
 
 _SUITPy_INSTALL_MSG = 'See %s for installation information.' % (

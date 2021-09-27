@@ -1,23 +1,19 @@
 """
-Downloading Cerebellum NeuroImaging datasets: atlas datasets
+Downloading Cerebellum neuroImaging datasets: atlas datasets
 
-A lot of the functionality was borrowed from `nilearn.datasets.atlas
+@author: maedbhking
+
+A lot of the functionality was based on `nilearn.datasets.atlas`
 https://github.com/nilearn/nilearn/blob/main/nilearn/datasets/atlas.py`
 """
-import os
-import warnings
-import xml.etree.ElementTree
-from tempfile import mkdtemp
 import json
-import shutil
 import requests
 
 import nibabel as nb
 import numpy as np
-from numpy.lib import recfunctions
 
-from .utils import _get_dataset_dir, _fetch_files, _get_dataset_descr, _fetch_file
-from .._utils import fill_doc
+from .utils import _get_dataset_dir, _fetch_files
+from ._utils import fill_doc
 
 @fill_doc
 def fetch_king_2019(data='con', data_dir=None, 

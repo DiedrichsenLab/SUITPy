@@ -6,7 +6,7 @@ SUIT toolbox flatmap module
 Basic functionality for mapping and plotting functional
 Data for the cerebellum
 
-@authors jdiedrichsen, eliu72, dzhi1993, switt
+@authors jdiedrichsen, maedbhking, eliu72, dzhi1993, switt
 """
 
 import numpy as np
@@ -27,7 +27,7 @@ import warnings
 _base_dir = os.path.dirname(os.path.abspath(__file__))
 _surf_dir = os.path.join(_base_dir, 'surfaces')
 
-def affine_transform(x1,x2,x3,M):
+def affine_transform(x1, x2, x3, M):
     """
     Returns affine transform of x
 
@@ -56,21 +56,24 @@ def affine_transform(x1,x2,x3,M):
     y3 = np.multiply(M[2,0],x1) + np.multiply(M[2,1],x2) + np.multiply(M[2,2],x3) + M[2,3]
     return (y1,y2,y3)
 
-def coords_to_voxelidxs(coords,volDef):
+def coords_to_voxelidxs(
+    coords, 
+    vol_def
+    ):
     """
     Maps coordinates to linear voxel indices
 
     Args:
         coords (3*N matrix or 3xPxQ array):
             (x,y,z) coordinates
-        voldef (nibabel object):
+        vol_def (nibabel object):
             Nibabel object with attributes .affine (4x4 voxel to coordinate transformation matrix from the images to be sampled (1-based)) and shape (1x3 volume dimension in voxels)
 
     Returns:
         linidxsrs (N-array or PxQ matrix):
             Linear voxel indices
     """
-    mat = np.array(volDef.affine)
+    mat = np.array(vol_def.affine)
 
     # Check that coordinate transformation matrix is 4x4
     if (mat.shape != (4,4)):
@@ -97,11 +100,18 @@ def coords_to_voxelidxs(coords,volDef):
     ijk = np.rint(ijk)[0:3,:]
     # Now set the indices out of range to -1
     for i in range(3):
-        ijk[i,ijk[i,:]>=volDef.shape[i]]=-1
+        ijk[i,ijk[i,:]>=vol_def.shape[i]]=-1
     return ijk
 
-def vol_to_surf(volumes, space = 'SUIT', ignoreZeros=0, 
-                depths=[0,0.2,0.4,0.6,0.8,1.0],stats='nanmean',outerSurfGifti=None, innerSurfGifti=None):
+def vol_to_surf(
+    volumes, 
+    space='SUIT', 
+    ignore_zeros=False, 
+    depths=[0,0.2,0.4,0.6,0.8,1.0], 
+    stats='nanmean', 
+    outer_surf_gifti=None, 
+    inner_surf_gifti=None
+    ):
     """
     Maps volume data onto a surface, defined by inner and outer surface.
     Function enables mapping of volume-based data onto the vertices of a
@@ -122,8 +132,8 @@ def vol_to_surf(volumes, space = 'SUIT', ignoreZeros=0,
             List of filenames/nib objs, or nib obj to be mapped
         space (string):
             Normalization space: 'SUIT' (default), 'FSL', 'SPM'
-        ignoreZeros (bool):
-            Should zeros be ignored in mapping? DEFAULT:  False
+        ignore_zeros (bool):
+            Should zeros be ignored in mapping? default: False
         depths (array-like):
             Depths of points along line at which to map (0=white/gray, 1=pial).
             DEFAULT: [0.0,0.2,0.4,0.6,0.8,1.0]
@@ -131,9 +141,9 @@ def vol_to_surf(volumes, space = 'SUIT', ignoreZeros=0,
             function that calculates the Statistics to be evaluated.
             'nanmean': default and used for activation data
             'mode': used when discrete labels are sampled. The most frequent label is assigned.
-        outerSurfGifti (string or nibabel.GiftiImage):
+        outer_surf_gifti (string or nibabel.GiftiImage):
             optional pial surface, filename or loaded gifti object, overwrites space
-        innerSurfGifti (string or nibabel.GiftiImage):
+        inner_surf_gifti (string or nibabel.GiftiImage):
             White surface, filename or loaded gifti object, overwrites space
 
     Returns:
@@ -141,21 +151,21 @@ def vol_to_surf(volumes, space = 'SUIT', ignoreZeros=0,
             A Data array for the mapped data
     """
     # Get the surface files
-    if innerSurfGifti is None:
-        innerSurfGifti = f'PIAL_{space}.surf.gii'
-    if outerSurfGifti is None:
-        outerSurfGifti = f'WHITE_{space}.surf.gii'
+    if inner_surf_gifti is None:
+        inner_surf_gifti = f'PIAL_{space}.surf.gii'
+    if outer_surf_gifti is None:
+        outer_surf_gifti = f'WHITE_{space}.surf.gii'
 
-    inner = os.path.join(_base_dir,'surfaces',innerSurfGifti)
-    innerSurfGiftiImage = nb.load(inner)
-    outer = os.path.join(_base_dir,'surfaces',outerSurfGifti)
-    outerSurfGiftiImage = nb.load(outer)
+    inner = os.path.join(_base_dir,'surfaces',inner_surf_gifti)
+    inner_surf_giftiImage = nb.load(inner)
+    outer = os.path.join(_base_dir,'surfaces',outer_surf_gifti)
+    outer_surf_giftiImage = nb.load(outer)
 
     # Get the vertices and check that the numbers are the same
-    c1 = innerSurfGiftiImage.darrays[0].data
-    c2 = outerSurfGiftiImage.darrays[0].data
-    numVerts = c1.shape[0]
-    if c2.shape[0] != numVerts:
+    c1 = inner_surf_giftiImage.darrays[0].data
+    c2 = outer_surf_giftiImage.darrays[0].data
+    num_verts = c1.shape[0]
+    if c2.shape[0] != num_verts:
         sys.exit('Error: White and pial surfaces should have same number of vertices.')
 
     # Prepare the mapping
@@ -186,21 +196,21 @@ def vol_to_surf(volumes, space = 'SUIT', ignoreZeros=0,
         sys.exit('Error: None of the images could be opened.')
 
     # Get the indices for all the points being sampled
-    indices = np.zeros((numPoints,numVerts,3),dtype=int)
+    indices = np.zeros((numPoints,num_verts,3),dtype=int)
     for i in range(numPoints):
         c = (1-depths[i])*c1.T+depths[i]*c2.T
         ijk = coords_to_voxelidxs(c,Vols[firstGood])
         indices[i] = ijk.T
 
     # Read the data and map it
-    data = np.zeros((numPoints,numVerts))
-    mapped_data = np.zeros((numVerts,len(Vols)))
+    data = np.zeros((numPoints,num_verts))
+    mapped_data = np.zeros((num_verts,len(Vols)))
     for v,vol in enumerate(Vols):
         if vol is None:
             pass
         else:
             X = vol.get_data()
-            if (ignoreZeros>0):
+            if ignore_zeros:
                 X[X==0] = np.nan
             for p in range(numPoints):
                 data[p,:] = X[indices[p,:,0],indices[p,:,1],indices[p,:,2]]
@@ -217,14 +227,18 @@ def vol_to_surf(volumes, space = 'SUIT', ignoreZeros=0,
 
     return mapped_data
 
-def make_func_gifti(data,anatomical_struct='Cerebellum',column_names=[]):
+def make_func_gifti(
+    data, 
+    anatomical_struct='Cerebellum', 
+    column_names=[]
+    ):
     """
     Generates a function GiftiImage from a numpy array
        @author joern.diedrichsen@googlemail.com, Feb 2019 (Python conversion: switt)
 
     Args:
         data (np.array):
-             numVert x numCol data
+             num_vert x num_col data
         anatomical_struct (string):
             Anatomical Structure for the Meta-data default= 'Cerebellum'
         column_names (list):
@@ -232,11 +246,11 @@ def make_func_gifti(data,anatomical_struct='Cerebellum',column_names=[]):
     Returns:
         FuncGifti (functional GiftiImage)
     """
-    numVerts, numCols = data.shape
+    num_verts, num_cols = data.shape
     #
     # Make columnNames if empty
     if len(column_names)==0:
-        for i in range(numCols):
+        for i in range(num_cols):
             column_names.append("col_{:02d}".format(i+1))
 
     C = nb.gifti.GiftiMetaData.from_dict({
@@ -252,7 +266,7 @@ def make_func_gifti(data,anatomical_struct='Cerebellum',column_names=[]):
     E.alpha = 0.0
 
     D = list()
-    for i in range(numCols):
+    for i in range(num_cols):
         d = nb.gifti.GiftiDataArray(
             data=np.float32(data[:, i]),
             intent='NIFTI_INTENT_NONE',
@@ -266,14 +280,20 @@ def make_func_gifti(data,anatomical_struct='Cerebellum',column_names=[]):
 
     return gifti
 
-def make_label_gifti(data,anatomical_struct='Cerebellum',label_names=[],column_names=[],label_RGBA=[]):
+def make_label_gifti(
+                    data, 
+                    anatomical_struct='Cerebellum', 
+                    label_names=[], 
+                    column_names=[],
+                    label_RGBA=[]
+                    ):
     """
     Generates a label GiftiImage from a numpy array
        @author joern.diedrichsen@googlemail.com, Feb 2019 (Python conversion: switt)
 
     Args:
         data (np.array):
-             numVert x numCol data
+             num_vert x num_col data
         anatomical_struct (string):
             Anatomical Structure for the Meta-data default= 'Cerebellum'
         label_names (list): 
@@ -286,8 +306,8 @@ def make_label_gifti(data,anatomical_struct='Cerebellum',label_names=[],column_n
         gifti (label GiftiImage)
 
     """
-    numVerts, numCols = data.shape
-    numLabels = len(np.unique(data))
+    num_verts, num_cols = data.shape
+    num_labels = len(np.unique(data))
 
     # check for 0 labels
     zero_label = 0 in data
@@ -295,17 +315,17 @@ def make_label_gifti(data,anatomical_struct='Cerebellum',label_names=[],column_n
     # Create naming and coloring if not specified in varargin
     # Make columnNames if empty
     if len(column_names) == 0:
-        for i in range(numCols):
+        for i in range(num_cols):
             column_names.append("col_{:02d}".format(i+1))
 
     # Determine color scale if empty
     if len(label_RGBA) == 0:
-        hsv = plt.cm.get_cmap('hsv',numLabels)
-        color = hsv(np.linspace(0,1,numLabels))
+        hsv = plt.cm.get_cmap('hsv',num_labels)
+        color = hsv(np.linspace(0,1,num_labels))
         # Shuffle the order so that colors are more visible
-        color = color[np.random.permutation(numLabels)]
-        label_RGBA = np.zeros([numLabels,4])
-        for i in range(numLabels):
+        color = color[np.random.permutation(num_labels)]
+        label_RGBA = np.zeros([num_labels,4])
+        for i in range(num_labels):
             label_RGBA[i] = color[i]
         if zero_label:
             label_RGBA = np.vstack([[0,0,0,1], label_RGBA[1:,]])
@@ -315,7 +335,7 @@ def make_label_gifti(data,anatomical_struct='Cerebellum',label_names=[],column_n
         idx = 0
         if not zero_label:
             idx = 1
-        for i in range(numLabels):
+        for i in range(num_labels):
             label_names.append("label-{:02d}".format(i + idx))
 
     # Create label.gii structure
@@ -323,7 +343,7 @@ def make_label_gifti(data,anatomical_struct='Cerebellum',label_names=[],column_n
         'AnatomicalStructurePrimary': anatomical_struct,
         'encoding': 'XML_BASE64_GZIP'})
 
-    num_labels = np.arange(numLabels)
+    num_labels = np.arange(num_labels)
     E_all = []
     for (label, rgba, name) in zip(num_labels, label_RGBA, label_names):
         E = nb.gifti.gifti.GiftiLabel()
@@ -337,7 +357,7 @@ def make_label_gifti(data,anatomical_struct='Cerebellum',label_names=[],column_n
         E_all.append(E)
 
     D = list()
-    for i in range(numCols):
+    for i in range(num_cols):
         d = nb.gifti.GiftiDataArray(
             data=np.float32(data[:, i]),
             intent='NIFTI_INTENT_LABEL',
@@ -351,7 +371,9 @@ def make_label_gifti(data,anatomical_struct='Cerebellum',label_names=[],column_n
     gifti.labeltable.labels.extend(E_all)
     return gifti
 
-def get_gifti_column_names(G):
+def get_gifti_column_names(
+    G
+    ):
     """
     Returns the column names from a functional gifti file.
 
@@ -373,7 +395,9 @@ def get_gifti_column_names(G):
                 names.append(G.darrays[n].meta.data[i].value)
     return names
 
-def get_gifti_colortable(G):
+def get_gifti_colortable(
+    G
+    ):
     """
     Returns the RGBA color table from a label gifti.
 
@@ -392,7 +416,9 @@ def get_gifti_colortable(G):
         colors[i,:]=labels[i].rgba
     return colors
 
-def get_gifti_anatomical_struct(G):
+def get_gifti_anatomical_struct(
+    G
+    ):
     """
     Returns the primary anatomical structure for a gifti object.
 
@@ -414,10 +440,12 @@ def get_gifti_anatomical_struct(G):
             anatStruct.append(G._meta.data[i].value)
     return anatStruct
 
-def plot(data, surf=None, underlay=os.path.join(_surf_dir,'SUIT.shape.gii'),
+def plot(
+        data, surf=None, underlay=os.path.join(_surf_dir,'SUIT.shape.gii'),
         undermap='Greys', underscale=[-1, 0.5], overlay_type='func', threshold=None,
         cmap=None, label_names=None, cscale=None, borders=os.path.join(_surf_dir,'borders.txt'), alpha=1.0,
-        outputfile=None, render='matplotlib', new_figure=False, colorbar=False, cbar_tick_format="%.2g"):
+        outputfile=None, render='matplotlib', new_figure=False, colorbar=False, cbar_tick_format="%.2g"
+        ):
     """
     Visualised cerebellar cortical acmake tivty on a flatmap in a matlab window
 
@@ -462,6 +490,8 @@ def plot(data, surf=None, underlay=os.path.join(_surf_dir,'SUIT.shape.gii'),
     Returns:
         ax (matplotlib.axis)
             If render is matplotlib, the function returns the axis
+
+        @author joern.diedrichsen@googlemail.com, Feb 2019 (Python conversion: switt, maedbhking)
     """
     # default directory
     if surf is None:
@@ -500,14 +530,14 @@ def plot(data, surf=None, underlay=os.path.join(_surf_dir,'SUIT.shape.gii'),
 
     # create label names if they don't exist
     if overlay_type=='label' and label_names is None:
-        numLabels = len(np.unique(data_arr))
+        num_labels = len(np.unique(data_arr))
         label_names = []
         # check for 0 labels
         zero_label = 0 in data_arr
         idx = 1
         if zero_label:
             idx = 0
-        for i in range(numLabels):
+        for i in range(num_labels):
             label_names.append("label-{:02d}".format(i + idx))
 
     # map the overlay to the faces
@@ -540,12 +570,20 @@ def plot(data, surf=None, underlay=os.path.join(_surf_dir,'SUIT.shape.gii'),
     
     return ax
 
-def _map_color(faces, data, cscale=None, cmap=None, threshold=None):
+def _map_color(
+    faces, 
+    data, 
+    cscale=None, 
+    cmap=None, 
+    threshold=None
+    ):
     """
     Maps data from vertices to faces, scales the values, and
     then looks up the RGB values in the color map
 
     Args:
+        faces (nd.array)
+            Array of Faces
         data (1d-np-array)
             Numpy Array of values to scale. If integer, if it is not scaled
         cscale (array like)
@@ -556,6 +594,8 @@ def _map_color(faces, data, cscale=None, cmap=None, threshold=None):
             (lower, upper) threshold for data display -
              only data x<lower and x>upper will be plotted
             if one value is given (-inf) is assumed for the lower
+
+        @author: maedbhking
     """
 
     # When continuous data, scale and threshold
@@ -610,15 +650,37 @@ def _map_color(faces, data, cscale=None, cmap=None, threshold=None):
 
     return color_data, cmap, cscale
 
-def _colorbar_label(ax, cmap, cscale, cbar_tick_format, label_names):
+def _colorbar_label(
+    ax, 
+    cmap, 
+    cscale, 
+    cbar_tick_format, 
+    label_names
+    ):
     """adds colorbar to figure
+
+    Args:
+        ax (matplotlib.axes.Axes)
+            Pre-existing axes for the plot.
+        cmap (str, or matplotlib.colors.Colormap)
+            The Matplotlib colormap
+        cscale (array like)
+            (min,max) of the scaling of the data
+        cbar_tick_format : str, optional
+            Controls how to format the tick labels of the colorbar.
+            Ex: use "%i" to display as integers.
+            Default='%.2g' for scientific notation.
+        label_names (list)
+            List of strings for label names
+
+    @author: maedbhking
     """
     # check if there is a 0 label and adjust colorbar accordingly
     if cscale[0]==0:
         cmap.N = cmap.N-1
         label_names = label_names[1:]
     # set up colorbar
-    cax, kw = make_axes(ax, location='right', fraction=.15,
+    cax, _ = make_axes(ax, location='right', fraction=.15,
                         shrink=.5, pad=.0, aspect=10.)
     norm = Normalize(vmin=cscale[0], vmax=cscale[1])
     ticks = np.arange(1,len(label_names)+1)+0.5
@@ -633,8 +695,25 @@ def _colorbar_label(ax, cmap, cscale, cbar_tick_format, label_names):
 
     return cbar
 
-def _colorbar_func(ax, cmap, cscale, cbar_tick_format):
+def _colorbar_func(
+    ax, 
+    cmap, 
+    cscale, 
+    cbar_tick_format
+    ):
     """adds colorbar to figure
+
+    Args:
+        ax (matplotlib.axes.Axes)
+            Pre-existing axes for the plot.
+        cmap (str, or matplotlib.colors.Colormap)
+            The Matplotlib colormap
+        cscale (array like)
+            (min,max) of the scaling of the data
+        cbar_tick_format : str, optional
+            Controls how to format the tick labels of the colorbar.
+            Ex: use "%i" to display as integers.
+            Default='%.2g' for scientific notation.
     """
     nb_ticks = 5
     # ...unless we are dealing with integers with a small range
@@ -658,7 +737,13 @@ def _colorbar_func(ax, cmap, cscale, cbar_tick_format):
 
     return cbar
 
-def _render_matplotlib(vertices, faces, face_color, borders, new_figure):
+def _render_matplotlib(
+    vertices, 
+    faces, 
+    face_color, 
+    borders, 
+    new_figure
+    ):
     """
     Render the data in matplotlib: This is segmented to allow for openGL renderer
 
@@ -669,8 +754,12 @@ def _render_matplotlib(vertices, faces, face_color, borders, new_figure):
             Array of Faces
         face_color (nd.array)
             RGBA array of color and alpha of all vertices
+        borders (np.ndarray)
+            default is None
         new_figure (bool)
-            Create new Figure or render in currrent axis? 
+            Create new Figure or render in currrent axis
+
+    @author: jdiedrichsen, maedbhking
     """
     patches = []
     for i in range(faces.shape[0]):

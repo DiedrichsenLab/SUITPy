@@ -1,15 +1,14 @@
 # -*- coding: utf-8 -*-
 """Functions related to the documentation.
 
-docdict contains the standard documentation entries
-used across SUITPy (source: Nilearn)
+@author: maedbhking
 
-source: Eric Larson and MNE-python team.
+docdict contains the standard documentation entries
+used across SUITPy (source: Nilearn and Eric Larson and MNE-python team.
 https://github.com/mne-tools/mne-python/blob/main/mne/utils/docs.py
 """
 
 import sys
-
 
 ###################################
 # Standard documentation entries
@@ -192,23 +191,6 @@ output_file : :obj:`str`, or None, optional
     The name of an image file to export the plot to. Valid extensions
     are .png, .pdf, .svg. If ``output_file`` is not None, the plot
     is saved to a file, and the display is closed."""
-
-# extractor / extract_type
-docdict['extractor'] = """
-extractor : {'local_regions', 'connected_components'}, optional
-    This option can take two values:
-
-        - 'connected_components': each component/region in the image is
-          extracted automatically by labelling each region based upon the
-          presence of unique features in their respective regions.
-
-        - 'local_regions': each component/region is extracted based on
-          their maximum peak value to define a seed marker and then using
-          random walker segementation algorithm on these markers for region
-          separation.
-
-    Default='local_regions'."""
-docdict['extract_type'] = docdict['extractor']
 
 # display_mode
 docdict['display_mode'] = """
@@ -451,125 +433,6 @@ docdict['fsaverage_options'] = """
             .. note::
                 The high-resolution fsaverage will result in more computation
                 time and memory usage
-
-"""
-
-# Classifiers
-base_url = "https://scikit-learn.org/stable/modules/generated/sklearn"
-svc = "Linear support vector classifier"
-logistic = "Logistic regression"
-rc = "Ridge classifier"
-dc = "Dummy classifier with stratified strategy"
-SKLEARN_LINKS = {
-    'svc': f"{base_url}.svm.SVC.html",
-    'logistic': f"{base_url}.linear_model.LogisticRegression.html",
-    'ridge_classifier': f"{base_url}.linear_model.RidgeClassifierCV.html",
-    'dummy_classifier': f"{base_url}.dummy.DummyClassifier.html",
-    'ridge': f"{base_url}.linear_model.RidgeCV.html",
-    'svr': f"{base_url}.svm.SVR.html",
-    'dummy_regressor': f"{base_url}.dummy.DummyRegressor.html",
-}
-
-docdict['classifier_options'] = f"""
-
-        - `svc`: `{svc} <%(svc)s>`_ with L2 penalty.
-            .. code-block:: python
-
-                svc = LinearSVC(penalty='l2',
-                                max_iter=1e4)
-
-        - `svc_l2`: `{svc} <%(svc)s>`_ with L2 penalty.
-            .. note::
-                Same as option `svc`.
-
-        - `svc_l1`: `{svc} <%(svc)s>`_ with L1 penalty.
-            .. code-block:: python
-
-                svc_l1 = LinearSVC(penalty='l1',
-                                   dual=False,
-                                   max_iter=1e4)
-
-        - `logistic`: `{logistic} <%(logistic)s>`_ with L2 penalty.
-            .. code-block:: python
-
-                logistic = LogisticRegression(penalty='l2',
-                                              solver='liblinear')
-
-        - `logistic_l1`: `{logistic} <%(logistic)s>`_ with L1 penalty.
-            .. code-block:: python
-
-                logistic_l1 = LogisticRegression(penalty='l1',
-                                                 solver='liblinear')
-
-        - `logistic_l2`: `{logistic} <%(logistic)s>`_ with L2 penalty
-            .. note::
-                Same as option `logistic`.
-
-        - `ridge_classifier`: `{rc} <%(ridge_classifier)s>`_.
-            .. code-block:: python
-
-                ridge_classifier = RidgeClassifierCV()
-
-        - `dummy_classifier`: `{dc} <%(dummy_classifier)s>`_.
-            .. code-block:: python
-
-                dummy = DummyClassifier(strategy='stratified',
-                                        random_state=0)
-
-""" % SKLEARN_LINKS
-
-docdict['regressor_options'] = """
-
-        - `ridge`: `Ridge regression <%(ridge)s>`_.
-            .. code-block:: python
-
-                ridge = RidgeCV()
-
-        - `ridge_regressor`: `Ridge regression <%(ridge)s>`_.
-            .. note::
-                Same option as `ridge`.
-
-        - `svr`: `Support vector regression <%(svr)s>`_.
-            .. code-block:: python
-
-                svr = SVR(kernel='linear',
-                          max_iter=1e4)
-
-        - `dummy_regressor`: `Dummy regressor <%(dummy_regressor)s>`_.
-            .. code-block:: python
-
-                dummy = DummyRegressor(strategy='mean')
-
-""" % SKLEARN_LINKS
-
-# mask_strategy
-docdict["mask_strategy"] = """
-mask_strategy : {'background', 'epi', 'whole-brain-template',\
-'gm-template', 'wm-template'}, optional
-    The strategy used to compute the mask:
-
-        - 'background': Use this option if your images present
-          a clear homogeneous background.
-        - 'epi': Use this option if your images are raw EPI images
-        - 'whole-brain-template': This will extract the whole-brain
-          part of your data by resampling the MNI152 brain mask for
-          your data's field of view.
-
-            .. note::
-                This option is equivalent to the previous 'template' option
-                which is now deprecated.
-
-        - 'gm-template': This will extract the gray matter part of your
-          data by resampling the corresponding MNI152 template for your
-          data's field of view.
-
-            .. versionadded:: 0.8.1
-
-        - 'wm-template': This will extract the white matter part of your
-          data by resampling the corresponding MNI152 template for your
-          data's field of view.
-
-            .. versionadded:: 0.8.1
 
 """
 

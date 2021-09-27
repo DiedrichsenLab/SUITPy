@@ -1,7 +1,9 @@
 """
 Downloading NeuroImaging datasets: utility functions
 
-source: Nilearn team.
+@author: maedbhking
+
+source: Nilearn
 https://github.com/nilearn/nilearn/blob/main/nilearn/datasets/utils.py
 """
 import os
@@ -22,7 +24,7 @@ import json
 
 import requests
 
-from .._utils import fill_doc
+from ._utils import fill_doc
 
 _REQUESTS_TIMEOUT = (15.1, 61)
 
