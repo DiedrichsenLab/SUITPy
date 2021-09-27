@@ -8,6 +8,7 @@ import SUITPy.flatmap as flatmap
 import numpy as np 
 
 def test_flatmap_map(): 
+    pass
     
 
 if __name__ == '__main__':
