@@ -21,14 +21,12 @@ Dependencies
 
 The required dependencies to use the software are:
 
-* Python >= 3.6,
+* python >= 3.6,
 * setuptools
-* Numpy >= 1.16
-* Nibabel >= 2.5
-* Pandas >= 0.24
+* numpy >= 1.16
+* nibabel >= 2.5
+* pandas >= 0.24
 * matplotlib >= 1.5.1
-
-If you want to run the tests, you need pytest >= 3.9 and pytest-cov for coverage reporting.
 
 Install
 =======

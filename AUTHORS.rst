@@ -15,11 +15,12 @@ The SUITPy core developers are:
 
 *Joern Diedrichsen
 *Maedbh King
+*Suzanne Witt
+
+Other contributors:
+
 *Carlos Hernandez-Castillo
 *Da Zhi
-
-Other contributors
-..................
 
 Some other past or present contributors are:
 
