@@ -441,9 +441,9 @@ def get_gifti_anatomical_struct(
     return anatStruct
 
 def plot(
-        data, surf=None, underlay=os.path.join(_surf_dir,'SUIT.shape.gii'),
+        data, surf=None, underlay='SUIT.shape.gii',
         undermap='Greys', underscale=[-1, 0.5], overlay_type='func', threshold=None,
-        cmap=None, label_names=None, cscale=None, borders=os.path.join(_surf_dir,'borders.txt'), alpha=1.0,
+        cmap=None, label_names=None, cscale=None, borders='borders.txt', alpha=1.0,
         outputfile=None, render='matplotlib', new_figure=False, colorbar=False, cbar_tick_format="%.2g"
         ):
     """
@@ -545,7 +545,11 @@ def plot(
 
     # Load underlay and assign color
     if type(underlay) is not np.ndarray:
-        underlay = nb.load(underlay).darrays[0].data
+        if os.path.isfile(underlay):
+            underlay = nb.load(underlay).darrays[0].data
+        else: 
+            underlay = os.path.join(os.path.join(_surf_dir, underlay))
+            underlay = nb.load(underlay).darrays[0].data
     underlay_color,_,_ = _map_color(faces=faces, data=underlay, cscale=underscale, cmap=undermap)
 
     # Combine underlay and overlay: For Nan overlay, let underlay shine through
@@ -556,7 +560,10 @@ def plot(
 
     # If present, get the borders
     if borders is not None:
-        borders = np.genfromtxt(borders, delimiter=',')
+        if os.path.isfile(underlay):
+            borders = np.genfromtxt(borders, delimiter=',')
+        else: 
+            borders = os.path.join(os.path.join(_surf_dir, borders))
 
     # Render with Matplotlib
     ax = _render_matplotlib(vertices, faces, face_color, borders, new_figure)
