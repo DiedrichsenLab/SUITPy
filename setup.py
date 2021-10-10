@@ -49,7 +49,7 @@ with open('README.rst') as fp:
     LONG_DESCRIPTION = fp.read()
 MAINTAINER = 'Maedbh King'
 MAINTAINER_EMAIL = 'maedbhking@berkeley.edu'
-URL = 'http://SUITPy.github.io'
+URL = 'https://github.com/DiedrichsenLab/SUITPy'
 LICENSE = 'MIT'
 DOWNLOAD_URL = 'http://SUITPy.github.io'
 VERSION = _VERSION_GLOBALS['__version__']
