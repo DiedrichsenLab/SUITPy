@@ -12,8 +12,8 @@ import requests
 import nibabel as nb
 import numpy as np
 
-from .utils import _get_dataset_dir, _fetch_files
-from ._utils import fill_doc
+from SUITPy.utils import _get_dataset_dir, _fetch_files
+from SUITPy._utils import fill_doc
 
 @fill_doc
 def fetch_king_2019(data='con', data_dir=None,
