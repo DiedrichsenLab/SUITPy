@@ -6,3 +6,4 @@ pytest
 pytest-cov
 lxml
 codecov
+scipy
