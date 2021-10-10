@@ -4,7 +4,7 @@ People
 ------
 
 This work is made available by a community of people, largely originating from
-Joern Diedrichsen's lab at `Western University <http://www.diedrichsenlab.org//>`_
+the diedrichsenlab lab at `Western University <http://www.diedrichsenlab.org//>`_
 
 .. _core_devs:
 
@@ -22,10 +22,6 @@ Other contributors:
 *Carlos Hernandez-Castillo
 *Da Zhi
 
-Some other past or present contributors are:
-
-*
-  
 Funding
 .......
 
