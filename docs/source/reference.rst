@@ -1,14 +1,14 @@
 Module and Function reference
 =============================
 
-Flatmap module
---------------
+Flatmap module reference
+------------------------
 
 .. automodule:: flatmap
    :members:
 
-Datasets module
---------------
+Datasets module reference
+-------------------------
 
 .. automodule:: atlas
    :members:

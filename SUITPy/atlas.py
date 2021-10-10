@@ -16,10 +16,10 @@ from .utils import _get_dataset_dir, _fetch_files
 from ._utils import fill_doc
 
 @fill_doc
-def fetch_king_2019(data='con', data_dir=None, 
+def fetch_king_2019(data='con', data_dir=None,
                     base_url=None, resume=True, verbose=1,
                     ):
-    
+
     """"Download and return file names for the King et al. (2019) atlas
     or contrast images set by `data`
 
@@ -40,7 +40,7 @@ def fetch_king_2019(data='con', data_dir=None,
     data : data dict
         Dictionary, contains keys:
         - data_dir: Absolute path of downloaded folder
-        - files: list of string. 
+        - files: list of string.
             Absolute paths of downloaded files on disk.
         - description: A short description of `data` and some references.
     References
@@ -73,7 +73,7 @@ def fetch_king_2019(data='con', data_dir=None,
     url = base_url + '/atlas_description.json'
     resp = requests.get(url)
     data_dict = json.loads(resp.text)
-    
+
     # get map names and description
     maps = data_dict['Maps']
     fdescr = data_dict['LongDesc']
@@ -93,14 +93,14 @@ def fetch_king_2019(data='con', data_dir=None,
     fpaths = _fetch_files(data_dir, files, resume=resume, verbose=verbose)
 
     return dict({'data_dir': data_dir,
-                'files': fpaths, 
+                'files': fpaths,
                 'description': fdescr})
 
 @fill_doc
-def fetch_buckner_2011(data_dir=None, base_url=None, 
+def fetch_buckner_2011(data_dir=None, base_url=None,
                     resume=True, verbose=1,
                     ):
-    
+
     """"Download and return file names for the Buckner et al. (2011) atlas
 
     The provided images are in SUIT and MNI spaces
@@ -117,7 +117,7 @@ def fetch_buckner_2011(data_dir=None, base_url=None,
     data : data dict
         Dictionary, contains keys:
         - data_dir: Absolute path of downloaded folder
-        - files: list of string. 
+        - files: list of string.
             Absolute paths of downloaded files on disk.
         - description: A short description of `data` and some references.
     References
@@ -142,7 +142,7 @@ def fetch_buckner_2011(data_dir=None, base_url=None,
     url = base_url + '/atlas_description.json'
     resp = requests.get(url)
     data_dict = json.loads(resp.text)
-    
+
     # get map names and description
     maps = data_dict['Maps']
     fdescr = data_dict['LongDesc']
@@ -161,11 +161,11 @@ def fetch_buckner_2011(data_dir=None, base_url=None,
     fpaths = _fetch_files(data_dir, files, resume=resume, verbose=verbose)
 
     return dict({'data_dir': data_dir,
-                'files': fpaths, 
+                'files': fpaths,
                 'description': fdescr})
 
 @fill_doc
-def fetch_diedrichsen_2009(data_dir=None, base_url=None, 
+def fetch_diedrichsen_2009(data_dir=None, base_url=None,
                     resume=True, verbose=1):
     """"Download and return file names for the Diedrichsen et al. (2009) atlas
 
@@ -183,7 +183,7 @@ def fetch_diedrichsen_2009(data_dir=None, base_url=None,
     data : data dict
         Dictionary, contains keys:
         - data_dir: Absolute path of downloaded folder
-        - files: list of string. 
+        - files: list of string.
             Absolute paths of downloaded files on disk.
         - description: A short description of `data` and some references.
     References
@@ -208,7 +208,7 @@ def fetch_diedrichsen_2009(data_dir=None, base_url=None,
     url = base_url + '/atlas_description.json'
     resp = requests.get(url)
     data_dict = json.loads(resp.text)
-    
+
     # get map names and description
     maps = data_dict['Maps']
     fdescr = data_dict['LongDesc']
@@ -227,11 +227,11 @@ def fetch_diedrichsen_2009(data_dir=None, base_url=None,
     fpaths = _fetch_files(data_dir, files, resume=resume, verbose=verbose)
 
     return dict({'data_dir': data_dir,
-                'files': fpaths, 
+                'files': fpaths,
                 'description': fdescr})
 
 @fill_doc
-def fetch_ji_2019(data_dir=None, base_url=None, 
+def fetch_ji_2019(data_dir=None, base_url=None,
                     resume=True, verbose=1):
     """"Download and return file names for the Ji et al. (2019) atlas
 
@@ -249,7 +249,7 @@ def fetch_ji_2019(data_dir=None, base_url=None,
     data : data dict
         Dictionary, contains keys:
         - data_dir: Absolute path of downloaded folder
-        - files: list of string. 
+        - files: list of string.
             Absolute paths of downloaded files on disk.
         - description: A short description of `data` and some references.
     References
@@ -274,7 +274,7 @@ def fetch_ji_2019(data_dir=None, base_url=None,
     url = base_url + '/atlas_description.json'
     resp = requests.get(url)
     data_dict = json.loads(resp.text)
-    
+
     # get map names and description
     maps = data_dict['Maps']
     fdescr = data_dict['LongDesc']
@@ -293,11 +293,11 @@ def fetch_ji_2019(data_dir=None, base_url=None,
     fpaths = _fetch_files(data_dir, files, resume=resume, verbose=verbose)
 
     return dict({'data_dir': data_dir,
-                'files': fpaths, 
+                'files': fpaths,
                 'description': fdescr})
 
 @fill_doc
-def fetch_xue_2021(data_dir=None, base_url=None, 
+def fetch_xue_2021(data_dir=None, base_url=None,
                     resume=True, verbose=1):
     """"Download and return file names for the Xue et al. (2021) atlas
 
@@ -315,7 +315,7 @@ def fetch_xue_2021(data_dir=None, base_url=None,
     data : data dict
         Dictionary, contains keys:
         - data_dir: Absolute path of downloaded folder
-        - files: list of string. 
+        - files: list of string.
             Absolute paths of downloaded files on disk.
         - description: A short description of `data` and some references.
     References
@@ -340,7 +340,7 @@ def fetch_xue_2021(data_dir=None, base_url=None,
     url = base_url + '/atlas_description.json'
     resp = requests.get(url)
     data_dict = json.loads(resp.text)
-    
+
     # get map names and description
     maps = data_dict['Maps']
     fdescr = data_dict['LongDesc']
@@ -359,5 +359,5 @@ def fetch_xue_2021(data_dir=None, base_url=None,
     fpaths = _fetch_files(data_dir, files, resume=resume, verbose=verbose)
 
     return dict({'data_dir': data_dir,
-                'files': fpaths, 
+                'files': fpaths,
                 'description': fdescr})

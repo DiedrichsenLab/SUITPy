@@ -5,8 +5,8 @@
 
 SUITPy Documentation
 ====================
-SUITPy is a Python toolbox dedicated to the analysis of imaging data of the human cerebellum. It provides a subset og the original Matlab version of the SUIT toolbox for Matlab (https://github.com/jdiedrichsen/suit).  
-Currently, only mapping of volume data to the flatmap and display of the flatmap are implemented. 
+SUITPy is a Python toolbox dedicated to the analysis of imaging data of the human cerebellum. It provides a subset og the original Matlab version of the SUIT toolbox for Matlab (https://github.com/jdiedrichsen/suit).
+Currently, only mapping of volume data to the flatmap and display of the flatmap are implemented.
 
 .. toctree::
    :maxdepth: 1
