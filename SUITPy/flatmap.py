@@ -54,10 +54,7 @@ def affine_transform(x1, x2, x3, M):
     y3 = np.multiply(M[2,0],x1) + np.multiply(M[2,1],x2) + np.multiply(M[2,2],x3) + M[2,3]
     return (y1,y2,y3)
 
-def coords_to_voxelidxs(
-    coords,
-    vol_def
-    ):
+def coords_to_voxelidxs(coords,vol_def):
     """
     Maps coordinates to linear voxel indices
 
@@ -68,8 +65,8 @@ def coords_to_voxelidxs(
             Nibabel object with attributes .affine (4x4 voxel to coordinate transformation matrix from the images to be sampled (1-based)) and shape (1x3 volume dimension in voxels)
 
     Returns:
-        linidxsrs (N-array or PxQ matrix):
-            Linear voxel indices
+        linidxsrs (np.ndarray):
+            N-array or PxQ matrix of Linear voxel indices
     """
     mat = np.array(vol_def.affine)
 

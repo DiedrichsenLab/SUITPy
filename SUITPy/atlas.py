@@ -35,6 +35,7 @@ def fetch_king_2019(data='con', data_dir=None,
         base_url of files to download (None results in default base_url).
     %(resume)s
     %(verbose)s
+
     Returns
     -------
     data : data dict
@@ -43,9 +44,7 @@ def fetch_king_2019(data='con', data_dir=None,
         - files: list of string.
             Absolute paths of downloaded files on disk.
         - description: A short description of `data` and some references.
-    References
-    ----------
-    .. footbibliography::
+
     Notes
     -----
      For more details, see
@@ -112,6 +111,7 @@ def fetch_buckner_2011(data_dir=None, base_url=None,
         base_url of files to download (None results in default base_url).
     %(resume)s
     %(verbose)s
+
     Returns
     -------
     data : data dict
@@ -120,9 +120,7 @@ def fetch_buckner_2011(data_dir=None, base_url=None,
         - files: list of string.
             Absolute paths of downloaded files on disk.
         - description: A short description of `data` and some references.
-    References
-    ----------
-    .. footbibliography::
+
     Notes
     -----
      For more details, see
@@ -186,9 +184,7 @@ def fetch_diedrichsen_2009(data_dir=None, base_url=None,
         - files: list of string.
             Absolute paths of downloaded files on disk.
         - description: A short description of `data` and some references.
-    References
-    ----------
-    .. footbibliography::
+
     Notes
     -----
      For more details, see
@@ -252,9 +248,7 @@ def fetch_ji_2019(data_dir=None, base_url=None,
         - files: list of string.
             Absolute paths of downloaded files on disk.
         - description: A short description of `data` and some references.
-    References
-    ----------
-    .. footbibliography::
+
     Notes
     -----
      For more details, see
@@ -310,6 +304,7 @@ def fetch_xue_2021(data_dir=None, base_url=None,
         base_url of files to download (None results in default base_url).
     %(resume)s
     %(verbose)s
+
     Returns
     -------
     data : data dict
@@ -318,9 +313,7 @@ def fetch_xue_2021(data_dir=None, base_url=None,
         - files: list of string.
             Absolute paths of downloaded files on disk.
         - description: A short description of `data` and some references.
-    References
-    ----------
-    .. footbibliography::
+
     Notes
     -----
      For more details, see
