@@ -14,6 +14,7 @@ import os
 import sys
 import nibabel as nb
 import matplotlib.pyplot as plt
+import matplotlib as mpl
 import scipy.stats as ss
 import matplotlib
 from matplotlib.patches import Polygon
@@ -27,7 +28,12 @@ import warnings
 _base_dir = os.path.dirname(os.path.abspath(__file__))
 _surf_dir = os.path.join(_base_dir, 'surfaces')
 
-def affine_transform(x1, x2, x3, M):
+def affine_transform(
+    x1, 
+    x2, 
+    x3, 
+    M
+    ):
     """
     Returns affine transform of x
 
@@ -96,7 +102,7 @@ def coords_to_voxelidxs(
     coords = np.reshape(coords,[3,-1])
     coords = np.vstack([coords,np.ones((1,rs[1]))])
 
-    ijk = np.linalg.solve(mat,coords)
+    ijk = np.linalgifti.solve(mat,coords)
     ijk = np.rint(ijk)[0:3,:]
     # Now set the indices out of range to -1
     for i in range(3):
@@ -372,13 +378,13 @@ def make_label_gifti(
     return gifti
 
 def get_gifti_column_names(
-    G
+    gifti
     ):
     """
-    Returns the column names from a functional gifti file.
+    Returns the column names from a gifti file (*.label.gii or *.func.gii)
 
     Args:
-        G (gifti image):
+        gifti (gifti image):
             Nibabel Gifti image 
 
     Returns:
@@ -387,45 +393,57 @@ def get_gifti_column_names(
 
     @author: jdiedrichsen 
     """
-    N = len(G.darrays)
+    N = len(gifti.darrays)
     names = []
     for n in range(N):
-        for i in range(len(G.darrays[n].meta.data)):
-            if 'Name' in G.darrays[n].meta.data[i].name:
-                names.append(G.darrays[n].meta.data[i].value)
+        for i in range(len(gifti.darrays[n].meta.data)):
+            if 'Name' in gifti.darrays[n].meta.data[i].name:
+                names.append(gifti.darrays[n].meta.data[i].value)
     return names
 
 def get_gifti_colortable(
-    G
+    gifti,
+    ignore_0=True
     ):
-    """
-    Returns the RGBA color table from a label gifti.
+    """Returns the RGBA color table and matplotlib cmap from gifti object (*.label.gii)
 
     Args:
-        G (gifti image):
+        gifti (gifti image):
             Nibabel Gifti image 
 
     Returns:
-        A (np.ndarray):
+        rgba (np.ndarray):
             N x 4 of RGB values
+        
+        cmap (mpl obj):
+            matplotlib colormap
+
+    @author: maedbhking
     """
-    labels = G.labeltable.labels
-    N = len(labels)
-    colors = np.zeros((N,4))
-    for i in range(N):
-        colors[i,:]=labels[i].rgba
-    return colors
+    labels = gifti.labeltable.labels
+
+    rgba = np.zeros((len(labels),4))
+    for i,label in enumerate(labels):
+        rgba[i,] = labels[i].rgba
+    
+    if ignore_0:
+        rgba = rgba[1:]
+        labels = labels[1:]
+
+    cmap = LinearSegmentedColormap.from_list('mylist', rgba, N=len(rgba))
+    mpl.cm.register_cmap("mycolormap", cmap)
+
+    return rgba, cmap
 
 def get_gifti_anatomical_struct(
-    G
+    gifti
     ):
     """
-    Returns the primary anatomical structure for a gifti object.
+    Returns the primary anatomical structure for a gifti object (*.label.gii or *.func.gii)
 
     Args:
-        G (gifti image):
+        gifti (gifti image):
             Nibabel Gifti image 
-
 
     Returns:
         anatStruct (string):
@@ -433,12 +451,66 @@ def get_gifti_anatomical_struct(
 
     @author: jdiedrichsen (Python conversion: switt)
     """
-    N = len(G._meta.data)
+    N = len(gifti._meta.data)
     anatStruct = []
     for i in range(N):
-        if 'AnatomicalStructurePrimary' in G._meta.data[i].name:
-            anatStruct.append(G._meta.data[i].value)
+        if 'AnatomicalStructurePrimary' in gifti._meta.data[i].name:
+            anatStruct.append(gifti._meta.data[i].value)
     return anatStruct
+
+def get_gifti_labels(
+    gifti
+    ):
+    """Returns labels from gifti object (*.label.gii)
+
+    Args:
+        gifti (gifti image):
+            Nibabel Gifti image 
+
+    Returns:
+        labels (list):
+            labels from gifti object
+    @author: maedbhking
+    """
+    # labels = img.labeltable.get_labels_as_dict().values()
+    label_dict = gifti.labeltable.get_labels_as_dict()
+    labels = list(label_dict.values())
+    return labels
+
+def save_colorbar(
+    gifti, 
+    outpath
+    ):
+    """plots colorbar for gifti object (*.label.gii)
+        
+    Args:
+        gifti (gifti image):
+            Nibabel Gifti image 
+        outpath (str):
+            outpath for colorbar
+    
+    @author: maedbhking
+    """
+    _, ax = plt.subplots(figsize=(1,10)) # figsize=(1, 10)
+
+    _, cmap = get_gifti_colortable(gifti)
+    labels = get_gifti_labels(gifti)
+
+    bounds = np.arange(cmap.N + 1)
+
+    norm = mpl.colors.BoundaryNorm(bounds, cmap.N)
+    cb3 = mpl.colorbar.ColorbarBase(ax, cmap=cmap.reversed(cmap), 
+                                    norm=norm,
+                                    ticks=bounds,
+                                    format='%s',
+                                    orientation='vertical',
+                                    )
+    cb3.set_ticklabels(labels[::-1])  
+    cb3.ax.tick_params(size=0)
+    cb3.set_ticks(bounds+.5)
+    cb3.ax.tick_params(axis='y', which='major', labelsize=30)
+
+    plt.savefig(outpath, bbox_inches='tight', dpi=150)
 
 def plot(
         data, surf=None, underlay='SUIT.shape.gii',
@@ -509,7 +581,7 @@ def plot(
     # If it is a giftiImage, figure out colormap
     if type(data) is nb.gifti.gifti.GiftiImage:
         if overlay_type == 'label':
-            cmap = get_gifti_colortable(data)
+            _, cmap = get_gifti_colortable(data)
             if label_names is None:
                 labels = data.labeltable
                 label_names = list(labels.get_labels_as_dict().values())
@@ -721,6 +793,8 @@ def _colorbar_func(
             Controls how to format the tick labels of the colorbar.
             Ex: use "%i" to display as integers.
             Default='%.2g' for scientific notation.
+
+    @author: maedbhking
     """
     nb_ticks = 5
     # ...unless we are dealing with integers with a small range
