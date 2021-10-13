@@ -6,7 +6,7 @@ SUITPy
 Analysis and visualization of cerebellar imaging data.
 =======
 
-The package provides some basic functionality of the original SUIT toolbox for Matlab(https://github.com/jdiedrichsen/suit).
+The package provides some basic functionality of the original SUIT toolbox for Matlab (https://github.com/jdiedrichsen/suit).
 Currently, only mapping of volume data to the flatmap and display of the flatmap are implemented.
 
 Important links

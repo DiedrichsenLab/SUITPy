@@ -1,5 +1,10 @@
 #! /usr/bin/env python
 
+"""
+@author: maedbhking
+based heavily on flexible functionality of nilearn `setup.py`
+"""
+
 descr = """A python package for cerebellar neuroimaging..."""
 
 import sys

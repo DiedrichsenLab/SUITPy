@@ -3,6 +3,7 @@
 SUITPy version, required package versions, and utilities for checking
 
 @author: maedbhking
+based heavily on `nilearn.version`
 """
 
 __version__ = '1.0.1'
