@@ -16,3 +16,4 @@ joblib
 matplotlib
 ipykernel
 nbsphinx
+scipy

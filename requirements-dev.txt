@@ -8,3 +8,4 @@ nibabel
 numpy
 cython
 requests
+scipy

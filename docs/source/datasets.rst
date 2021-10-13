@@ -1,5 +1,5 @@
 Dataset and Import Module
-==============
+=========================
 
 The atlas module of the SUIT toolbox contains functions that download cerebellar atlases and contrast images from online open-source repositories (e.g., King et al., 2019; Ji et al., 2019). Both nifti and gifti files are downloaded but note that gifti files should be used for visualization purposes only.
 
@@ -19,6 +19,3 @@ For details on cerebellar projects currently included, see:
 * Diedrichsen, J., Balsters, J. H., Flavell, J., Cussans, E., & Ramnani, N. (2009). A probabilistic atlas of the human cerebellum. Neuroimage.
 * Diedrichsen, J., Maderwald, S., Kuper, M., Thurling, M., Rabe, K., Gizewski, E. R., et al. (2011). Imaging the deep cerebellar nuclei: A probabilistic atlas and normalization procedure. Neuroimage.
 
-Did you know?
--------------
-We also have an online version of our cerebellar atlases. Check it out at http://www.diedrichsenlab.org/imaging/AtlasViewer/index.html.

@@ -23,11 +23,11 @@ a command prompt::
     pip install -U --user SUITPy
 
 Install for developers
----------------------- 
+----------------------
 
 Alternatively you can also fork or clone the repository at http://github.com/diedrichsenlab/SUITPy to a desired location (DIR). Simply include the lines::
 
     PYTHONPATH=/DIR/SUITPy:${PYTHONPATH}
-    export PYTHONPATH 
+    export PYTHONPATH
 
-To your ``.bash.profile`` or other shell startup file. 
+To your ``.bash.profile`` or other shell startup file.

@@ -6,15 +6,15 @@ SUITPy
 Analysis and visualization of cerebellar imaging data.
 =======
 
-The package provides some basic functionality of the original SUIT toolbox for Matlab(https://github.com/jdiedrichsen/suit). 
-Currently, only mapping of volume data to the flatmap and display of the flatmap are implemented. 
+The package provides some basic functionality of the original SUIT toolbox for Matlab(https://github.com/jdiedrichsen/suit).
+Currently, only mapping of volume data to the flatmap and display of the flatmap are implemented.
 
 Important links
 ===============
 
 - SUIT website: http://diedrichsenlab.org/imaging/SUIT.htm
 - Official source code repository: https://github.com/SUITPy/
-- HTML documentation (stable release): https://suitpy.readthedocs.io/
+- HTML documentation (latest release): https://suitpy.readthedocs.io/
 
 Dependencies
 ============
@@ -27,6 +27,7 @@ The required dependencies to use the software are:
 * nibabel >= 2.5
 * pandas >= 0.24
 * matplotlib >= 1.5.1
+* scipy
 
 Install
 =======
@@ -42,13 +43,13 @@ https://suitpy.readthedocs.io/en/latest/install.html
 
 
 Licence and Acknowledgements
-=========================== 
+===========================
 The Python version of the SUIT toolbox has been developed by the Diedrichsenlab including J. Diedrichsen, M. King, D. Zhi, C. Hernandez-Castillo, S. Witt and others. It is distributed under MIT License, meaning that it can be freely used and re-used, as long as proper attribution in form of acknowledgments and links (for online use) or citations (in publications) are given. The relevant references are:
 
-SUIT normalisation and template: 
+SUIT normalisation and template:
 
-- Diedrichsen, J. (2006). A spatially unbiased atlas template of the human cerebellum. Neuroimage. 33(1), 127-138. 
+- Diedrichsen, J. (2006). A spatially unbiased atlas template of the human cerebellum. Neuroimage. 33(1), 127-138.
 
 Surface-based representation and flatmap
 
-- Diedrichsen, J. & Zotow, E. (2015). Surface-based display of volume-averaged cerebellar data. PLOSOne. 
+- Diedrichsen, J. & Zotow, E. (2015). Surface-based display of volume-averaged cerebellar data. PLOSOne.
