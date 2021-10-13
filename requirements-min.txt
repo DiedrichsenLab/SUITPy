@@ -1,9 +1,6 @@
-numpy==1.16
-pandas==0.24.0
-joblib==0.12
-nibabel==2.5.0
-pytest
-pytest-cov
-lxml
-codecov
-scipy
+numpy==1.20.3
+pandas==0.25.0
+joblib==1.0.1
+nibabel==3.2.1
+matplotlib==3.4.2
+scipy==1.6.3

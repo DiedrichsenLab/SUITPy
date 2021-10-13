@@ -21,13 +21,13 @@ Dependencies
 
 The required dependencies to use the software are:
 
-* python >= 3.6,
+* python >= 3.6
 * setuptools
 * numpy >= 1.16
 * nibabel >= 2.5
 * pandas >= 0.24
 * matplotlib >= 1.5.1
-* scipy
+* scipy >=1.0
 
 Install
 =======
