@@ -16,7 +16,6 @@ import nibabel as nb
 import matplotlib.pyplot as plt
 import matplotlib as mpl
 import scipy.stats as ss
-import matplotlib
 from matplotlib.patches import Polygon
 from matplotlib.collections import PatchCollection
 from matplotlib.colors import ListedColormap
@@ -519,7 +518,7 @@ def plot(
         outputfile=None, render='matplotlib', new_figure=False, colorbar=False, cbar_tick_format="%.2g"
         ):
     """
-    Visualised cerebellar cortical acmake tivty on a flatmap in a matlab window
+    Visualize cerebellar activity on a flatmap
 
     Args:
         data (np.array, giftiImage, or name of gifti file):

@@ -51,7 +51,7 @@ MAINTAINER = 'Maedbh King'
 MAINTAINER_EMAIL = 'maedbhking@berkeley.edu'
 URL = 'https://github.com/DiedrichsenLab/SUITPy'
 LICENSE = 'MIT'
-DOWNLOAD_URL = 'http://SUITPy.github.io'
+DOWNLOAD_URL = 'https://suitpy.readthedocs.io/'
 VERSION = _VERSION_GLOBALS['__version__']
 
 
@@ -89,10 +89,7 @@ if __name__ == "__main__":
           ],
           packages=find_packages(),
           package_data={
-              'SUITPy.datasets.data': ['*.nii.gz', '*.csv', '*.txt'],
-              'SUITPy.datasets.data.surface': ['*.gii'],
-              'SUITPy.tests.data': ['*'],
-              'SUITPy.datasets.description': ['*.rst'],
+              'SUITPy.surfaces': ['*.surf.gii', '*.C.scene', '*.shape.gii', '*.txt'],
           },
           install_requires=list_required_packages(),
           python_requires='>=3.6',
