@@ -100,7 +100,7 @@ def coords_to_voxelidxs(
     coords = np.reshape(coords,[3,-1])
     coords = np.vstack([coords,np.ones((1,rs[1]))])
 
-    ijk = np.linalgifti.solve(mat,coords)
+    ijk = np.linalg.solve(mat,coords)
     ijk = np.rint(ijk)[0:3,:]
     # Now set the indices out of range to -1
     for i in range(3):
@@ -617,11 +617,9 @@ def plot(
 
     # Load underlay and assign color
     if type(underlay) is not np.ndarray:
-        if os.path.isfile(underlay):
-            underlay = nb.load(underlay).darrays[0].data
-        else:
+        if not os.path.isfile(underlay):
             underlay = os.path.join(os.path.join(_surf_dir, underlay))
-            underlay = nb.load(underlay).darrays[0].data
+        underlay = nb.load(underlay).darrays[0].data
     underlay_color,_,_ = _map_color(faces=faces, data=underlay, cscale=underscale, cmap=undermap)
 
     # Combine underlay and overlay: For Nan overlay, let underlay shine through
@@ -632,10 +630,9 @@ def plot(
 
     # If present, get the borders
     if borders is not None:
-        if os.path.isfile(underlay):
-            borders = np.genfromtxt(borders, delimiter=',')
-        else:
+        if not os.path.isfile(borders):
             borders = os.path.join(os.path.join(_surf_dir, borders))
+        borders = np.genfromtxt(borders, delimiter=',')
 
     # Render with Matplotlib
     ax = _render_matplotlib(vertices, faces, face_color, borders, new_figure)
