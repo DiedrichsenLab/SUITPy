@@ -19,10 +19,7 @@ from SUITPy._utils import fill_doc
 def fetch_king_2019(data='con', data_dir=None,
                     base_url=None, resume=True, verbose=1,
                     ):
-
-    """"Download and return file names for the King et al. (2019) atlas
-    or contrast images set by `data`
-
+    """Download and return file names for the King et al. (2019) atlas or contrast images set by `data`.
     The provided images are in SUIT and MNI spaces
 
     Parameters
@@ -47,10 +44,10 @@ def fetch_king_2019(data='con', data_dir=None,
 
     Notes
     -----
-     For more details, see
+    For more details, see
     https://github.com/DiedrichsenLab/cerebellar_atlases/tree/master/King_2019
-    Licence: MIT.
     """
+
     valid_data = ['atl', 'con']
 
     if data=='atl':
@@ -99,9 +96,7 @@ def fetch_king_2019(data='con', data_dir=None,
 def fetch_buckner_2011(data_dir=None, base_url=None,
                     resume=True, verbose=1,
                     ):
-
-    """"Download and return file names for the Buckner et al. (2011) atlas
-
+    """Download and return file names for the Buckner et al. (2011) atlas
     The provided images are in SUIT and MNI spaces
 
     Parameters
@@ -123,10 +118,10 @@ def fetch_buckner_2011(data_dir=None, base_url=None,
 
     Notes
     -----
-     For more details, see
+    For more details, see
     https://github.com/DiedrichsenLab/cerebellar_atlases/tree/master/Buckner_2011
-    Licence: MIT.
     """
+
     suffixes = ['desc-confid_space-SUIT.nii', 'dseg.label.gii', 'space-MNI_dseg.nii', 'space-SUIT_dseg.nii']
 
     if base_url is None:
@@ -165,7 +160,7 @@ def fetch_buckner_2011(data_dir=None, base_url=None,
 @fill_doc
 def fetch_diedrichsen_2009(data_dir=None, base_url=None,
                     resume=True, verbose=1):
-    """"Download and return file names for the Diedrichsen et al. (2009) atlas
+    """Download and return file names for the Diedrichsen et al. (2009) atlas
 
     The provided images are in SUIT and MNI spaces
 
@@ -187,10 +182,10 @@ def fetch_diedrichsen_2009(data_dir=None, base_url=None,
 
     Notes
     -----
-     For more details, see
+    For more details, see
     https://github.com/DiedrichsenLab/cerebellar_atlases/tree/master/Diedrichsen_2009
-    Licence: MIT.
     """
+
     suffixes = ['desc-confid_space-SUIT.nii', 'dseg.label.gii', 'space-MNI_dseg.nii', 'space-SUIT_dseg.nii']
 
     if base_url is None:
@@ -229,8 +224,7 @@ def fetch_diedrichsen_2009(data_dir=None, base_url=None,
 @fill_doc
 def fetch_ji_2019(data_dir=None, base_url=None,
                     resume=True, verbose=1):
-    """"Download and return file names for the Ji et al. (2019) atlas
-
+    """Download and return file names for the Ji et al. (2019) atlas
     The provided images are in SUIT and MNI spaces
 
     Parameters
@@ -251,10 +245,10 @@ def fetch_ji_2019(data_dir=None, base_url=None,
 
     Notes
     -----
-     For more details, see
+    For more details, see
     https://github.com/DiedrichsenLab/cerebellar_atlases/tree/master/Ji_2019
-    Licence: MIT.
     """
+
     suffixes = ['dseg.label.gii', 'space-MNI_dseg.nii', 'space-SUIT_dseg.nii']
 
     if base_url is None:
@@ -318,8 +312,8 @@ def fetch_xue_2021(data_dir=None, base_url=None,
     -----
      For more details, see
     https://github.com/DiedrichsenLab/cerebellar_atlases/tree/master/Xue_2021
-    Licence: MIT.
     """
+
     suffixes = ['dseg.label.gii', 'space-MNI_dseg.nii', 'space-SUIT_dseg.nii']
 
     if base_url is None:

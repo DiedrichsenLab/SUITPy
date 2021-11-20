@@ -120,8 +120,6 @@ def vol_to_surf(
     the variable 'stats'. For functional activation, use 'mean' or
     'nanmean'. For discrete label data, use 'mode'.
 
-    @author joern.diedrichsen@googlemail.com, Feb 2019 (Python conversion: switt)
-
     Args:
         volumes (list or nib obj):
             List of filenames/nib objs, or nib obj to be mapped
@@ -229,8 +227,6 @@ def make_func_gifti(
     ):
     """Generates a function GiftiImage from a numpy array
 
-    @author joern.diedrichsen@googlemail.com, Feb 2019 (Python conversion: switt)
-
     Args:
         data (np.array):
              num_vert x num_col data
@@ -284,8 +280,6 @@ def make_label_gifti(
                     label_RGBA=[]
                     ):
     """Generates a label GiftiImage from a numpy array
-
-    @author joern.diedrichsen@googlemail.com, Feb 2019 (Python conversion: switt)
 
     Args:
         data (np.array):
@@ -368,11 +362,8 @@ def make_label_gifti(
     gifti.labeltable.labels.extend(E_all)
     return gifti
 
-def get_gifti_column_names(
-    G
-    ):
+def get_gifti_column_names(G):
     """Returns the column names from a functional gifti file.
-    @author: jdiedrichsen
 
     Args:
         G (gifti image):
@@ -391,9 +382,7 @@ def get_gifti_column_names(
                 names.append(G.darrays[n].meta.data[i].value)
     return names
 
-def get_gifti_colortable(
-    G
-    ):
+def get_gifti_colortable(G):
     """Returns the RGBA color table from a label gifti.
 
     Args:
@@ -411,9 +400,7 @@ def get_gifti_colortable(
         colors[i,:]=labels[i].rgba
     return colors
 
-def get_gifti_anatomical_struct(
-    G
-    ):
+def get_gifti_anatomical_struct(G):
     """
     Returns the primary anatomical structure for a gifti object.
 
@@ -426,7 +413,6 @@ def get_gifti_anatomical_struct(
         anatStruct (string):
             AnatomicalStructurePrimary attribute from gifti object
 
-    @author: jdiedrichsen (Python conversion: switt)
     """
     N = len(G._meta.data)
     anatStruct = []
@@ -487,7 +473,6 @@ def plot(
         ax (matplotlib.axis)
             If render is matplotlib, the function returns the axis
 
-        @author joern.diedrichsen@googlemail.com, Feb 2019 (Python conversion: switt, maedbhking)
     """
     # default directory
     if surf is None:
@@ -598,7 +583,6 @@ def _map_color(
              only data x<lower and x>upper will be plotted
             if one value is given (-inf) is assumed for the lower
 
-        @author: maedbhking
     """
 
     # When continuous data, scale and threshold
@@ -676,7 +660,9 @@ def _colorbar_label(
         label_names (list)
             List of strings for label names
 
-    @author: maedbhking
+    Returns:
+        cbar (matplotlib.colorbar)
+            Colorbar object
     """
     # check if there is a 0 label and adjust colorbar accordingly
     if cscale[0]==0:
@@ -740,13 +726,7 @@ def _colorbar_func(
 
     return cbar
 
-def _render_matplotlib(
-    vertices,
-    faces,
-    face_color,
-    borders,
-    new_figure
-    ):
+def _render_matplotlib(vertices,faces,face_color,borders,new_figure):
     """
     Render the data in matplotlib: This is segmented to allow for openGL renderer
 
@@ -762,7 +742,9 @@ def _render_matplotlib(
         new_figure (bool)
             Create new Figure or render in currrent axis
 
-    @author: jdiedrichsen, maedbhking
+    Returns:
+        ax (matplotlib.axes)
+            Axis that was used to render the axis
     """
     patches = []
     for i in range(faces.shape[0]):
