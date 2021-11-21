@@ -1,23 +1,18 @@
-
-	.. -*- mode: rst -*-
-
-SUITPy
-
-Analysis and visualization of cerebellar imaging data.
-=======
+SUITPy: Analysis and visualization of cerebellar imaging data.
+==============================================================
 
 The package provides some basic functionality of the original SUIT toolbox for Matlab (https://github.com/jdiedrichsen/suit).
 Currently, only mapping of volume data to the flatmap and display of the flatmap are implemented.
 
 Important links
-===============
+---------------
 
 - SUIT website: http://diedrichsenlab.org/imaging/SUIT.htm
 - Official source code repository: https://github.com/SUITPy/
 - HTML documentation (latest release): https://suitpy.readthedocs.io/
 
 Dependencies
-============
+------------
 
 The required dependencies to use the software are:
 
@@ -30,7 +25,7 @@ The required dependencies to use the software are:
 * scipy >=1.0
 
 Install
-=======
+-------
 
 First make sure you have installed all the dependencies listed above.
 Then you can install SUITPy by running the following command in
@@ -43,7 +38,7 @@ https://suitpy.readthedocs.io/en/latest/install.html
 
 
 Licence and Acknowledgements
-===========================
+----------------------------
 The Python version of the SUIT toolbox has been developed by the Diedrichsenlab including J. Diedrichsen, M. King, D. Zhi, C. Hernandez-Castillo, S. Witt and others. It is distributed under MIT License, meaning that it can be freely used and re-used, as long as proper attribution in form of acknowledgments and links (for online use) or citations (in publications) are given. The relevant references are:
 
 SUIT normalisation and template:
