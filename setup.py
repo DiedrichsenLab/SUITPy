@@ -71,7 +71,7 @@ if __name__ == "__main__":
           description=DESCRIPTION,
           license=LICENSE,
           url=URL,
-          version=1.0.3,
+          version=VERSION,
           download_url=DOWNLOAD_URL,
           long_description=LONG_DESCRIPTION,
           zip_safe=False,  # the package can run out of an .egg file
