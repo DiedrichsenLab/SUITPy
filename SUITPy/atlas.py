@@ -185,8 +185,7 @@ def fetch_diedrichsen_2009(data_dir=None, base_url=None,
     For more details, see
     https://github.com/DiedrichsenLab/cerebellar_atlases/tree/master/Diedrichsen_2009
     """
-
-    suffixes = ['desc-confid_space-SUIT.nii', 'dseg.label.gii', 'space-MNI_dseg.nii', 'space-SUIT_dseg.nii']
+    suffixes = ['dseg.label.gii', 'space-MNI_dseg.nii', 'space-SUIT_dseg.nii']
 
     if base_url is None:
         base_url = ('https://github.com/DiedrichsenLab/cerebellar_atlases/raw/master/Diedrichsen_2009')
@@ -207,6 +206,10 @@ def fetch_diedrichsen_2009(data_dir=None, base_url=None,
     # get filename for maps
     maps_full = []
     for map in maps:
+        if 'desc-confid' in map:
+                suffixes = ['space-SUIT.nii', 'space-MNI.nii']
+        else:
+            suffixes = ['dseg.label.gii', 'space-MNI_dseg.nii', 'space-SUIT_dseg.nii']
         for suffix in suffixes:
             maps_full.append(f'{map}_{suffix}')
 

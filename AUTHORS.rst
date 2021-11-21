@@ -22,10 +22,6 @@ Other contributors:
 *Carlos Hernandez-Castillo
 *Da Zhi
 
-Funding
-.......
-
-
 .. _citing:
 
 Citing SUITPy

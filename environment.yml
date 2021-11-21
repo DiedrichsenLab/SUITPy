@@ -4,8 +4,11 @@ channels:
 dependencies:
     - pip
     - numpy
+    - scipy
     - matplotlib
+    - nibabel
     - pandas
+    - scikit-learn
     - joblib
     - pytest
     - pytest-cov

@@ -1,5 +1,10 @@
 #! /usr/bin/env python
 
+"""
+@author: maedbhking
+based heavily on flexible functionality of nilearn `setup.py`
+"""
+
 descr = """A python package for cerebellar neuroimaging..."""
 
 import sys
@@ -52,6 +57,7 @@ MAINTAINER_EMAIL = 'maedbhking@berkeley.edu'
 URL = 'https://github.com/DiedrichsenLab/SUITPy'
 LICENSE = 'MIT'
 DOWNLOAD_URL = 'https://github.com/DiedrichsenLab/SUITPy/archive/refs/tags/v1.0.3.tar.gz'
+VERSION = _VERSION_GLOBALS['__version__']
 
 
 if __name__ == "__main__":
@@ -73,7 +79,6 @@ if __name__ == "__main__":
               'Intended Audience :: Science/Research',
               'Intended Audience :: Developers',
               'License :: OSI Approved',
-              'Programming Language :: C',
               'Programming Language :: Python',
               'Topic :: Software Development',
               'Topic :: Scientific/Engineering',
@@ -88,10 +93,7 @@ if __name__ == "__main__":
           ],
           packages=find_packages(),
           package_data={
-              'SUITPy.datasets.data': ['*.nii.gz', '*.csv', '*.txt'],
-              'SUITPy.datasets.data.surface': ['*.gii'],
-              'SUITPy.tests.data': ['*'],
-              'SUITPy.datasets.description': ['*.rst'],
+              'SUITPy.surfaces': ['*.surf.gii', '*.C.scene', '*.shape.gii', '*.txt'],
           },
           install_requires=list_required_packages(),
           python_requires='>=3.6',

@@ -3,10 +3,13 @@
 SUITPy version, required package versions, and utilities for checking
 
 @author: maedbhking
+based heavily on `nilearn.version`
 """
 
+__version__ = '1.0.1'
+
 _SUITPy_INSTALL_MSG = 'See %s for installation information.' % (
-    'http://SUITPy.github.io/introduction.html#installation')
+    'https://suitpy.readthedocs.io/en/latest/install.html#installation')
 
 # This is a tuple to preserve order, so that dependencies are checked
 #   in some meaningful order (more => less 'core').
@@ -17,14 +20,18 @@ REQUIRED_MODULE_METADATA = (
         'install_info': _SUITPy_INSTALL_MSG}),
     ('nibabel', {
         'min_version': '2.5',
-        'required_at_installation': False}),
+        'required_at_installation': True}),
     ('pandas', {
         'min_version': '0.24.0',
         'required_at_installation': True,
         'install_info': _SUITPy_INSTALL_MSG}),
     ("requests", {
         "min_version": "2",
-        "required_at_installation": False
+        "required_at_installation": True
+    }),
+    ("scipy", {
+        "min_version": "1.0",
+        "required_at_installation": True
     })
 )
 
