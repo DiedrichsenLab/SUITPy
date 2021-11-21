@@ -51,8 +51,7 @@ MAINTAINER = 'Maedbh King'
 MAINTAINER_EMAIL = 'maedbhking@berkeley.edu'
 URL = 'https://github.com/DiedrichsenLab/SUITPy'
 LICENSE = 'MIT'
-DOWNLOAD_URL = 'http://SUITPy.github.io'
-VERSION = _VERSION_GLOBALS['__version__']
+DOWNLOAD_URL = 'https://github.com/DiedrichsenLab/SUITPy/archive/refs/tags/v1.0.3.tar.gz'
 
 
 if __name__ == "__main__":
@@ -66,7 +65,7 @@ if __name__ == "__main__":
           description=DESCRIPTION,
           license=LICENSE,
           url=URL,
-          version=VERSION,
+          version=1.0.3,
           download_url=DOWNLOAD_URL,
           long_description=LONG_DESCRIPTION,
           zip_safe=False,  # the package can run out of an .egg file
