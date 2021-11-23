@@ -6,7 +6,7 @@ SUITPy version, required package versions, and utilities for checking
 based heavily on `nilearn.version`
 """
 
-__version__ = '1.0.3'
+__version__ = '1.0.4'
 
 _SUITPy_INSTALL_MSG = 'See %s for installation information.' % (
     'https://suitpy.readthedocs.io/en/latest/install.html#installation')

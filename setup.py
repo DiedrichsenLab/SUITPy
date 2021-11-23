@@ -56,7 +56,7 @@ MAINTAINER = 'Maedbh King'
 MAINTAINER_EMAIL = 'maedbhking@berkeley.edu'
 URL = 'https://github.com/DiedrichsenLab/SUITPy'
 LICENSE = 'MIT'
-DOWNLOAD_URL = 'https://github.com/DiedrichsenLab/SUITPy/archive/refs/tags/v1.0.3.tar.gz'
+DOWNLOAD_URL = 'https://github.com/DiedrichsenLab/SUITPy/archive/refs/tags/v1.0.4.tar.gz'
 VERSION = _VERSION_GLOBALS['__version__']
 
 
@@ -93,7 +93,7 @@ if __name__ == "__main__":
           ],
           packages=find_packages(),
           package_data={
-              'SUITPy.surfaces': ['*.surf.gii', '*.C.scene', '*.shape.gii', '*.txt'],
+              'SUITPy': ['surfaces/*.surf.gii', 'surfaces/*.C.scene', '.surfaces/*.shape.gii', 'surfaces/*.txt'],
           },
           install_requires=list_required_packages(),
           python_requires='>=3.6',
