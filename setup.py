@@ -93,7 +93,7 @@ if __name__ == "__main__":
           ],
           packages=find_packages(),
           package_data={
-              'SUITPy': ['surfaces/*.surf.gii', 'surfaces/*.C.scene', '.surfaces/*.shape.gii', 'surfaces/*.txt'],
+              'SUITPy': ['surfaces/*.surf.gii', 'surfaces/*.C.scene', 'surfaces/*.shape.gii', 'surfaces/*.txt'],
           },
           install_requires=list_required_packages(),
           python_requires='>=3.6',
