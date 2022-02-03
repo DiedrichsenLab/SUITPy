@@ -13,6 +13,7 @@ Currently, only mapping of volume data to the flatmap and display of the flatmap
    :caption: Contents:
 
    install.rst
+   reslice.rst
    flatmap.rst
    datasets.rst
    reference.rst

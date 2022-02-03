@@ -1,6 +1,13 @@
 Module and Function reference
 =============================
 
+Reslice module reference
+------------------------
+
+.. automodule:: reslice
+   :members:
+
+      
 Flatmap module reference
 ------------------------
 
