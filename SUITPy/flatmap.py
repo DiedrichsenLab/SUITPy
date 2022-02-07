@@ -494,8 +494,9 @@ def save_colorbar(
 
 def plot(
         data, surf=None, underlay='SUIT.shape.gii',
-        undermap='Greys', underscale=[-1, 0.5], overlay_type='func', threshold=None,
-        cmap=None, label_names=None, cscale=None, borders='borders.txt', alpha=1.0,
+        undermap='Greys', underscale=[-1, 0.5], overlay_type='func', threshold=None, cmap=None, label_names=None, cscale=None, 
+        borders='borders.txt', bordercolor = 'k', bordersize = 2,
+        alpha=1.0,
         outputfile=None, render='matplotlib', new_figure=False, colorbar=False, cbar_tick_format="%.2g"
         ):
     """
@@ -523,6 +524,10 @@ def plot(
             labelnames for .label.gii (default is None)
         borders (str)
             Full filepath of the borders txt file (default: borders.txt in SUIT pkg)
+        bordercolor (char or matplotlib.color)
+            Color of border - defaults to 'k'
+        bordersize (int)
+            Size of the border points - defaults to 2
         cscale (int array)
             Colorscale [min, max] for the overlay, valid input values from -1 to 1 (default: [overlay.max, overlay.min])
         alpha (float)
@@ -615,7 +620,8 @@ def plot(
         borders = np.genfromtxt(borders, delimiter=',')
 
     # Render with Matplotlib
-    ax = _render_matplotlib(vertices, faces, face_color, borders, new_figure)
+    ax = _render_matplotlib(vertices, faces, face_color, borders, 
+                            bordercolor, bordersize, new_figure)
 
     # set up colorbar
     if colorbar:
@@ -796,7 +802,8 @@ def _colorbar_func(
 
     return cbar
 
-def _render_matplotlib(vertices,faces,face_color,borders,new_figure):
+def _render_matplotlib(vertices,faces,face_color,borders, 
+                    bordercolor, bordersize, new_figure):
     """
     Render the data in matplotlib: This is segmented to allow for openGL renderer
 
@@ -809,6 +816,10 @@ def _render_matplotlib(vertices,faces,face_color,borders,new_figure):
             RGBA array of color and alpha of all vertices
         borders (np.ndarray)
             default is None
+        bordercolor (char or matplotlib.color)
+            Color of border 
+        bordersize (int)
+            Size of the border points
         new_figure (bool)
             Create new Figure or render in currrent axis
 
@@ -838,8 +849,8 @@ def _render_matplotlib(vertices,faces,face_color,borders,new_figure):
     ax.axis('off')
 
     if borders is not None:
-        ax.plot(borders[:,0],borders[:,1],color='k',
+        ax.plot(borders[:,0],borders[:,1],color=bordercolor,
                 marker='.', linestyle=None,
-                markersize=2,linewidth=0)
+                markersize=bordersize,linewidth=0)
     return ax
 
