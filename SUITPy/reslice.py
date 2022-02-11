@@ -15,6 +15,28 @@ import numpy as np
 from SUITPy._utils import fill_doc
 from SUITPy.flatmap import affine_transform
 
+def reslice_image(
+
+)
+    """[summary]
+        image: (NIFTI Image, str, or iterable of NIFTI)
+            Images to reslice
+        deformation: (NIFTI, str): 
+            Nonlinear dEformation file (y_xxx.nii) 
+        mask (NIFTI, str): 
+            Optional masking image (defaults to None)
+        interp (int):
+            0: nearest neighbor, 1:trilinear        
+        voxelsize (tuple): Desired voxel size - defaults to deformation image
+            [THROW A WARNING IF BOTH VOXEL SIZE AND AFFINE MAT ARE SPECIFIC] 
+        imagesize (tuple): 
+            desired image size: Defaults to deformation image 
+        affinemat (ndarray): Desired affine transformation matrix 
+            of the output image
+    Returns: 
+        image (NIFTI image or list of NIFTI Images )
+    """
+
 
 def mesh_data(
             affineTr,
