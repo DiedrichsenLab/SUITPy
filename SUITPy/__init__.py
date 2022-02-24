@@ -27,13 +27,13 @@ from .flatmap import (vol_to_surf,
                     save_colorbar,
                     plot)
 
-from .reslice import (mesh_data,
+from .reslice import (reslice_image,
+                      mesh_data,
                       check_range,
                       trilinear,
                       sample_image,
                       non_linear_deformation,
-                      create_img,
-                      img_in_LPI)
+                      create_img)
 
 def _nibabel2_deprecation_warning():
     msg = ('Support for Nibabel 2.x is deprecated and will stop '
