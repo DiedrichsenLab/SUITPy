@@ -15,7 +15,6 @@ import numpy as np
 import warnings
 from nilearn import image
 from SUITPy.flatmap import affine_transform
-import itertools
 
 def reslice_image(
                 source_image,
