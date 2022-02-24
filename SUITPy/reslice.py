@@ -12,36 +12,127 @@ from numpy import *
 import scipy.io as sio
 import matplotlib.pyplot as plt
 import numpy as np
-from SUITPy._utils import fill_doc
+import warnings
+from nilearn import image
 from SUITPy.flatmap import affine_transform
+import itertools
 
 def reslice_image(
-
-)
+                source_image,
+                deformation,
+                mask,
+                interp,
+                voxelsize,
+                imagesize,
+                affinemat
+):
     """[summary]
-        image: (NIFTI Image, str, or iterable of NIFTI)
+        source_image: (NIFTI Image, str, or iterable of NIFTI)
             Images to reslice
         deformation: (NIFTI, str): 
-            Nonlinear dEformation file (y_xxx.nii) 
+            Nonlinear deformation file (y_xxx.nii) 
         mask (NIFTI, str): 
             Optional masking image (defaults to None)
         interp (int):
             0: nearest neighbor, 1:trilinear        
-        voxelsize (tuple): Desired voxel size - defaults to deformation image
+        voxelsize (tuple): 
+            Desired voxel size - defaults to deformation image
             [THROW A WARNING IF BOTH VOXEL SIZE AND AFFINE MAT ARE SPECIFIC] 
         imagesize (tuple): 
             desired image size: Defaults to deformation image 
-        affinemat (ndarray): Desired affine transformation matrix 
-            of the output image
+        affinemat (ndarray): 
+            The affine transformation matrix for the linear part of the normalization
     Returns: 
         image (NIFTI image or list of NIFTI Images )
     """
+    
+    if type(affinemat) == str:
+        affinemat = sio.loadmat(affinemat).get('Affine')
+        
+    if type(deformation) == str:
+        deformation = nib.load(deformation)
+    
+    if mask != None:
+        if type(mask) == str:
+            mask = nib.load(mask)
+
+
+    list_after_def_img = []
+
+    for i in range(len(source_image)):
+        if type(source_image[i]) == str:
+            source_image[i] = nib.load(source_image[i])
+        img = source_image[i]
+    
+        xm_data, ym_data, zm_data = mesh_data(affinemat,img,deformation)
+        data = np.zeros((deformation.shape[0], deformation.shape[1], deformation.shape[2]))
+        data = sample_image(img, xm_data, ym_data, zm_data, interp).reshape((deformation.shape[0], deformation.shape[1], deformation.shape[2]))
+        if mask != None:
+            xm_mask, ym_mask, zm_mask = mesh_data(affinemat, mask, deformation)
+            maskData = np.zeros((deformation.shape[0], deformation.shape[1], deformation.shape[2]))
+            maskData = sample_image(mask, xm_mask, ym_mask, zm_mask, interp).reshape((deformation.shape[0], deformation.shape[1], deformation.shape[2]))
+            masked = np.multiply(data,maskData)
+            img = create_img(masked, deformation.affine)
+        else:
+            img = create_img(data, deformation.affine)
+        after_def = non_linear_deformation(deformation, img, affinemat)
+        aff = np.copy(deformation.affine)
+        
+        after_def_img = create_img(after_def, aff)
+        
+        if imagesize != None:
+            initial_x, initial_y, initial_z = after_def_img.shape
+            new_x, new_y, new_z = imagesize[0], imagesize[1], imagesize[2]
+            delta_x = initial_x/new_x
+            delta_y = initial_y/new_y
+            delta_z = initial_z/new_z
+            
+            xx = np.linspace(0, new_x-1, new_x, dtype=int)
+            yy = np.linspace(0, new_y-1, new_y, dtype=int)
+            zz = np.linspace(0, new_z-1, new_z, dtype=int)
+            
+            x, y, z = np.meshgrid(xx, yy, zz, indexing='ij')
+            
+            affine = np.eye(4)
+            affine[0][0] = delta_x
+            affine[1][1] = delta_y
+            affine[2][2] = delta_z
+            
+            x_data, y_data, z_data = affine_transform(x, y, z, affine)
+            
+            after_def_img = sample_image(after_def_img, x_data, y_data, z_data, 1).reshape(new_x,new_y,new_z)
+            if voxelsize == None:
+                after_def_img = create_img(after_def_img, np.eye(4))
+            else:
+                warnings.warn('Both affine matrix and voxel size are specified!')
+                affine = np.eye(4)
+                affine[0][0] = voxelsize[0]
+                affine[1][1] = voxelsize[1]
+                affine[2][2] = voxelsize[2]
+                after_def_img = create_img(after_def_img, affine)
+                
+        elif voxelsize != None and imagesize == None:
+            warnings.warn('Both affine matrix and voxel size are specified!')
+            aff = np.copy(after_def_img.affine)
+            aff[0][0] = voxelsize[0] if aff[0][0] > 0 else -voxelsize[0]
+            aff[1][1] = voxelsize[1] if aff[1][1] > 0 else -voxelsize[1]
+            aff[2][2] = voxelsize[2] if aff[2][2] > 0 else -voxelsize[2]
+            after_def_img = image.resample_img(after_def_img, aff)
+        
+        
+        
+        list_after_def_img.append(after_def_img)
+        
+            
+    return list_after_def_img
+    
+
 
 
 def mesh_data(
             affineTr,
             img,
-            flowfield
+            deformation
             ):
     """
     Meshgrid x, y, z coordinates and then applying affine matrix to them to get x, y, z coordinates in voxel space.
@@ -51,8 +142,8 @@ def mesh_data(
             The affine transformation matrix for the linear part of the normalization
         img (NIFTI image):
             The target image
-        flowfield (NIFTI image):
-            Non-linear flowfield
+        deformation (NIFTI image):
+            Non-linear deformation
     
     Returns:
         x_data (np.array):
@@ -62,9 +153,9 @@ def mesh_data(
         z_data (np.array):
             The array contains z coordinates in voxel space
     """
-    xaxis = flowfield.shape[0]
-    yaxis = flowfield.shape[1]
-    zaxis = flowfield.shape[2]
+    xaxis = deformation.shape[0]
+    yaxis = deformation.shape[1]
+    zaxis = deformation.shape[2]
 
     xx = np.linspace(0, xaxis-1, xaxis, dtype=int)
     yy = np.linspace(0, yaxis-1, yaxis, dtype=int)
@@ -72,7 +163,7 @@ def mesh_data(
 
     x, y, z = np.meshgrid(xx, yy, zz, indexing='ij')
 
-    affine = np.linalg.inv(affineTr@img.affine)@flowfield.affine
+    affine = np.linalg.inv(affineTr@img.affine)@deformation.affine
 
     x_data, y_data, z_data = affine_transform(x, y, z, affine)
 
@@ -210,9 +301,9 @@ def sample_image(
     ym = ym.reshape(-1)
     zm = zm.reshape(-1)
     value = np.zeros(xm.shape, dtype=int)
-    if interpolation == 'trilinear':
+    if interpolation == 1:
         value = trilinear(img, xm, ym, zm)
-    elif interpolation == 'nearest':
+    elif interpolation == 0:
         xm = np.round(xm).astype('int')
         ym = np.round(ym).astype('int')
         zm = np.round(zm).astype('int')
@@ -258,15 +349,14 @@ def non_linear_deformation(
     x = mm_to_voxel[0,:,:,:]
     y = mm_to_voxel[1,:,:,:]
     z = mm_to_voxel[2,:,:,:]
-    value = sample_image(img, x, y, z, 'trilinear').reshape(img.shape[0], img.shape[1], img.shape[2])
+    value = sample_image(img, x, y, z, 1).reshape(img.shape[0], img.shape[1], img.shape[2])
 
     return value
 
 
 def create_img(
             value,
-            affine,
-            save
+            affine
             ):
     """
     Saving an array as an NIFTI image
@@ -286,70 +376,4 @@ def create_img(
     output_img.header.set_xyzt_units('mm', 'sec')
     output_img.update_header()
 
-    if save == True:
-        nib.save(output_img, filename="reslice_img.nii")
-
     return output_img
-
-
-def img_in_LPI(
-                img,
-                flowfield
-                ):
-    """
-    Put output image into LPI
-
-    Args:
-        img (NIFTI image):
-            The target image
-        flowfield (NIFTI image):
-            Non-linear flowfield
-    
-    Returns:
-        data (np.array):
-            An array which contains data for the output image.
-        vff (np.array):
-            An affine matrix for image in LPI
-    """
-    xaxis = flowfield.shape[0]
-    yaxis = flowfield.shape[1]
-    zaxis = flowfield.shape[2]
-
-    bbx_min = -flowfield.affine[0,3]
-    bbx_max = xaxis + bbx_min-1
-
-    bby_min = flowfield.affine[1,3]
-    bby_max = yaxis + bby_min-1
-
-    bbz_min = flowfield.affine[2,3]
-    bbz_max = zaxis + bbz_min-1
-
-    xx = np.linspace(bbx_min, bbx_max, xaxis)
-    yy = np.linspace(bby_min, bby_max, yaxis)
-    zz = np.linspace(bbz_min, bbz_max, zaxis)
-    x, y, z = np.meshgrid(xx, yy, zz, indexing='ij')
-    xm, ym, zm = affine_transform(x, y, z, np.linalg.inv(flowfield.affine))
-    sample_data = np.zeros((img.shape[0], img.shape[1], img.shape[2]))
-    sample_data = sample_image(img, xm, ym, zm, 'trilinear').reshape((img.shape[0], img.shape[1], img.shape[2]))
-
-    i1 = img.shape[0]-1
-    i2 = img.shape[1]-1
-    i3 = img.shape[2]-1
-
-    x_affine = np.array([[x[0,0,0], x[i1,0,0], x[i1,i2,0], x[i1,i2,i3]], 
-                [y[0,0,0], y[i1,0,0], y[i1,i2,0], y[i1,i2,i3]], 
-                [z[0,0,0], z[i1,0,0], z[i1,i2,0], z[i1,i2,i3]], 
-                [1,1,1,1]])
-
-    v = np.array([[0,i1+1,i1+1,i1+1],
-                [0,0,i2+1,i2+1],
-                [0,0,0,i3+1],
-                [1,1,1,1]])
-
-    v = np.linalg.pinv(v)
-
-    vff = x_affine@v
-    vff = np.round(vff)
-    vff[vff==0]=0
-
-    return sample_data, vff
