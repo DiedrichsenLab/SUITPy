@@ -15,6 +15,7 @@ import sys
 import nibabel as nb
 import matplotlib.pyplot as plt
 import matplotlib as mpl
+import plotly.graph_objects as go
 import scipy.stats as ss
 from matplotlib.patches import Polygon
 from matplotlib.collections import PatchCollection
@@ -620,8 +621,14 @@ def plot(
         borders = np.genfromtxt(borders, delimiter=',')
 
     # Render with Matplotlib
-    ax = _render_matplotlib(vertices, faces, face_color, borders, 
-                            bordercolor, bordersize, new_figure)
+    if render == 'matplotlib':
+        ax = _render_matplotlib(vertices, faces, face_color, borders, 
+                                bordercolor, bordersize, new_figure)
+    elif render == 'plotly':
+        mesh_3d = go.Mesh3d(x=vertices[:, 0], y=vertices[:, 1], z=vertices[:, 2], i=faces[:, 0], j=faces[:, 1], k=faces[:, 2], vertexcolor=colors)
+    fig_data = [mesh_3d]
+    ax = go.Figure(data=fig_data)
+    # ax.show() will show the figure
 
     # set up colorbar
     if colorbar:
