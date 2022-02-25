@@ -7,6 +7,7 @@ Basic functionality for resample image into atlas
 
 """
 
+from tkinter import N
 import nibabel as nib
 from numpy import *
 import scipy.io as sio
@@ -19,11 +20,11 @@ from SUITPy.flatmap import affine_transform
 def reslice_image(
                 source_image,
                 deformation,
-                mask,
-                interp,
-                voxelsize,
-                imagesize,
-                affinemat
+                mask = None,
+                interp = 1,
+                voxelsize = None,
+                imagesize = None,
+                affinemat = None
 ):
     """[summary]
         source_image: (NIFTI Image, str, or iterable of NIFTI)
