@@ -536,7 +536,7 @@ def plot(
         outputfile (str)
             Name / path to file to save figure (default None)
         render (str)
-            Renderer for graphic display 'matplot' / 'opengl'. Dafault is matplotlib
+            Renderer for graphic display 'matplot' / 'plotly'. Dafault is matplotlib
         new_figure (bool)
             By default, flatmap.plot renders the color map into matplotlib's current axis. It new_figure is set to True is will create a new figure
         colorbar (bool)
@@ -625,9 +625,8 @@ def plot(
         ax = _render_matplotlib(vertices, faces, face_color, borders, 
                                 bordercolor, bordersize, new_figure)
     elif render == 'plotly':
-        mesh_3d = go.Mesh3d(x=vertices[:, 0], y=vertices[:, 1], z=vertices[:, 2], i=faces[:, 0], j=faces[:, 1], k=faces[:, 2], vertexcolor=colors)
-    fig_data = [mesh_3d]
-    ax = go.Figure(data=fig_data)
+        ax = _render_plotly(vertices,faces,face_color,borders,
+                                bordercolor,bordersize, new_figure)
     # ax.show() will show the figure
 
     # set up colorbar
@@ -812,7 +811,7 @@ def _colorbar_func(
 def _render_matplotlib(vertices,faces,face_color,borders, 
                     bordercolor, bordersize, new_figure):
     """
-    Render the data in matplotlib: This is segmented to allow for openGL renderer
+    Render the data in matplotlib
 
     Args:
         vertices (np.ndarray)
@@ -861,3 +860,30 @@ def _render_matplotlib(vertices,faces,face_color,borders,
                 markersize=bordersize,linewidth=0)
     return ax
 
+def _render_plotly(vertices,faces,face_color,borders,bordercolor, bordersize, new_figure):
+    """
+    Render the data in plotly
+    Args:
+        vertices (np.ndarray)
+            Array of vertices
+        faces (nd.array)
+            Array of Faces
+        face_color (nd.array)
+            RGBA array of color and alpha of all vertices
+        borders (np.ndarray)
+            default is None
+        bordercolor (char or matplotlib.color)
+            Color of border 
+        bordersize (int)
+            Size of the border points
+        new_figure (bool)
+            Create new Figure or render in currrent axis
+
+    Returns:
+        ax (matplotlib.axes)
+            Axis that was used to render the axis
+    """ 
+    mesh_3d = go.Mesh3d(x=vertices[:, 0], y=vertices[:, 1], z=vertices[:, 2], i=faces[:, 0], j=faces[:, 1], k=faces[:, 2], facecolor=face_color)
+    fig_data = [mesh_3d]
+    ax = go.Figure(data=fig_data)
+    return ax
