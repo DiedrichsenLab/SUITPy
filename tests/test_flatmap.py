@@ -28,9 +28,10 @@ def make_shapes():
 
 def test_flatmap_plot():
     ax = flatmap.plot('docs/source/notebooks/Buckner_17Networks.label.gii',overlay_type='label',new_figure=True, colorbar=False,render='plotly')
+    ax.show()
     pass
 
 
 if __name__ == '__main__':
-    make_shapes()
-    # test_flatmap_plot()
+    # make_shapes()
+    test_flatmap_plot()

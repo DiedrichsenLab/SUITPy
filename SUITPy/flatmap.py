@@ -498,7 +498,12 @@ def plot(
         undermap='Greys', underscale=[-1, 0.5], overlay_type='func', threshold=None, cmap=None, label_names=None, cscale=None, 
         borders='borders.txt', bordercolor = 'k', bordersize = 2,
         alpha=1.0,
-        outputfile=None, render='matplotlib', new_figure=False, colorbar=False, cbar_tick_format="%.2g"
+        outputfile=None, 
+        render='matplotlib', 
+        maptoface = False,
+        hover = 'value',
+        new_figure=False, colorbar=False, 
+        cbar_tick_format="%.2g"
         ):
     """
     Visualize cerebellar activity on a flatmap
@@ -598,21 +603,31 @@ def plot(
         for i in range(num_labels):
             label_names.append("label-{:02d}".format(i + idx))
 
-    # map the overlay to the faces
-    overlay_color, cmap, cscale = _map_color(faces=faces, data=data_arr, cscale=cscale, cmap=cmap, threshold=threshold)
+    # decide whether to map to faces  
+    if (render=='plotly') & (maptoface==False):
+        mapfac=None
+    else:
+        mapfac = faces
+
+    # map the overlay to colors: 
+    overlay_color, cmap, cscale = _map_color(data=data_arr, 
+            faces = mapfac, cscale=cscale, 
+            cmap=cmap, threshold=threshold)
 
     # Load underlay and assign color
     if type(underlay) is not np.ndarray:
         if not os.path.isfile(underlay):
             underlay = os.path.join(os.path.join(_surf_dir, underlay))
         underlay = nb.load(underlay).darrays[0].data
-    underlay_color,_,_ = _map_color(faces=faces, data=underlay, cscale=underscale, cmap=undermap)
+    underlay_color,_,_ = _map_color(data=underlay, 
+                    faces = mapfac,
+                    cscale=underscale, cmap=undermap)
 
     # Combine underlay and overlay: For Nan overlay, let underlay shine through
-    face_color = underlay_color * (1-alpha) + overlay_color * alpha
-    i = np.isnan(face_color.sum(axis=1))
-    face_color[i,:]=underlay_color[i,:]
-    face_color[i,3]=1.0
+    color = underlay_color * (1-alpha) + overlay_color * alpha
+    i = np.isnan(color.sum(axis=1))
+    color[i,:]=underlay_color[i,:]
+    color[i,3]=1.0
 
     # If present, get the borders
     if borders is not None:
@@ -622,10 +637,16 @@ def plot(
 
     # Render with Matplotlib
     if render == 'matplotlib':
-        ax = _render_matplotlib(vertices, faces, face_color, borders, 
+        ax = _render_matplotlib(vertices, faces, color, borders, 
                                 bordercolor, bordersize, new_figure)
     elif render == 'plotly':
-        ax = _render_plotly(vertices,faces,face_color,borders,
+        if hover == 'value':
+            np.empty((data.shape[0],))
+            for i o
+        ax = _render_plotly_mesh3d(vertices,faces,color,borders,
+                                bordercolor,bordersize, new_figure)
+    elif render == 'plotly_s':
+        ax = _render_plotly_scatter(vertices,faces,color,borders,
                                 bordercolor,bordersize, new_figure)
     # ax.show() will show the figure
 
@@ -639,21 +660,22 @@ def plot(
     return ax
 
 def _map_color(
-    faces,
     data,
+    faces=None,
     cscale=None,
     cmap=None,
     threshold=None
     ):
     """
-    Maps data from vertices to faces, scales the values, and
+    Scales the values, and
     then looks up the RGB values in the color map
+    If faces are provided, maps the data to faces 
 
     Args:
-        faces (nd.array)
-            Array of Faces
         data (1d-np-array)
             Numpy Array of values to scale. If integer, if it is not scaled
+        faces (nd.array)
+            Array of Faces, if provided, it maps to faces 
         cscale (array like)
             (min,max) of the scaling of the data
         cmap (str, or matplotlib.colors.Colormap)
@@ -664,6 +686,9 @@ def _map_color(
             if one value is given (-inf) is assumed for the lower
 
     """
+    # if scale not given, find it
+    if cscale is None:
+        cscale = np.array([np.nanmin(data), np.nanmax(data)])
 
     # When continuous data, scale and threshold
     if data.dtype.kind == 'f':
@@ -673,30 +698,25 @@ def _map_color(
                 threshold=np.array([-np.inf,threshold])
             data[~np.logical_and(data>threshold[0], data<threshold[1])]=np.nan
 
-        # if scale not given, find it
-        if cscale is None:
-            cscale = np.array([np.nanmin(data), np.nanmax(data)])
-
         # scale the data
         data = ((data - cscale[0]) / (cscale[1] - cscale[0]))
 
-    elif data.dtype.kind == 'i':
-        if cscale is None:
-            cscale = np.array([np.nanmin(data), np.nanmax(data)])
-
     # Map the values from vertices to faces and integrate
-    numFaces = faces.shape[0]
-    face_value = np.zeros((3,numFaces),dtype = data.dtype)
-    for i in range(3):
-        face_value[i,:] = data[faces[:,i]]
+    if faces is not None:
+        numFaces = faces.shape[0]
+        face_value = np.zeros((3,numFaces),dtype = data.dtype)
+        for i in range(3):
+            face_value[i,:] = data[faces[:,i]]
 
-    if data.dtype.kind == 'i':
-        face_value,_ = ss.mode(face_value,axis=0)
-        face_value = face_value.reshape((numFaces,))
+        if data.dtype.kind == 'i':
+            value,_ = ss.mode(face_value,axis=0)
+            value = value.reshape((numFaces,))
+        else:
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore", category=RuntimeWarning)
+                value = np.nanmean(face_value, axis=0)
     else:
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore", category=RuntimeWarning)
-            face_value = np.nanmean(face_value, axis=0)
+        value = data
 
     # Get the color map
     if type(cmap) is str:
@@ -707,13 +727,13 @@ def _map_color(
         cmap = plt.get_cmap('jet')
 
     # Map the color
-    color_data = cmap(face_value)
+    color_data = cmap(value)
 
     # Set missing data 0 for int or NaN for float to NaN
     if data.dtype.kind == 'f':
-        color_data[np.isnan(face_value),:]=np.nan
+        color_data[np.isnan(value),:]=np.nan
     elif data.dtype.kind == 'i':
-        color_data[face_value==0,:]=np.nan
+        color_data[value==0,:]=np.nan
 
     return color_data, cmap, cscale
 
@@ -860,7 +880,72 @@ def _render_matplotlib(vertices,faces,face_color,borders,
                 markersize=bordersize,linewidth=0)
     return ax
 
-def _render_plotly(vertices,faces,face_color,borders,bordercolor, bordersize, new_figure):
+def _render_plotly_mesh3d(vertices,faces,color,borders,bordercolor, bordersize, new_figure, hovertext=None):
+    """
+    Render the data in plotly
+    Args:
+        vertices (np.ndarray)
+            Array of vertices
+        faces (nd.array)
+            Array of Faces
+        face_color (nd.array)
+            RGBA array of color and alpha of all vertices
+        borders (np.ndarray)
+            default is None
+        bordercolor (char or matplotlib.color)
+            Color of border 
+        bordersize (int)
+            Size of the border points
+        new_figure (bool)
+            Create new Figure or render in currrent axis
+        hovertext (list of str)
+            Text for hovering for each vertex
+    Returns:
+        ax (matplotlib.axes)
+            Axis that was used to render the axis
+    """ 
+    # Check whether to color faces or vertices: 
+    if color.shape[0]==vertices.shape[0]:
+        vertcolor=color
+        facecolor=None
+    elif color.shape[0]==faces.shape[0]:
+        vertcolor=None
+        facecolor=color
+    else:
+        raise(NameError('Color data not the correct shape'))
+
+    if hovertext is None:
+        hi = 'skip'
+    else:
+        hi = 'text'
+
+    mesh_3d = go.Mesh3d(x=vertices[:, 0], y=vertices[:, 1], z=vertices[:, 2],
+                    i=faces[:, 0], j=faces[:, 1], k=faces[:, 2], 
+                    facecolor = facecolor,
+                    vertexcolor = vertcolor,
+                    lightposition=dict(x=0, y=0, z=2.5),
+                    text = hovertext,
+                    hoverinfo=hi)
+    fig_data = [mesh_3d]
+    fig = go.Figure(data=fig_data)
+    camera = dict(
+        up=dict(x=0, y=1, z=0),
+        center=dict(x=0, y=0, z=0),
+        eye=dict(x=0, y=0, z=1.5)
+    )
+    axis_dict= dict(visible=False,showbackground=False,showline=False,showgrid=False,showspikes=False,showticklabels=False,title=None)
+    scene = dict(xaxis=axis_dict,
+                yaxis=axis_dict,
+                zaxis=axis_dict,
+                aspectratio=dict(x=1, y=1, z=1))
+    fig.update_layout(scene_camera=camera,
+                dragmode=False,
+                margin=dict(r=10, l=10, b=10, t=10),
+                scene = scene
+                )
+    return fig
+
+def _render_plotly_scatter(vertices,faces,face_color,borders,bordercolor, bordersize, new_figure):
     """
     Render the data in plotly
     Args:
@@ -883,7 +968,21 @@ def _render_plotly(vertices,faces,face_color,borders,bordercolor, bordersize, ne
         ax (matplotlib.axes)
             Axis that was used to render the axis
     """ 
-    mesh_3d = go.Mesh3d(x=vertices[:, 0], y=vertices[:, 1], z=vertices[:, 2], i=faces[:, 0], j=faces[:, 1], k=faces[:, 2], facecolor=face_color)
-    fig_data = [mesh_3d]
-    ax = go.Figure(data=fig_data)
+    sc=[] # List of scatter objects (ploygons)
+    findx = np.c_[faces,faces[:,0]] # Append the last one 
+    fcolor = (face_color[:,0:3]*255).astype(int)
+    for i,f in enumerate(findx):
+        c = f"#{fcolor[i,0]:02x}{fcolor[i,1]:02x}{fcolor[i,2]:02x}"        
+        sc.append(go.Scatter(x=vertices[f,0], 
+                    y=vertices[f,1],
+                    fill="toself",
+                    fillcolor=c,
+                    line = dict(width=0),
+                    mode='lines',
+                    showlegend = False
+                    ))
+        if i % 1000==0:
+            print(f"face{i}")
+    ax = go.Figure(sc)
     return ax
+    pass
