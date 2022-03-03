@@ -498,10 +498,8 @@ def plot(
         undermap='Greys', underscale=[-1, 0.5], overlay_type='func', threshold=None, cmap=None, label_names=None, cscale=None, 
         borders='borders.txt', bordercolor = 'k', bordersize = 2,
         alpha=1.0,
-        outputfile=None, 
         render='matplotlib', 
-        maptoface = False,
-        hover = 'value',
+        hover = 'auto',
         new_figure=False, colorbar=False, 
         cbar_tick_format="%.2g"
         ):
@@ -538,10 +536,10 @@ def plot(
             Colorscale [min, max] for the overlay, valid input values from -1 to 1 (default: [overlay.max, overlay.min])
         alpha (float)
             Opacity of the overlay (default: 1)
-        outputfile (str)
-            Name / path to file to save figure (default None)
         render (str)
             Renderer for graphic display 'matplot' / 'plotly'. Dafault is matplotlib
+        hover (str)
+            When renderer is plotly, it determines what is displayed in the hover label. 
         new_figure (bool)
             By default, flatmap.plot renders the color map into matplotlib's current axis. It new_figure is set to True is will create a new figure
         colorbar (bool)
@@ -564,6 +562,7 @@ def plot(
     flatsurf = nb.load(surf)
     vertices = flatsurf.darrays[0].data
     faces    = flatsurf.darrays[1].data
+    num_vert = vertices.shape[0]
 
     # Load the overlay if it's a string
     if type(data) is str:
@@ -604,10 +603,10 @@ def plot(
             label_names.append("label-{:02d}".format(i + idx))
 
     # decide whether to map to faces  
-    if (render=='plotly') & (maptoface==False):
-        mapfac=None
+    if (render=='plotly'):
+        mapfac=None    # Don't map to faces 
     else:
-        mapfac = faces
+        mapfac = faces # Map to faces 
 
     # map the overlay to colors: 
     overlay_color, cmap, cscale = _map_color(data=data_arr, 
@@ -640,15 +639,19 @@ def plot(
         ax = _render_matplotlib(vertices, faces, color, borders, 
                                 bordercolor, bordersize, new_figure)
     elif render == 'plotly':
+        if hover == 'auto':
+            if overlay_type=='func':
+                textlabel = _make_labels(data_arr,cbar_tick_format)
+            if overlay_type=='label': 
+                textlabel = _make_labels(data_arr,label_names)
         if hover == 'value':
-            np.empty((data.shape[0],))
-            for i o
+            textlabel = _make_labels(data_arr,cbar_tick_format)
+        elif hover is None: 
+            textlabel=None
+
         ax = _render_plotly_mesh3d(vertices,faces,color,borders,
-                                bordercolor,bordersize, new_figure)
-    elif render == 'plotly_s':
-        ax = _render_plotly_scatter(vertices,faces,color,borders,
-                                bordercolor,bordersize, new_figure)
-    # ax.show() will show the figure
+                                bordercolor,bordersize, new_figure, 
+                                textlabel)
 
     # set up colorbar
     if colorbar:
@@ -658,6 +661,7 @@ def plot(
             cbar = _colorbar_func(ax, cmap, cscale, cbar_tick_format)
 
     return ax
+
 
 def _map_color(
     data,
@@ -736,6 +740,8 @@ def _map_color(
         color_data[value==0,:]=np.nan
 
     return color_data, cmap, cscale
+
+def _
 
 def _colorbar_label(
     ax,
