@@ -29,9 +29,9 @@ _base_dir = os.path.dirname(os.path.abspath(__file__))
 _surf_dir = os.path.join(_base_dir, 'surfaces')
 
 def affine_transform(
-    x1, 
-    x2, 
-    x3, 
+    x1,
+    x2,
+    x3,
     M
     ):
     """
@@ -378,7 +378,7 @@ def get_gifti_column_names(gifti):
 
     Args:
         gifti (gifti image):
-            Nibabel Gifti image 
+            Nibabel Gifti image
 
     Returns:
         names (list):
@@ -398,12 +398,12 @@ def get_gifti_colortable(gifti,ignore_0=True):
 
     Args:
         gifti (gifti image):
-            Nibabel Gifti image 
+            Nibabel Gifti image
 
     Returns:
         rgba (np.ndarray):
             N x 4 of RGB values
-        
+
         cmap (mpl obj):
             matplotlib colormap
 
@@ -413,7 +413,7 @@ def get_gifti_colortable(gifti,ignore_0=True):
     rgba = np.zeros((len(labels),4))
     for i,label in enumerate(labels):
         rgba[i,] = labels[i].rgba
-    
+
     if ignore_0:
         rgba = rgba[1:]
         labels = labels[1:]
@@ -429,7 +429,7 @@ def get_gifti_anatomical_struct(gifti):
 
     Args:
         gifti (gifti image):
-            Nibabel Gifti image 
+            Nibabel Gifti image
 
     Returns:
         anatStruct (string):
@@ -448,7 +448,7 @@ def get_gifti_labels(gifti):
 
     Args:
         gifti (gifti image):
-            Nibabel Gifti image 
+            Nibabel Gifti image
 
     Returns:
         labels (list):
@@ -460,17 +460,17 @@ def get_gifti_labels(gifti):
     return labels
 
 def save_colorbar(
-    gifti, 
+    gifti,
     outpath
     ):
     """plots colorbar for gifti object (*.label.gii)
-        
+
     Args:
         gifti (gifti image):
-            Nibabel Gifti image 
+            Nibabel Gifti image
         outpath (str):
             outpath for colorbar
-    
+
     """
     _, ax = plt.subplots(figsize=(1,10)) # figsize=(1, 10)
 
@@ -480,13 +480,13 @@ def save_colorbar(
     bounds = np.arange(cmap.N + 1)
 
     norm = mpl.colors.BoundaryNorm(bounds, cmap.N)
-    cb3 = mpl.colorbar.ColorbarBase(ax, cmap=cmap.reversed(cmap), 
+    cb3 = mpl.colorbar.ColorbarBase(ax, cmap=cmap.reversed(cmap),
                                     norm=norm,
                                     ticks=bounds,
                                     format='%s',
                                     orientation='vertical',
                                     )
-    cb3.set_ticklabels(labels[::-1])  
+    cb3.set_ticklabels(labels[::-1])
     cb3.ax.tick_params(size=0)
     cb3.set_ticks(bounds+.5)
     cb3.ax.tick_params(axis='y', which='major', labelsize=30)
@@ -495,12 +495,14 @@ def save_colorbar(
 
 def plot(
         data, surf=None, underlay='SUIT.shape.gii',
-        undermap='Greys', underscale=[-1, 0.5], overlay_type='func', threshold=None, cmap=None, label_names=None, cscale=None, 
-        borders='borders.txt', bordercolor = 'k', bordersize = 2,
+        undermap='Greys', underscale=[-1, 0.5], overlay_type='func', threshold=None, cmap=None, label_names=None, cscale=None,
+        borders='borders.txt',
+        bordercolor = 'k',
+        bordersize = 2,
         alpha=1.0,
-        render='matplotlib', 
+        render='matplotlib',
         hover = 'auto',
-        new_figure=False, colorbar=False, 
+        new_figure=False, colorbar=False,
         cbar_tick_format="%.2g"
         ):
     """
@@ -539,7 +541,7 @@ def plot(
         render (str)
             Renderer for graphic display 'matplot' / 'plotly'. Dafault is matplotlib
         hover (str)
-            When renderer is plotly, it determines what is displayed in the hover label. 
+            When renderer is plotly, it determines what is displayed in the hover label.
         new_figure (bool)
             By default, flatmap.plot renders the color map into matplotlib's current axis. It new_figure is set to True is will create a new figure
         colorbar (bool)
@@ -602,15 +604,15 @@ def plot(
         for i in range(num_labels):
             label_names.append("label-{:02d}".format(i + idx))
 
-    # decide whether to map to faces  
+    # decide whether to map to faces
     if (render=='plotly'):
-        mapfac=None    # Don't map to faces 
+        mapfac=None    # Don't map to faces
     else:
-        mapfac = faces # Map to faces 
+        mapfac = faces # Map to faces
 
-    # map the overlay to colors: 
-    overlay_color, cmap, cscale = _map_color(data=data_arr, 
-            faces = mapfac, cscale=cscale, 
+    # map the overlay to colors:
+    overlay_color, cmap, cscale = _map_color(data=data_arr,
+            faces = mapfac, cscale=cscale,
             cmap=cmap, threshold=threshold)
 
     # Load underlay and assign color
@@ -618,7 +620,7 @@ def plot(
         if not os.path.isfile(underlay):
             underlay = os.path.join(os.path.join(_surf_dir, underlay))
         underlay = nb.load(underlay).darrays[0].data
-    underlay_color,_,_ = _map_color(data=underlay, 
+    underlay_color,_,_ = _map_color(data=underlay,
                     faces = mapfac,
                     cscale=underscale, cmap=undermap)
 
@@ -636,25 +638,25 @@ def plot(
 
     # Render with Matplotlib
     if render == 'matplotlib':
-        ax = _render_matplotlib(vertices, faces, color, borders, 
+        ax = _render_matplotlib(vertices, faces, color, borders,
                                 bordercolor, bordersize, new_figure)
     elif render == 'plotly':
         if hover == 'auto':
             if overlay_type=='func':
                 textlabel = _make_labels(data_arr,cbar_tick_format)
-            if overlay_type=='label': 
+            if overlay_type=='label':
                 textlabel = _make_labels(data_arr,label_names)
         if hover == 'value':
             textlabel = _make_labels(data_arr,cbar_tick_format)
-        elif hover is None: 
+        elif hover is None:
             textlabel=None
 
         ax = _render_plotly_mesh3d(vertices,faces,color,borders,
-                                bordercolor,bordersize, new_figure, 
+                                bordercolor,bordersize, new_figure,
                                 textlabel)
 
     # set up colorbar
-    if colorbar:
+    if (render == 'matplotlib') & colorbar:
         if overlay_type=='label':
             cbar = _colorbar_label(ax, cmap, cscale, cbar_tick_format, label_names)
         elif overlay_type=='func':
@@ -673,13 +675,13 @@ def _map_color(
     """
     Scales the values, and
     then looks up the RGB values in the color map
-    If faces are provided, maps the data to faces 
+    If faces are provided, maps the data to faces
 
     Args:
         data (1d-np-array)
             Numpy Array of values to scale. If integer, if it is not scaled
         faces (nd.array)
-            Array of Faces, if provided, it maps to faces 
+            Array of Faces, if provided, it maps to faces
         cscale (array like)
             (min,max) of the scaling of the data
         cmap (str, or matplotlib.colors.Colormap)
@@ -741,7 +743,16 @@ def _map_color(
 
     return color_data, cmap, cscale
 
-def _
+def _make_labels(data,labelstr):
+    numvert=data.shape[0]
+    labels = np.empty((data.shape[0],),dtype=np.object)
+    if type(labelstr) is str:
+        for i in range(numvert):
+            labels[i]=f"{data[i]:{labelstr[1:]}}"
+    else:
+        for i in range(numvert):
+            labels[i]=labelstr[data[i]]
+    return labels
 
 def _colorbar_label(
     ax,
@@ -834,7 +845,7 @@ def _colorbar_func(
 
     return cbar
 
-def _render_matplotlib(vertices,faces,face_color,borders, 
+def _render_matplotlib(vertices,faces,face_color,borders,
                     bordercolor, bordersize, new_figure):
     """
     Render the data in matplotlib
@@ -849,7 +860,7 @@ def _render_matplotlib(vertices,faces,face_color,borders,
         borders (np.ndarray)
             default is None
         bordercolor (char or matplotlib.color)
-            Color of border 
+            Color of border
         bordersize (int)
             Size of the border points
         new_figure (bool)
@@ -899,7 +910,7 @@ def _render_plotly_mesh3d(vertices,faces,color,borders,bordercolor, bordersize, 
         borders (np.ndarray)
             default is None
         bordercolor (char or matplotlib.color)
-            Color of border 
+            Color of border
         bordersize (int)
             Size of the border points
         new_figure (bool)
@@ -909,8 +920,8 @@ def _render_plotly_mesh3d(vertices,faces,color,borders,bordercolor, bordersize, 
     Returns:
         ax (matplotlib.axes)
             Axis that was used to render the axis
-    """ 
-    # Check whether to color faces or vertices: 
+    """
+    # Check whether to color faces or vertices:
     if color.shape[0]==vertices.shape[0]:
         vertcolor=color
         facecolor=None
@@ -924,26 +935,49 @@ def _render_plotly_mesh3d(vertices,faces,color,borders,bordercolor, bordersize, 
         hi = 'skip'
     else:
         hi = 'text'
-
-    mesh_3d = go.Mesh3d(x=vertices[:, 0], y=vertices[:, 1], z=vertices[:, 2],
-                    i=faces[:, 0], j=faces[:, 1], k=faces[:, 2], 
+    traces = []
+    traces.append(go.Mesh3d(x=vertices[:, 0], y=vertices[:, 1], z=vertices[:, 2],
+                    i=faces[:, 0], j=faces[:, 1], k=faces[:, 2],
                     facecolor = facecolor,
                     vertexcolor = vertcolor,
                     lightposition=dict(x=0, y=0, z=2.5),
                     text = hovertext,
-                    hoverinfo=hi)
-    fig_data = [mesh_3d]
-    fig = go.Figure(data=fig_data)
+                    hoverinfo=None))
+    if borders is not None:
+        if bordercolor=='k':
+            bordercolor='#000000'
+        if bordercolor=='w':
+            bordercolor='#ffffff'
+        traces.append(go.Scatter3d(
+                x=borders[:,0],
+                y=borders[:,1],
+                z=np.ones((borders.shape[0],))*0.01,
+                marker = dict(
+                    color=bordercolor,
+                    size=bordersize,
+                    symbol='circle'),
+                mode='markers',
+                hoverinfo=None))
+
     camera = dict(
         up=dict(x=0, y=1, z=0),
         center=dict(x=0, y=0, z=0),
-        eye=dict(x=0, y=0, z=1.5)
+        eye=dict(x=0, y=0, z=1.4)
     )
-    axis_dict= dict(visible=False,showbackground=False,showline=False,showgrid=False,showspikes=False,showticklabels=False,title=None)
+    axis_dict= dict(visible=False,
+        showbackground=False,
+        showline=False,
+        showgrid=False,
+        showspikes=False,
+        showticklabels=False,
+        title=None,
+        range=[-110,110])
     scene = dict(xaxis=axis_dict,
                 yaxis=axis_dict,
                 zaxis=axis_dict,
-                aspectratio=dict(x=1, y=1, z=1))
+                aspectmode= 'cube')
+                # aspectratio=dict(x=1, y=1, z=0.1))
+    fig = go.Figure(data=traces)
     fig.update_layout(scene_camera=camera,
                 dragmode=False,
                 margin=dict(r=10, l=10, b=10, t=10),
@@ -951,44 +985,3 @@ def _render_plotly_mesh3d(vertices,faces,color,borders,bordercolor, bordersize, 
                 )
     return fig
 
-def _render_plotly_scatter(vertices,faces,face_color,borders,bordercolor, bordersize, new_figure):
-    """
-    Render the data in plotly
-    Args:
-        vertices (np.ndarray)
-            Array of vertices
-        faces (nd.array)
-            Array of Faces
-        face_color (nd.array)
-            RGBA array of color and alpha of all vertices
-        borders (np.ndarray)
-            default is None
-        bordercolor (char or matplotlib.color)
-            Color of border 
-        bordersize (int)
-            Size of the border points
-        new_figure (bool)
-            Create new Figure or render in currrent axis
-
-    Returns:
-        ax (matplotlib.axes)
-            Axis that was used to render the axis
-    """ 
-    sc=[] # List of scatter objects (ploygons)
-    findx = np.c_[faces,faces[:,0]] # Append the last one 
-    fcolor = (face_color[:,0:3]*255).astype(int)
-    for i,f in enumerate(findx):
-        c = f"#{fcolor[i,0]:02x}{fcolor[i,1]:02x}{fcolor[i,2]:02x}"        
-        sc.append(go.Scatter(x=vertices[f,0], 
-                    y=vertices[f,1],
-                    fill="toself",
-                    fillcolor=c,
-                    line = dict(width=0),
-                    mode='lines',
-                    showlegend = False
-                    ))
-        if i % 1000==0:
-            print(f"face{i}")
-    ax = go.Figure(sc)
-    return ax
-    pass
