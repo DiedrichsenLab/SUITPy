@@ -419,6 +419,7 @@ def get_gifti_colortable(gifti,ignore_0=True):
         labels = labels[1:]
 
     cmap = LinearSegmentedColormap.from_list('mylist', rgba, N=len(rgba))
+    mpl.cm.unregister_cmap("mycolormap")
     mpl.cm.register_cmap("mycolormap", cmap)
 
     return rgba, cmap
@@ -494,16 +495,26 @@ def save_colorbar(
     plt.savefig(outpath, bbox_inches='tight', dpi=150)
 
 def plot(
-        data, surf=None, underlay='SUIT.shape.gii',
-        undermap='Greys', underscale=[-1, 0.5], overlay_type='func', threshold=None, cmap=None, label_names=None, cscale=None,
+        data,
+        surf=None,
+        underlay='SUIT.shape.gii',
+        undermap='Greys',
+        underscale=[-0.5, 0.5],
+        overlay_type='func',
+        threshold=None,
+        cmap=None,
+        cscale=None,
+        label_names=None,
         borders='borders.txt',
         bordercolor = 'k',
         bordersize = 2,
         alpha=1.0,
         render='matplotlib',
         hover = 'auto',
-        new_figure=False, colorbar=False,
-        cbar_tick_format="%.2g"
+        new_figure=False,
+        colorbar=False,
+        cbar_tick_format="%.2g",
+        backgroundcolor = 'w'
         ):
     """
     Visualize cerebellar activity on a flatmap
@@ -527,7 +538,7 @@ def plot(
         cmap (str)
             Matplotlib colormap used for overlay (defaults to 'jet' if none given)
         label_names (list)
-            labelnames for .label.gii (default is None)
+            labelnames (default is None - extracts from .label.gii )
         borders (str)
             Full filepath of the borders txt file (default: borders.txt in SUIT pkg)
         bordercolor (char or matplotlib.color)
@@ -547,7 +558,7 @@ def plot(
         colorbar (bool)
             By default, colorbar is not plotted into matplotlib's current axis (or new figure if new_figure is set to True)
         cbar_tick_format : str, optional
-            Controls how to format the tick labels of the colorbar.
+            Controls how to format the tick labels of the colorbar, and for the hover label.
             Ex: use "%i" to display as integers.
             Default='%.2g' for scientific notation.
 
@@ -635,11 +646,16 @@ def plot(
         if not os.path.isfile(borders):
             borders = os.path.join(os.path.join(_surf_dir, borders))
         borders = np.genfromtxt(borders, delimiter=',')
-
     # Render with Matplotlib
     if render == 'matplotlib':
         ax = _render_matplotlib(vertices, faces, color, borders,
-                                bordercolor, bordersize, new_figure)
+                                bordercolor, bordersize, new_figure,backgroundcolor)
+        # set up colorbar
+        if colorbar:
+            if overlay_type=='label':
+                cbar = _colorbar_label(ax, cmap, cscale, cbar_tick_format, label_names)
+            elif overlay_type=='func':
+                cbar = _colorbar_func(ax, cmap, cscale, cbar_tick_format)
     elif render == 'plotly':
         if hover == 'auto':
             if overlay_type=='func':
@@ -651,16 +667,10 @@ def plot(
         elif hover is None:
             textlabel=None
 
-        ax = _render_plotly_mesh3d(vertices,faces,color,borders,
+        ax = _render_plotly(vertices,faces,color,borders,
                                 bordercolor,bordersize, new_figure,
-                                textlabel)
+                                textlabel,backgroundcolor)
 
-    # set up colorbar
-    if (render == 'matplotlib') & colorbar:
-        if overlay_type=='label':
-            cbar = _colorbar_label(ax, cmap, cscale, cbar_tick_format, label_names)
-        elif overlay_type=='func':
-            cbar = _colorbar_func(ax, cmap, cscale, cbar_tick_format)
 
     return ax
 
@@ -742,6 +752,158 @@ def _map_color(
         color_data[value==0,:]=np.nan
 
     return color_data, cmap, cscale
+
+
+def _render_matplotlib(vertices,faces,face_color,borders,
+                    bordercolor, bordersize, new_figure,backgroundcolor):
+    """
+    Render the data in matplotlib
+
+    Args:
+        vertices (np.ndarray)
+            Array of vertices
+        faces (nd.array)
+            Array of Faces
+        face_color (nd.array)
+            RGBA array of color and alpha of all vertices
+        borders (np.ndarray)
+            default is None
+        bordercolor (char or matplotlib.color)
+            Color of border
+        bordersize (int)
+            Size of the border points
+        new_figure (bool)
+            Create new Figure or render in currrent axis
+
+    Returns:
+        ax (matplotlib.axes)
+            Axis that was used to render the axis
+    """
+    patches = []
+    for i in range(faces.shape[0]):
+        polygon = Polygon(vertices[faces[i],0:2], True)
+        patches.append(polygon)
+    p = PatchCollection(patches)
+    p.set_facecolor(face_color)
+    p.set_edgecolor(face_color)
+    p.set_linewidth(0.5)
+
+    # Get the current axis and plot it
+    if new_figure:
+        fig = plt.figure(figsize=(7,7))
+    ax = plt.gca()
+    ax.add_collection(p)
+    xrang = [np.nanmin(vertices[:,0]),np.nanmax(vertices[:,0])]
+    yrang = [np.nanmin(vertices[:,1]),np.nanmax(vertices[:,1])]
+
+    ax.set_xlim(xrang[0],xrang[1])
+    ax.set_ylim(yrang[0],yrang[1])
+    ax.axis('equal')
+    ax.axis('off')
+    fig=plt.gcf()
+    fig.set_facecolor(backgroundcolor)
+
+    if borders is not None:
+        ax.plot(borders[:,0],borders[:,1],color=bordercolor,
+                marker='.', linestyle=None,
+                markersize=bordersize,linewidth=0)
+
+    return ax
+
+def _render_plotly(vertices,faces,color,borders,
+            bordercolor, bordersize,
+            new_figure, hovertext=None,
+            backgroundcolor='#ffffff'):
+    """
+    Render the data in plotly
+    Args:
+        vertices (np.ndarray)
+            Array of vertices
+        faces (nd.array)
+            Array of Faces
+        face_color (nd.array)
+            RGBA array of color and alpha of all vertices
+        borders (np.ndarray)
+            default is None
+        bordercolor (char or matplotlib.color)
+            Color of border
+        bordersize (int)
+            Size of the border points
+        new_figure (bool)
+            Create new Figure or render in currrent axis
+        hovertext (list of str)
+            Text for hovering for each vertex
+    Returns:
+        ax (matplotlib.axes)
+            Axis that was used to render the axis
+    """
+    # Check whether to color faces or vertices:
+    if color.shape[0]==vertices.shape[0]:
+        vertcolor=color
+        facecolor=None
+    elif color.shape[0]==faces.shape[0]:
+        vertcolor=None
+        facecolor=color
+    else:
+        raise(NameError('Color data not the correct shape'))
+
+    if hovertext is None:
+        hi = 'skip'
+    else:
+        hi = 'text'
+    traces = []
+    colorbar = dict(exponentformat='none',tickformat='%.2f')
+
+    traces.append(go.Mesh3d(x=vertices[:, 0], y=vertices[:, 1], z=vertices[:, 2],
+                    i=faces[:, 0], j=faces[:, 1], k=faces[:, 2],
+                    facecolor = facecolor,
+                    vertexcolor = vertcolor,
+                    lightposition=dict(x=0, y=0, z=2.5),
+                    text = hovertext,
+                    hoverinfo=hi))
+    if borders is not None:
+        bordercolor=_color_matplotlib_to_plotly(bordercolor)
+        traces.append(go.Scatter3d(
+                x=borders[:,0],
+                y=borders[:,1],
+                z=np.ones((borders.shape[0],))*0.01,
+                marker = dict(
+                    color=bordercolor,
+                    size=bordersize,
+                    symbol='circle'),
+                mode='markers',
+                hoverinfo=None))
+
+
+    camera = dict(
+        up=dict(x=0, y=1, z=0),
+        center=dict(x=0, y=0, z=0),
+        eye=dict(x=0, y=0, z=1.1)
+    )
+    axis_dict= dict(visible=False,
+        showbackground=False,
+        showline=False,
+        showgrid=False,
+        showspikes=False,
+        showticklabels=False,
+        title=None,
+        range=[-110,110])
+    scene = dict(xaxis=axis_dict,
+                yaxis=axis_dict,
+                zaxis=axis_dict,
+                aspectmode= 'cube')
+                # aspectratio=dict(x=1, y=1, z=0.1))
+    backgroundcolor=_color_matplotlib_to_plotly(backgroundcolor)
+    fig = go.Figure(data=traces,)
+    fig.update_layout(scene_camera=camera,
+                dragmode=False,
+                margin=dict(r=0, l=0, b=0, t=0),
+                scene = scene,
+                width=400,
+                height=400,
+                paper_bgcolor=backgroundcolor
+                )
+    return fig
 
 def _make_labels(data,labelstr):
     numvert=data.shape[0]
@@ -845,143 +1007,18 @@ def _colorbar_func(
 
     return cbar
 
-def _render_matplotlib(vertices,faces,face_color,borders,
-                    bordercolor, bordersize, new_figure):
-    """
-    Render the data in matplotlib
+
+def _color_matplotlib_to_plotly(color):
+    """Transforms Matplotlib color string to
+    plotly/html hexadecimal representation
 
     Args:
-        vertices (np.ndarray)
-            Array of vertices
-        faces (nd.array)
-            Array of Faces
-        face_color (nd.array)
-            RGBA array of color and alpha of all vertices
-        borders (np.ndarray)
-            default is None
-        bordercolor (char or matplotlib.color)
-            Color of border
-        bordersize (int)
-            Size of the border points
-        new_figure (bool)
-            Create new Figure or render in currrent axis
-
+        color (str): color string
     Returns:
-        ax (matplotlib.axes)
-            Axis that was used to render the axis
+        colorhex (str): web-based color, e.g., '#000000'
     """
-    patches = []
-    for i in range(faces.shape[0]):
-        polygon = Polygon(vertices[faces[i],0:2], True)
-        patches.append(polygon)
-    p = PatchCollection(patches)
-    p.set_facecolor(face_color)
-    p.set_linewidth(0.0)
-
-    # Get the current axis and plot it
-    if new_figure:
-        fig = plt.figure(figsize=(7,7))
-    ax = plt.gca()
-    ax.add_collection(p)
-    xrang = [np.nanmin(vertices[:,0]),np.nanmax(vertices[:,0])]
-    yrang = [np.nanmin(vertices[:,1]),np.nanmax(vertices[:,1])]
-
-    ax.set_xlim(xrang[0],xrang[1])
-    ax.set_ylim(yrang[0],yrang[1])
-    ax.axis('equal')
-    ax.axis('off')
-
-    if borders is not None:
-        ax.plot(borders[:,0],borders[:,1],color=bordercolor,
-                marker='.', linestyle=None,
-                markersize=bordersize,linewidth=0)
-    return ax
-
-def _render_plotly_mesh3d(vertices,faces,color,borders,bordercolor, bordersize, new_figure, hovertext=None):
-    """
-    Render the data in plotly
-    Args:
-        vertices (np.ndarray)
-            Array of vertices
-        faces (nd.array)
-            Array of Faces
-        face_color (nd.array)
-            RGBA array of color and alpha of all vertices
-        borders (np.ndarray)
-            default is None
-        bordercolor (char or matplotlib.color)
-            Color of border
-        bordersize (int)
-            Size of the border points
-        new_figure (bool)
-            Create new Figure or render in currrent axis
-        hovertext (list of str)
-            Text for hovering for each vertex
-    Returns:
-        ax (matplotlib.axes)
-            Axis that was used to render the axis
-    """
-    # Check whether to color faces or vertices:
-    if color.shape[0]==vertices.shape[0]:
-        vertcolor=color
-        facecolor=None
-    elif color.shape[0]==faces.shape[0]:
-        vertcolor=None
-        facecolor=color
-    else:
-        raise(NameError('Color data not the correct shape'))
-
-    if hovertext is None:
-        hi = 'skip'
-    else:
-        hi = 'text'
-    traces = []
-    traces.append(go.Mesh3d(x=vertices[:, 0], y=vertices[:, 1], z=vertices[:, 2],
-                    i=faces[:, 0], j=faces[:, 1], k=faces[:, 2],
-                    facecolor = facecolor,
-                    vertexcolor = vertcolor,
-                    lightposition=dict(x=0, y=0, z=2.5),
-                    text = hovertext,
-                    hoverinfo=None))
-    if borders is not None:
-        if bordercolor=='k':
-            bordercolor='#000000'
-        if bordercolor=='w':
-            bordercolor='#ffffff'
-        traces.append(go.Scatter3d(
-                x=borders[:,0],
-                y=borders[:,1],
-                z=np.ones((borders.shape[0],))*0.01,
-                marker = dict(
-                    color=bordercolor,
-                    size=bordersize,
-                    symbol='circle'),
-                mode='markers',
-                hoverinfo=None))
-
-    camera = dict(
-        up=dict(x=0, y=1, z=0),
-        center=dict(x=0, y=0, z=0),
-        eye=dict(x=0, y=0, z=1.4)
-    )
-    axis_dict= dict(visible=False,
-        showbackground=False,
-        showline=False,
-        showgrid=False,
-        showspikes=False,
-        showticklabels=False,
-        title=None,
-        range=[-110,110])
-    scene = dict(xaxis=axis_dict,
-                yaxis=axis_dict,
-                zaxis=axis_dict,
-                aspectmode= 'cube')
-                # aspectratio=dict(x=1, y=1, z=0.1))
-    fig = go.Figure(data=traces)
-    fig.update_layout(scene_camera=camera,
-                dragmode=False,
-                margin=dict(r=10, l=10, b=10, t=10),
-                scene = scene
-                )
-    return fig
-
+    if color=='k':
+        color='#000000'
+    if color=='w':
+        color='#ffffff'
+    return color
