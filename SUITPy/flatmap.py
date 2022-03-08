@@ -511,7 +511,7 @@ def plot(
         alpha=1.0,
         render='matplotlib',
         hover = 'auto',
-        new_figure=False,
+        new_figure=True,
         colorbar=False,
         cbar_tick_format="%.2g",
         backgroundcolor = 'w'
@@ -554,7 +554,7 @@ def plot(
         hover (str)
             When renderer is plotly, it determines what is displayed in the hover label.
         new_figure (bool)
-            By default, flatmap.plot renders the color map into matplotlib's current axis. It new_figure is set to True is will create a new figure
+            If False, plot renders into matplotlib's current axis. If True, it creates a new figure (default=True)
         colorbar (bool)
             By default, colorbar is not plotted into matplotlib's current axis (or new figure if new_figure is set to True)
         cbar_tick_format : str, optional
