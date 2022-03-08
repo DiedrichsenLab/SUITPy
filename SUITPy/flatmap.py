@@ -563,8 +563,9 @@ def plot(
             Default='%.2g' for scientific notation.
 
     Returns:
-        ax (matplotlib.axis or plotly.go.Figure)
+        ax (matplotlib.axis)
             If render is matplotlib, the function returns the axis
+        fig (plotly.go.Figure)
             If render is plotly, it returns Figure object
 
     """
