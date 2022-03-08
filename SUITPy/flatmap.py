@@ -373,8 +373,7 @@ def make_label_gifti(
     return gifti
 
 def get_gifti_column_names(gifti):
-    """
-    Returns the column names from a gifti file (*.label.gii or *.func.gii)
+    """Returns the column names from a gifti file (*.label.gii or *.func.gii)
 
     Args:
         gifti (gifti image):
@@ -516,8 +515,7 @@ def plot(
         cbar_tick_format="%.2g",
         backgroundcolor = 'w'
         ):
-    """
-    Visualize cerebellar activity on a flatmap
+    """Visualize cerebellar activity on a flatmap
 
     Args:
         data (np.array, giftiImage, or name of gifti file):
@@ -592,7 +590,7 @@ def plot(
                 label_names = list(labels.get_labels_as_dict().values())
         data_arr = data.darrays[0].data
 
-    # If it's a nd array, copy `data` arr
+    # If it's a nd array, copy data arr
     if type(data) is np.ndarray:
         data_arr = np.copy(data)
 
@@ -684,8 +682,7 @@ def _map_color(
     cmap=None,
     threshold=None
     ):
-    """
-    Scales the values, and
+    """Scales the values, and
     then looks up the RGB values in the color map
     If faces are provided, maps the data to faces
 

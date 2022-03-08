@@ -9,3 +9,4 @@ numpy
 cython
 requests
 scipy
+plotly
