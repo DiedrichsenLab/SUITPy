@@ -7,10 +7,9 @@ dependencies:
     - scipy
     - matplotlib
     - nibabel
-    - pandas
-    - scikit-learn
     - joblib
     - pytest
     - pytest-cov
     - lxml
     - codecov
+    - plotly

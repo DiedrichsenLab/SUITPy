@@ -6,7 +6,7 @@ SUITPy version, required package versions, and utilities for checking
 based heavily on `nilearn.version`
 """
 
-__version__ = '1.0.4'
+__version__ = '1.0.5'
 
 _SUITPy_INSTALL_MSG = 'See %s for installation information.' % (
     'https://suitpy.readthedocs.io/en/latest/install.html#installation')
@@ -21,16 +21,16 @@ REQUIRED_MODULE_METADATA = (
     ('nibabel', {
         'min_version': '2.5',
         'required_at_installation': True}),
-    ('pandas', {
-        'min_version': '0.24.0',
-        'required_at_installation': True,
-        'install_info': _SUITPy_INSTALL_MSG}),
     ("requests", {
         "min_version": "2",
         "required_at_installation": True
     }),
     ("scipy", {
         "min_version": "1.0",
+        "required_at_installation": True
+    }),
+    ("plotly", {
+        "min_version": "5.3.1",
         "required_at_installation": True
     })
 )
