@@ -552,7 +552,7 @@ def plot(
         render (str)
             Renderer for graphic display 'matplot' / 'plotly'. Dafault is matplotlib
         hover (str)
-            When renderer is plotly, it determines what is displayed in the hover label.
+            When renderer is plotly, it determines what is displayed in the hover label: 'auto', 'value', or None
         new_figure (bool)
             If False, plot renders into matplotlib's current axis. If True, it creates a new figure (default=True)
         colorbar (bool)
@@ -563,8 +563,9 @@ def plot(
             Default='%.2g' for scientific notation.
 
     Returns:
-        ax (matplotlib.axis)
+        ax (matplotlib.axis or plotly.go.Figure)
             If render is matplotlib, the function returns the axis
+            If render is plotly, it returns Figure object
 
     """
     # default directory
