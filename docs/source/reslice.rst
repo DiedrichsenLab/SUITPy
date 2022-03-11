@@ -1,7 +1,7 @@
 Reslice Module
 ===============
 
-The reslice module of the SUITPy toolbox is used to reslice images from individual into Atlas space. Currently, we are still relying on the noramlization being done in the [`noramlization function <https://github.com/jdiedrichsen/suit/blob/master/suit_normalize_dartel.m>`_](GITHUB) of the toolbox. We assume that you have `run suit_normalize_dartel.m` (see [`Documentation of the normalization function <http://www.diedrichsenlab.org/imaging/suit_function.htm#norm_dentate>`_]). The reslice module requires the non-linear deformation from the normalize steo as a nonlinear deformation file. In Matlab you can produce this file using the following command:
+The reslice module of the SUITPy toolbox is used to reslice images from individual into Atlas space. Currently, we are still relying on the noramlization being done in the [`noramlization function <https://github.com/jdiedrichsen/suit/blob/master/suit_normalize_dartel.m>`_](GITHUB) of the toolbox. We assume that you have `run suit_normalize_dartel.m` (see [`Documentation of the normalization function <https://www.diedrichsenlab.org/imaging/suit_function.htm#norm_dartel>`_]). The reslice module requires the non-linear deformation from the normalize steo as a nonlinear deformation file. In Matlab you can produce this file using the following command:
 ```
 [Def, mat] = spmdefs_get_dartel(flowfield, affine_matrix)
 ```
