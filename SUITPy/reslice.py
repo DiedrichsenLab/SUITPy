@@ -6,13 +6,9 @@ SUIT toolbox reslice module
 Basic functionality for resample image into atlas
 
 """
-from black import out
 import nibabel as nib
 from numpy import *
-import scipy.io as sio
-import matplotlib.pyplot as plt
 import numpy as np
-import warnings
 from nilearn import image
 from SUITPy.flatmap import affine_transform
 
@@ -86,7 +82,6 @@ def deal_sample(
             0: nearest neighbor, 1:trilinear        
         voxelsize (tuple): 
             Desired voxel size - defaults to deformation image
-            [THROW A WARNING IF BOTH VOXEL SIZE AND AFFINE MAT ARE SPECIFIC] 
         imagesize (tuple): 
             desired image size: Defaults to deformation image 
     Returns: 
@@ -103,35 +98,25 @@ def deal_sample(
         img = create_img(masked, deformation.affine)
     else:
         img = create_img(data, deformation.affine)
-    after_def = non_linear_deformation(deformation, img)
+    
     aff = np.copy(deformation.affine)
-        
-    after_def_img = create_img(after_def, aff)
-        
     if voxelsize != None:
-        warnings.warn('Both affine matrix and voxel size are specified!')
-        aff = np.copy(after_def_img.affine)
         aff[0][0] = voxelsize[0] if aff[0][0] > 0 else -voxelsize[0]
         aff[1][1] = voxelsize[1] if aff[1][1] > 0 else -voxelsize[1]
         aff[2][2] = voxelsize[2] if aff[2][2] > 0 else -voxelsize[2]
-        after_def_img = image.resample_img(after_def_img, aff)
-
-
     elif imagesize != None:
-        initial_x, initial_y, initial_z = after_def_img.shape
+        initial_x, initial_y, initial_z = deformation.shape[0], deformation.shape[1], deformation.shape[2]
         new_x, new_y, new_z = imagesize[0], imagesize[1], imagesize[2]
         delta_x = new_x/initial_x
         delta_y = new_y/initial_y
         delta_z = new_z/initial_z
-        
-        newAffine = np.copy(after_def_img.affine)
+        aff[0][:3] = aff[0][:3] / delta_x
+        aff[1][:3] = aff[1][:3] / delta_y
+        aff[2][:3] = aff[2][:3] / delta_z
 
-        newAffine[0][:3] = newAffine[0][:3] / delta_x
-        newAffine[1][:3] = newAffine[1][:3] / delta_y
-        newAffine[2][:3] = newAffine[2][:3] / delta_z
-            
-        after_def_img = image.resample_img(after_def_img, newAffine, (new_x, new_y, new_z))
-                
+
+    after_def_img = non_linear_deformation(deformation, img, aff)
+        
     
     return after_def_img
         
@@ -314,6 +299,7 @@ def sample_image(
 def non_linear_deformation(
                         deformation_img,
                         img,
+                        aff
                         ):
     """
     Applying non-linear deformation to image and return image.
@@ -323,10 +309,12 @@ def non_linear_deformation(
             A image which contains x, y, z coordinates in the native image that correspond to that voxel in atlas space.
         img (NIFTI image):
             The target image
+        aff (np array):
+            If user defined voxelsize or imagesize, the aff will be the modified affine matrix. Else, it will be the affine matrix for deformation file.
         
     Returns:
-        value (np.array):
-            An array which contains values of the image after applying non-linear deformation on this image
+        output_image (NIFTI image):
+            An NIFTI image after non-linear deformation
         
     """
     deformation_data = deformation_img.get_fdata()
@@ -336,9 +324,8 @@ def non_linear_deformation(
     y = deformation_data[:,:,:,1]
     z = deformation_data[:,:,:,2]
 
-    deformation_aff = deformation_img.affine
-
-    mm_to_voxel = affine_transform(x, y, z, np.linalg.inv(deformation_aff))
+    
+    mm_to_voxel = affine_transform(x, y, z, np.linalg.inv(deformation_img.affine))
     mm_to_voxel = np.array(mm_to_voxel)
 
     x = mm_to_voxel[0,:,:,:]
@@ -346,7 +333,11 @@ def non_linear_deformation(
     z = mm_to_voxel[2,:,:,:]
     value = sample_image(img, x, y, z, 1).reshape(img.shape[0], img.shape[1], img.shape[2])
 
-    return value
+    v_img = nib.Nifti1Image(value, deformation_img.affine)
+
+    v_img = image.resample_img(v_img, aff)
+
+    return v_img
 
 
 def create_img(
