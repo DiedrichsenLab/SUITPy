@@ -87,19 +87,7 @@ def deal_sample(
     Returns: 
         image (NIFTI image or list of NIFTI Images )
     """
-    xm_data, ym_data, zm_data = mesh_data(img,deformation)
-    data = np.zeros((deformation.shape[0], deformation.shape[1], deformation.shape[2]))
-    data = sample_image(img, xm_data, ym_data, zm_data, interp).reshape((deformation.shape[0], deformation.shape[1], deformation.shape[2]))
-    if mask != None:
-        xm_mask, ym_mask, zm_mask = mesh_data(mask, deformation)
-        maskData = np.zeros((deformation.shape[0], deformation.shape[1], deformation.shape[2]))
-        maskData = sample_image(mask, xm_mask, ym_mask, zm_mask, interp).reshape((deformation.shape[0], deformation.shape[1], deformation.shape[2]))
-        masked = np.multiply(data,maskData)
-        img = create_img(masked, deformation.affine)
-    else:
-        img = create_img(data, deformation.affine)
-    
-    aff = np.copy(deformation.affine)
+    aff = deformation.affine
     if voxelsize != None:
         aff[0][0] = voxelsize[0] if aff[0][0] > 0 else -voxelsize[0]
         aff[1][1] = voxelsize[1] if aff[1][1] > 0 else -voxelsize[1]
@@ -113,18 +101,27 @@ def deal_sample(
         aff[0][:3] = aff[0][:3] / delta_x
         aff[1][:3] = aff[1][:3] / delta_y
         aff[2][:3] = aff[2][:3] / delta_z
-
-
+    xm_data, ym_data, zm_data = mesh_data(img,deformation, aff)
+    data = np.zeros((deformation.shape[0], deformation.shape[1], deformation.shape[2]))
+    data = sample_image(img, xm_data, ym_data, zm_data, interp).reshape((deformation.shape[0], deformation.shape[1], deformation.shape[2]))
+    if mask != None:
+        xm_mask, ym_mask, zm_mask = mesh_data(mask, deformation, aff)
+        maskData = np.zeros((deformation.shape[0], deformation.shape[1], deformation.shape[2]))
+        maskData = sample_image(mask, xm_mask, ym_mask, zm_mask, interp).reshape((deformation.shape[0], deformation.shape[1], deformation.shape[2]))
+        masked = np.multiply(data,maskData)
+        img = create_img(masked, aff)
+    else:
+        img = create_img(data, aff)
+    
     after_def_img = non_linear_deformation(deformation, img, aff)
-        
+    after_def_img = create_img(after_def_img, aff)
     
     return after_def_img
-        
-
 
 def mesh_data(
             img,
-            deformation
+            deformation,
+            aff = None
             ):
     """
     Meshgrid x, y, z coordinates and then applying affine matrix to them to get x, y, z coordinates in voxel space.
@@ -134,6 +131,8 @@ def mesh_data(
             The target image
         deformation (NIFTI image):
             Non-linear deformation
+        aff (np.array):
+            Optional user-defined affine matrix (default as None)
     
     Returns:
         x_data (np.array):
@@ -148,7 +147,10 @@ def mesh_data(
     y = def_data[:,:,:,1]
     z = def_data[:,:,:,2]
 
-    x_data, y_data, z_data = affine_transform(x, y, z, np.linalg.inv(img.affine))
+    if aff != None:
+        x_data, y_data, z_data = affine_transform(x, y, z, np.linalg.inv(aff))
+    else:
+        x_data, y_data, z_data = affine_transform(x, y, z, np.linalg.inv(img.affine))
 
     return x_data, y_data, z_data
 
@@ -313,8 +315,8 @@ def non_linear_deformation(
             If user defined voxelsize or imagesize, the aff will be the modified affine matrix. Else, it will be the affine matrix for deformation file.
         
     Returns:
-        output_image (NIFTI image):
-            An NIFTI image after non-linear deformation
+        value (np.array):
+            The values in the output image.
         
     """
     deformation_data = deformation_img.get_fdata()
@@ -325,19 +327,14 @@ def non_linear_deformation(
     z = deformation_data[:,:,:,2]
 
     
-    mm_to_voxel = affine_transform(x, y, z, np.linalg.inv(deformation_img.affine))
+    mm_to_voxel = affine_transform(x, y, z, np.linalg.inv(aff))
     mm_to_voxel = np.array(mm_to_voxel)
 
     x = mm_to_voxel[0,:,:,:]
     y = mm_to_voxel[1,:,:,:]
     z = mm_to_voxel[2,:,:,:]
     value = sample_image(img, x, y, z, 1).reshape(img.shape[0], img.shape[1], img.shape[2])
-
-    v_img = nib.Nifti1Image(value, deformation_img.affine)
-
-    v_img = image.resample_img(v_img, aff)
-
-    return v_img
+    return value
 
 
 def create_img(
