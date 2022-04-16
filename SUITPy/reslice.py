@@ -9,8 +9,8 @@ Basic functionality for resample image into atlas
 import nibabel as nib
 from numpy import *
 import numpy as np
-from nilearn import image
 from SUITPy.flatmap import affine_transform
+import nilearn.image as image
 
 def reslice_image(
                 source_image,
@@ -38,7 +38,6 @@ def reslice_image(
         image (NIFTI image or list of NIFTI Images )
     """
     
-        
     if type(deformation) == str:
         deformation = nib.load(deformation)
     
@@ -46,11 +45,7 @@ def reslice_image(
         if type(mask) == str:
             mask = nib.load(mask)
 
-    if type(source_image) == str:
-        img = nib.load(source_image)
-        output_img = deal_sample(img, deformation, mask, interp, voxelsize, imagesize)
-        return output_img
-    elif type(source_image) == list:
+    if type(source_image) == list:
         output_list = []
         for img in source_image:
             if type(img) == str:
@@ -58,7 +53,12 @@ def reslice_image(
             output_img = deal_sample(img, deformation, mask, interp, voxelsize, imagesize)
             output_list.append(output_img)
         return output_list
-            
+    else:
+        if type(source_image) == str:
+            source_image = nib.load(source_image)
+        output_img = deal_sample(source_image, deformation, mask, interp, voxelsize, imagesize)
+        return output_img
+
             
 def deal_sample(
                 img,
@@ -87,11 +87,29 @@ def deal_sample(
     Returns: 
         image (NIFTI image or list of NIFTI Images )
     """
-    aff = deformation.affine
+    aff = np.copy(deformation.affine)
+    
+    xm_data, ym_data, zm_data = mesh_data(deformation, img.affine)
+    data = np.zeros((deformation.shape[0], deformation.shape[1], deformation.shape[2]))
+    data = sample_image(img, xm_data, ym_data, zm_data, interp).reshape((deformation.shape[0], deformation.shape[1], deformation.shape[2]))
+    if mask != None:
+        xm_mask, ym_mask, zm_mask = mesh_data(deformation, mask.affine)
+        maskData = np.zeros((deformation.shape[0], deformation.shape[1], deformation.shape[2]))
+        maskData = sample_image(mask, xm_mask, ym_mask, zm_mask, interp).reshape((deformation.shape[0], deformation.shape[1], deformation.shape[2]))
+        masked = np.multiply(data,maskData)
+        img = create_img(masked, aff)
+    else:
+        img = create_img(data, aff)
+    after_def_img = non_linear_deformation(deformation, img, aff, interp)
+    
+    after_def_img = create_img(after_def_img, aff)
+
+    
     if voxelsize != None:
         aff[0][0] = voxelsize[0] if aff[0][0] > 0 else -voxelsize[0]
         aff[1][1] = voxelsize[1] if aff[1][1] > 0 else -voxelsize[1]
         aff[2][2] = voxelsize[2] if aff[2][2] > 0 else -voxelsize[2]
+        
     elif imagesize != None:
         initial_x, initial_y, initial_z = deformation.shape[0], deformation.shape[1], deformation.shape[2]
         new_x, new_y, new_z = imagesize[0], imagesize[1], imagesize[2]
@@ -101,27 +119,15 @@ def deal_sample(
         aff[0][:3] = aff[0][:3] / delta_x
         aff[1][:3] = aff[1][:3] / delta_y
         aff[2][:3] = aff[2][:3] / delta_z
-    xm_data, ym_data, zm_data = mesh_data(img,deformation, aff)
-    data = np.zeros((deformation.shape[0], deformation.shape[1], deformation.shape[2]))
-    data = sample_image(img, xm_data, ym_data, zm_data, interp).reshape((deformation.shape[0], deformation.shape[1], deformation.shape[2]))
-    if mask != None:
-        xm_mask, ym_mask, zm_mask = mesh_data(mask, deformation, aff)
-        maskData = np.zeros((deformation.shape[0], deformation.shape[1], deformation.shape[2]))
-        maskData = sample_image(mask, xm_mask, ym_mask, zm_mask, interp).reshape((deformation.shape[0], deformation.shape[1], deformation.shape[2]))
-        masked = np.multiply(data,maskData)
-        img = create_img(masked, aff)
-    else:
-        img = create_img(data, aff)
+
+    after_def_img = image.resample_img(after_def_img, aff)
     
-    after_def_img = non_linear_deformation(deformation, img, aff)
-    after_def_img = create_img(after_def_img, aff)
     
     return after_def_img
 
 def mesh_data(
-            img,
             deformation,
-            aff = None
+            aff
             ):
     """
     Meshgrid x, y, z coordinates and then applying affine matrix to them to get x, y, z coordinates in voxel space.
@@ -147,11 +153,9 @@ def mesh_data(
     y = def_data[:,:,:,1]
     z = def_data[:,:,:,2]
 
-    if aff != None:
-        x_data, y_data, z_data = affine_transform(x, y, z, np.linalg.inv(aff))
-    else:
-        x_data, y_data, z_data = affine_transform(x, y, z, np.linalg.inv(img.affine))
-
+    
+    x_data, y_data, z_data = affine_transform(x, y, z, np.linalg.inv(aff))
+    
     return x_data, y_data, z_data
 
 
@@ -301,7 +305,8 @@ def sample_image(
 def non_linear_deformation(
                         deformation_img,
                         img,
-                        aff
+                        aff,
+                        interpolation
                         ):
     """
     Applying non-linear deformation to image and return image.
@@ -313,6 +318,9 @@ def non_linear_deformation(
             The target image
         aff (np array):
             If user defined voxelsize or imagesize, the aff will be the modified affine matrix. Else, it will be the affine matrix for deformation file.
+        interpolation (int):
+            1 for trilinear interpolation
+            0 for nearest neighbor interpolation
         
     Returns:
         value (np.array):
@@ -333,8 +341,9 @@ def non_linear_deformation(
     x = mm_to_voxel[0,:,:,:]
     y = mm_to_voxel[1,:,:,:]
     z = mm_to_voxel[2,:,:,:]
-    value = sample_image(img, x, y, z, 1).reshape(img.shape[0], img.shape[1], img.shape[2])
+    value = sample_image(img, x, y, z, interpolation).reshape(img.shape[0], img.shape[1], img.shape[2])
     return value
+
 
 
 def create_img(
@@ -360,3 +369,4 @@ def create_img(
     output_img.update_header()
 
     return output_img
+
