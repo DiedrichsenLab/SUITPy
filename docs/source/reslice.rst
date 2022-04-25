@@ -9,6 +9,8 @@ The reslice module is used to reslice images from individual into atlas space. C
 
 Where ``<name>`` is the name of the original anatomical and ``dir`` the suit working directory (defaults to current directory). This function produces ``y_<name>_suitdef.nii`` as an output. 
 
+This file can then be used in SUITPy to reslice anatomical and functional images into atlas space. 
+
 .. toctree::
 
     notebooks/reslice_example
