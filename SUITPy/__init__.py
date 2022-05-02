@@ -28,12 +28,9 @@ from .flatmap import (vol_to_surf,
                     plot)
 
 from .reslice import (reslice_image,
-                      mesh_data,
+                      reslice_img,
                       check_range,
-                      trilinear,
-                      sample_image,
-                      non_linear_deformation,
-                      create_img)
+                      sample_image)
 
 def _nibabel2_deprecation_warning():
     msg = ('Support for Nibabel 2.x is deprecated and will stop '

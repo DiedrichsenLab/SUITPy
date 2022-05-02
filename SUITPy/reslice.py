@@ -49,12 +49,15 @@ def reslice_image(
         if type(mask) == str:
             mask = nib.load(mask)
 
-    # Deal with voxelsize and imagedim and affine
+    # Deal with voxelsize: This works only for 
+    # image in LPI / RPI format 
     if voxelsize is not None: 
         if (imagedim is not None) | (affine is not None):
             raise(NameError('give either voxelsize or (imagedim / affine), but not both'))
-        fac = np.diag(deformation.affine[0:3,0:3])/voxelsize
-        pass
+        fac = voxelsize / np.abs(np.diag(deformation.affine[0:3,0:3]))
+        aff_scale = np.diag(np.append(fac,[1]))
+        affine = deformation.affine @ aff_scale
+        imagedim = np.ceil(deformation.shape[0:3] / fac).astype(int)
 
     if affine is None: 
         affine = deformation.affine
@@ -76,8 +79,7 @@ def reslice_image(
         output_img = reslice_img(source_image, deformation, mask, interp, imagedim, affine)
         return output_img
 
-def reslice_img(
-                img,
+def reslice_img(img,
                 deformation,
                 mask,
                 interp,
@@ -105,19 +107,24 @@ def reslice_img(
     """
     I,J,K = np.meshgrid(np.arange(imagedim[0]),
                         np.arange(imagedim[1]),
-                        np.arange(imagedim[2]))
+                        np.arange(imagedim[2]),
+                        indexing='ij')
     X,Y,Z = affine_transform(I,J,K, affine)
-    coord_def = sample_image(deformation,X,Y,Z)
-    xm = coord_def[0]
-    ym = coord_def[1]
-    zm = coord_def[2]
+    coord_def = sample_image(deformation,X,Y,Z,1).squeeze()
+    xm = coord_def[:,:,:,0]
+    ym = coord_def[:,:,:,1]
+    zm = coord_def[:,:,:,2]
     data = sample_image(img, xm, ym, zm, interp)
     if mask != None:
-        maskData = sample_image(mask, xm, ym, zm, interp))
+        maskData = sample_image(mask, xm, ym, zm, interp)
         data = np.multiply(data,maskData)
     
-    img = create_img(data, affine)
-    return img
+    # Create new image 
+    output_img = nib.Nifti1Image(data, affine=affine)
+    output_img.set_qform(output_img.get_qform())
+    output_img.header.set_xyzt_units('mm', 'sec')
+    output_img.update_header()
+    return output_img
 
 def check_range(img,im,jm,km):
     """
@@ -134,90 +141,17 @@ def check_range(img,im,jm,km):
             all z-coordinates
 
     Returns:
-        xm (np.array):
-            X-coordinates which are in the range
-        ym (np.array):
-            Y-coordinates which are in the range
-        zm (np.array):
-            Z-coordinates which are in the range
+        im (np.array):
+        jm (np.array):
+        km (np.array):
+            voxel coordinates - set to zero if invalid
+        invalid (nd.array)
     """
-    is_in_image = np.zeros(xm.shape[0])
-    check_x = np.zeros(xm.shape[0])
-    check_y = np.zeros(ym.shape[0])
-    check_z = np.zeros(zm.shape[0])
-
-    check_x = np.where(np.logical_and(xm >= 0, xm <= img.shape[0]-1), True, False)
-    check_y = np.where(np.logical_and(ym >= 0, ym <= img.shape[1]-1), True, False)
-    check_z = np.where(np.logical_and(zm >= 0, zm <= img.shape[2]-1), True, False)
-    
-    is_in_image = np.where(np.logical_and(np.logical_and(check_x, check_y), check_z), 1, 0)
-        
-    xm = np.multiply(xm, is_in_image)
-    ym = np.multiply(ym, is_in_image)
-    zm = np.multiply(zm, is_in_image)
-    return xm, ym, zm
-
-
-def trilinear(
-            img,
-            xm,
-            ym,
-            zm
-            ):
-    """
-    Return values after trilinear interpolation
-    
-    Args:
-        img (Nifti image)
-        xm (np.array)
-            X-coordinate in voxel system 
-        ym (np.array)
-            Y-coordinate in voxel system 
-        zm (np.array)
-            Z-coordinate in voxel system
-    Returns:
-        c (np.array)
-            Array contains all values in the image
-    """
-    xm, ym, zm = check_range(img, xm, ym, zm)
-    
-    xcoord = np.floor(xm).astype('int')
-    ycoord = np.floor(ym).astype('int')
-    zcoord = np.floor(zm).astype('int')
-
-    xcoord = np.where(xcoord > img.shape[0]-2, img.shape[0]-2, xcoord)
-    xcoord = np.where(xcoord < 0, 0, xcoord)
-    ycoord = np.where(ycoord > img.shape[1]-2, img.shape[1]-2, ycoord)
-    ycoord = np.where(ycoord < 0, 0, ycoord)
-    zcoord = np.where(zcoord > img.shape[2]-2, img.shape[2]-2, zcoord)
-    zcoord = np.where(zcoord < 0, 0, zcoord)
-    
-    xd = xm - xcoord
-    yd = ym - ycoord
-    zd = zm - zcoord
-
-    
-    c000 = img.get_fdata()[xcoord, ycoord, zcoord]
-    c100 = img.get_fdata()[xcoord+1, ycoord, zcoord]
-    c110 = img.get_fdata()[xcoord+1, ycoord+1, zcoord]
-    c101 = img.get_fdata()[xcoord+1, ycoord, zcoord+1]
-    c111 = img.get_fdata()[xcoord+1, ycoord+1, zcoord+1]
-    c010 = img.get_fdata()[xcoord, ycoord+1, zcoord]
-    c011 = img.get_fdata()[xcoord, ycoord+1, zcoord+1]
-    c001 = img.get_fdata()[xcoord, ycoord, zcoord+1]
-
-    c00 = c000*(1-xd)+c100*xd
-    c01 = c001*(1-xd)+c101*xd
-    c10 = c010*(1-xd)+c110*xd
-    c11 = c011*(1-xd)+c111*xd
-    
-    c0 = c00*(1-yd)+c10*yd
-    c1 = c01*(1-yd)+c11*yd
-    
-    c = c0*(1-zd)+c1*zd
-    
-    return c
-
+    invalid = np.logical_not((im>=0) & (im<img.shape[0]) & (jm>=0) & (jm<img.shape[1]) & (km>=0) & (km<img.shape[2]))
+    im[invalid] = 0
+    jm[invalid] = 0
+    km[invalid] = 0 
+    return im,jm,km,invalid
 
 def sample_image(img,xm,ym,zm,interpolation):
     """
@@ -238,40 +172,66 @@ def sample_image(img,xm,ym,zm,interpolation):
         value (np-array)
             Array contains all values in the image
     """
-    im,jm,jk = affine_transform(xm,ym,zm,inv(img.affine)
-    value = np.zeros(xm.shape, dtype=int)
+    im,jm,km = affine_transform(xm,ym,zm,inv(img.affine))
+
     if interpolation == 1:
-        value = trilinear(img, xm, ym, zm)
+        ir = np.floor(im).astype('int')
+        jr = np.floor(jm).astype('int')
+        kr = np.floor(km).astype('int')
+
+        invalid = np.logical_not((im>=0) & (im<img.shape[0]-1) & (jm>=0) & (jm<img.shape[1]-1) & (km>=0) & (km<img.shape[2]-1))
+        ir[invalid] = 0
+        jr[invalid] = 0
+        kr[invalid] = 0 
+                
+        id = im - ir
+        jd = jm - jr
+        kd = km - kr
+
+        D = img.get_fdata()
+        if D.ndim == 4:
+            ns = id.shape + (1,)
+        if D.ndim ==5: 
+            ns = id.shape + (1,1)
+        else:
+            ns = id.shape
+        
+        id = id.reshape(ns)
+        jd = jd.reshape(ns)
+        kd = kd.reshape(ns)
+
+        c000 = D[ir, jr, kr]
+        c100 = D[ir+1, jr, kr]
+        c110 = D[ir+1, jr+1, kr]
+        c101 = D[ir+1, jr, kr+1]
+        c111 = D[ir+1, jr+1, kr+1]
+        c010 = D[ir, jr+1, kr]
+        c011 = D[ir, jr+1, kr+1]
+        c001 = D[ir, jr, kr+1]
+
+        c00 = c000*(1-id)+c100*id
+        c01 = c001*(1-id)+c101*id
+        c10 = c010*(1-id)+c110*id
+        c11 = c011*(1-id)+c111*id
+        
+        c0 = c00*(1-jd)+c10*jd
+        c1 = c01*(1-jd)+c11*jd
+        
+        value = c0*(1-kd)+c1*kd
     elif interpolation == 0:
-        xm = np.round(xm).astype('int')
-        ym = np.round(ym).astype('int')
-        zm = np.round(zm).astype('int')
-        xm, ym, zm = check_range(img, im, jm, km)
-        value = img.get_fdata()[xm, ym, zm]
+        ir = np.rint(im).astype('int')
+        jr = np.rint(jm).astype('int')
+        kr = np.rint(km).astype('int')
+
+        ir, jr, kr, invalid = check_range(img, ir, jr, kr)
+        value = img.get_fdata()[ir, jr, kr]
+    
+    # Kill the invalid elements
+    if value.dtype is float:
+        value[invalid]=np.nan
+    else: 
+        value[invalid]=0
     return value
 
 
-def create_img(
-            value,
-            affine
-            ):
-    """
-    Saving an array as an NIFTI image
-
-    Args:
-        value (np.array):
-            An array contains values which should be stored into an NIFTI image
-        affine (np.array):
-            Affine matrix for the output image
-    
-    Returns:
-        output_img (NIFTI image):
-            The output image which contains values
-    """
-    output_img = nib.Nifti1Image(value.astype('int16'), affine=affine)
-    output_img.set_qform(output_img.get_qform())
-    output_img.header.set_xyzt_units('mm', 'sec')
-    output_img.update_header()
-
-    return output_img
 
