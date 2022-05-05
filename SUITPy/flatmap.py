@@ -182,6 +182,7 @@ def vol_to_surf(
         volumes = [volumes]
 
     # Make a list of the files to be mapped
+    volsize=np.zeros((len(volumes),),dtype=int)
     for i in range(len(volumes)):
         if (type(volumes[i]) is nb.Nifti2Image) or (type(volumes[i]) is nb.Nifti1Image):
             Vols.append(volumes[i])
@@ -194,6 +195,13 @@ def vol_to_surf(
             except:
                 print(f'File {volumes[i]} could not be opened')
                 Vols.append(None)
+        if Vols[-1] is None:
+            volsize[i]=0
+        elif Vols[-1].ndim == 3:
+            volsize[i]=1
+        else: 
+            volsize[i]=Vols[-1].shape[3]
+
 
     if firstGood is None:
         sys.exit('Error: None of the images could be opened.')
@@ -206,8 +214,9 @@ def vol_to_surf(
         indices[i] = ijk.T
 
     # Read the data and map it
-    data = np.zeros((numPoints,num_verts))
-    mapped_data = np.zeros((num_verts,len(Vols)))
+    mapped_data = np.zeros((num_verts,volsize.sum()))
+    index=volsize.cumsum()
+    index=np.insert(index,0,0)
     for v,vol in enumerate(Vols):
         if vol is None:
             pass
@@ -215,18 +224,16 @@ def vol_to_surf(
             X = vol.get_data()
             if ignore_zeros:
                 X[X==0] = np.nan
-            for p in range(numPoints):
-                data[p,:] = X[indices[p,:,0],indices[p,:,1],indices[p,:,2]]
-                outside = (indices[p,:,:]<0).any(axis=1) # These are vertices outside the volume
-                data[p,outside] = np.nan
-
+            data = X[indices[:,:,0],indices[:,:,1],indices[:,:,2]]
+            if data.ndim == 2: 
+                data = data.reshape(data.shape + (1,))
             # Determine the right statistics - if function - call it
             if stats=='nanmean':
-                mapped_data[:,v] = np.nanmean(data,axis=0)
+                mapped_data[:,index[v]:index[v+1]] = np.nanmean(data,axis=0)
             elif stats=='mode':
-                mapped_data[:,v],_ = ss.mode(data,axis=0)
+                mapped_data[:,index[v]:index[v+1]],_ = ss.mode(data,axis=0)
             elif callable(stats):
-                mapped_data[:,v] = stats(data)
+                mapped_data[:,index[v]:index[v+1]] = stats(data)
 
     return mapped_data
 
