@@ -11,7 +11,6 @@ from numpy import *
 import numpy as np
 from numpy.linalg import inv
 from SUITPy.flatmap import affine_transform
-import nilearn.image as image
 
 def reslice_image(
                 source_image,
