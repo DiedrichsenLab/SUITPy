@@ -37,10 +37,9 @@ def fetch_king_2019(data='con', data_dir=None,
     -------
     data : data dict
         Dictionary, contains keys:
-        - data_dir: Absolute path of downloaded folder
-        - files: list of string.
-            Absolute paths of downloaded files on disk.
-        - description: A short description of `data` and some references.
+            - data_dir: Absolute path of downloaded folder
+            - files: list of string. Absolute paths of downloaded files on disk.
+            - description: A short description of `data` and some references.
 
     Notes
     -----
@@ -111,10 +110,9 @@ def fetch_buckner_2011(data_dir=None, base_url=None,
     -------
     data : data dict
         Dictionary, contains keys:
-        - data_dir: Absolute path of downloaded folder
-        - files: list of string.
-            Absolute paths of downloaded files on disk.
-        - description: A short description of `data` and some references.
+            - data_dir: Absolute path of downloaded folder
+            - files: list of string. Absolute paths of downloaded files on disk.
+            - description: A short description of `data` and some references.
 
     Notes
     -----
@@ -175,10 +173,9 @@ def fetch_diedrichsen_2009(data_dir=None, base_url=None,
     -------
     data : data dict
         Dictionary, contains keys:
-        - data_dir: Absolute path of downloaded folder
-        - files: list of string.
-            Absolute paths of downloaded files on disk.
-        - description: A short description of `data` and some references.
+            - data_dir: Absolute path of downloaded folder
+            - files: list of string. Absolute paths of downloaded files on disk.
+            - description: A short description of `data` and some references.
 
     Notes
     -----
@@ -241,10 +238,9 @@ def fetch_ji_2019(data_dir=None, base_url=None,
     -------
     data : data dict
         Dictionary, contains keys:
-        - data_dir: Absolute path of downloaded folder
-        - files: list of string.
-            Absolute paths of downloaded files on disk.
-        - description: A short description of `data` and some references.
+            - data_dir: Absolute path of downloaded folder
+            - files: list of string. Absolute paths of downloaded files on disk.
+            - description: A short description of `data` and some references.
 
     Notes
     -----
@@ -306,10 +302,9 @@ def fetch_xue_2021(data_dir=None, base_url=None,
     -------
     data : data dict
         Dictionary, contains keys:
-        - data_dir: Absolute path of downloaded folder
-        - files: list of string.
-            Absolute paths of downloaded files on disk.
-        - description: A short description of `data` and some references.
+            - data_dir: Absolute path of downloaded folder
+            - files: list of string. Absolute paths of downloaded files on disk.
+            - description: A short description of `data` and some references.
 
     Notes
     -----

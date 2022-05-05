@@ -7,7 +7,7 @@ Currently, only mapping of volume data to the flatmap and display of the flatmap
 Important links
 ---------------
 
-- SUIT website: http://diedrichsenlab.org/imaging/SUIT.htm
+- SUIT website: http://diedrichsenlab.org/imaging/suit.htm
 - Official source code repository: https://github.com/SUITPy/
 - HTML documentation (latest release): https://suitpy.readthedocs.io/
 
