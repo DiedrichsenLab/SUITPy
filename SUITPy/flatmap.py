@@ -541,7 +541,7 @@ def plot(
             Threshold for functional overlay. If one value is given, it is used as a positive threshold.
             If two values are given, an positive and negative threshold is used.
         cmap (str)
-            Matplotlib colormap used for overlay (defaults to 'jet' if none given)
+            A Matplotlib colormap or an equivalent Nx3 or Nx4 floating point array (N rgb or rgba values). (defaults to 'jet' if none given)
         label_names (list)
             labelnames (default is None - extracts from .label.gii )
         borders (str)
@@ -701,7 +701,7 @@ def _map_color(
         cscale (array like)
             (min,max) of the scaling of the data
         cmap (str, or matplotlib.colors.Colormap)
-            The Matplotlib colormap
+            The Matplotlib colormap an equivalent Nx3 or Nx4 floating point array (N rgb or rgba values).
         threshold (array like)
             (lower, upper) threshold for data display -
              only data x<lower and x>upper will be plotted
