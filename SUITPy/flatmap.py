@@ -612,15 +612,7 @@ def plot(
 
     # create label names if they don't exist
     if overlay_type=='label' and label_names is None:
-        num_labels = len(np.unique(data_arr))
-        label_names = []
-        # check for 0 labels
-        zero_label = 0 in data_arr
-        idx = 1
-        if zero_label:
-            idx = 0
-        for i in range(num_labels):
-            label_names.append("label-{:02d}".format(i + idx))
+        label_names = [f"L-{i:02d}" for i in range(data_arr.max()+1)]
 
     # decide whether to map to faces
     if (render=='plotly'):
