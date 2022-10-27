@@ -8,5 +8,5 @@ nibabel
 numpy
 cython
 requests
-scipy
+scipy>=1.9.0
 plotly

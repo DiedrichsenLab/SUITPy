@@ -231,7 +231,7 @@ def vol_to_surf(
             if stats=='nanmean':
                 mapped_data[:,index[v]:index[v+1]] = np.nanmean(data,axis=0)
             elif stats=='mode':
-                mapped_data[:,index[v]:index[v+1]],_ = ss.mode(data,axis=0)
+                mapped_data[:,index[v]:index[v+1]],_ = ss.mode(data,axis=0,keepdims=False)
             elif callable(stats):
                 mapped_data[:,index[v]:index[v+1]] = stats(data)
 
@@ -719,7 +719,7 @@ def _map_color(
             face_value[i,:] = data[faces[:,i]]
 
         if data.dtype.kind == 'i':
-            value,_ = ss.mode(face_value,axis=0)
+            value,_ = ss.mode(face_value,axis=0,keepdims=False)
             value = value.reshape((numFaces,))
         else:
             with warnings.catch_warnings():
