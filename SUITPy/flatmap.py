@@ -399,7 +399,7 @@ def get_gifti_column_names(gifti):
                 names.append(gifti.darrays[n].meta.data[i].value)
     return names
 
-def get_gifti_colortable(gifti,ignore_0=True):
+def get_gifti_colortable(gifti):
     """Returns the RGBA color table and matplotlib cmap from gifti object (*.label.gii)
 
     Args:
@@ -420,11 +420,7 @@ def get_gifti_colortable(gifti,ignore_0=True):
     for i,label in enumerate(labels):
         rgba[i,] = labels[i].rgba
 
-    if ignore_0:
-        rgba = rgba[1:]
-        labels = labels[1:]
-
-    cmap = LinearSegmentedColormap.from_list('mylist', rgba, N=len(rgba))
+    cmap = ListedColormap(rgba)
     mpl.cm.unregister_cmap("mycolormap")
     mpl.cm.register_cmap("mycolormap", cmap)
 
@@ -652,7 +648,7 @@ def plot(
         # set up colorbar
         if colorbar:
             if overlay_type=='label':
-                cbar = _colorbar_label(ax, cmap, cscale, cbar_tick_format, label_names)
+                cbar = _colorbar_label(ax, cmap, cbar_tick_format, label_names)
             elif overlay_type=='func':
                 cbar = _colorbar_func(ax, cmap, cscale, cbar_tick_format)
     elif render == 'plotly':
@@ -917,7 +913,6 @@ def _make_labels(data,labelstr):
 def _colorbar_label(
     ax,
     cmap,
-    cscale,
     cbar_tick_format,
     label_names
     ):
@@ -928,8 +923,6 @@ def _colorbar_label(
             Pre-existing axes for the plot.
         cmap (str, or matplotlib.colors.Colormap)
             The Matplotlib colormap
-        cscale (array like)
-            (min,max) of the scaling of the data
         cbar_tick_format : str, optional
             Controls how to format the tick labels of the colorbar.
             Ex: use "%i" to display as integers.
@@ -941,16 +934,12 @@ def _colorbar_label(
         cbar (matplotlib.colorbar)
             Colorbar object
     """
-    # check if there is a 0 label and adjust colorbar accordingly
-    if cscale[0]==0:
-        cmap.N = cmap.N-1
-        label_names = label_names[1:]
-    # set up colorbar
+    N = len(label_names) # Length of the colormap
     cax, _ = make_axes(ax, location='right', fraction=.15,
                         shrink=.5, pad=.0, aspect=10.)
-    norm = Normalize(vmin=cscale[0], vmax=cscale[1])
-    ticks = np.arange(1,len(label_names)+1)+0.5
-    bounds = np.arange(1,len(label_names)+2)
+    norm = Normalize(vmin=0, vmax=cmap.N)
+    ticks = np.arange(0,N)+0.5
+    bounds = np.arange(0,N+1)
     proxy_mappable = ScalarMappable(cmap=cmap, norm=norm)
     cbar = plt.colorbar(
         proxy_mappable, cax=cax, ticks=ticks,

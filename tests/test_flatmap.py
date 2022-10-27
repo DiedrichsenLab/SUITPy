@@ -17,7 +17,14 @@ def test_flatmap_plot():
     # ax.show()
     pass
 
+def test_plot_label():
+    fname = 'docs/source/notebooks/Buckner_17Networks.label.gii'
+    fig=flatmap.plot(fname, overlay_type='label',new_figure=True, colorbar=True,
+    cscale=[1,5],render='plotly')
+    fig.show()
 
 if __name__ == '__main__':
     # make_shapes()
-    test_flatmap_plot()
+    # test_flatmap_plot()
+    test_plot_label()
+    pass
