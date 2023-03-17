@@ -532,7 +532,9 @@ def plot(
         underscale (array-like)
             Colorscale [min, max] for the underlay (default: [-1, 0.5])
         overlay_type (str)
-            'func': functional activation 'label': categories 'rgb': RGB values (default: func)
+            'func': functional activation (default)
+            'label': categories 
+            'rgb': RGB(A) values (0-1) directly specified. Alpha is optional
         threshold (scalar or array-like)
             Threshold for functional overlay. If one value is given, it is used as a positive threshold.
             If two values are given, an positive and negative threshold is used.
@@ -597,29 +599,46 @@ def plot(
     if type(data) is np.ndarray:
         data_arr = np.copy(data)
 
-    # If 2d-array, take the first column only
-    if data_arr.ndim>1:
-        data_arr = data_arr[:,0]
-    # depending on data type - type cast into int
-    if overlay_type=='label':
-        i = np.isnan(data_arr)
-        data_arr = data_arr.astype(int)
-        data_arr[i]=0
-
-    # create label names if they don't exist
-    if overlay_type=='label' and label_names is None:
-        label_names = [f"L-{i:02d}" for i in range(data_arr.max()+1)]
-
     # decide whether to map to faces
     if (render=='plotly'):
         mapfac=None    # Don't map to faces
     else:
         mapfac = faces # Map to faces
 
-    # map the overlay to colors:
-    overlay_color, cmap, cscale = _map_color(data=data_arr,
+    # Determine foreground color depending on type
+    if overlay_type=='label':
+        # If 2d-array, take the first column only
+        if data_arr.ndim>1:
+            data_arr = data_arr[:,0]
+        i = np.isnan(data_arr)
+        data_arr = data_arr.astype(int)
+        data_arr[i]=0
+
+        # create label names if they don't exist
+        if label_names is None:
+            label_names = [f"L-{i:02d}" for i in range(data_arr.max()+1)]
+        # map the overlay to colors:
+        overlay_color, cmap, cscale = _map_color(data=data_arr,
             faces = mapfac, cscale=cscale,
             cmap=cmap, threshold=threshold)
+    elif overlay_type=='func':
+        if data_arr.ndim>1:
+            data_arr = data_arr[:,0]
+        # map the overlay to colors:
+        overlay_color, cmap, cscale = _map_color(data=data_arr,
+            faces = mapfac, cscale=cscale,
+            cmap=cmap, threshold=threshold)
+    elif overlay_type=='rgb':
+        if mapfac is not None: 
+            data  = _map_to_face(data,mapfac)
+        if data.shape[1]==3:
+            overlay_color = np.c_[data,np.ones(data.shape[0],1)]
+
+        elif data.shape[1]==4: 
+            overlay_color = data[:,0:4]
+            alpha = data[:,3:4]
+        else: 
+            raise(NameError('for RGB(A), the data needs to have 3 or 4 columns'))
 
     # Load underlay and assign color
     if type(underlay) is not np.ndarray:
@@ -657,6 +676,8 @@ def plot(
                 textlabel = _make_labels(data_arr,cbar_tick_format)
             if overlay_type=='label':
                 textlabel = _make_labels(data_arr,label_names)
+            if overlay_type=='rgb':
+                textlabel = None
         if hover == 'value':
             textlabel = _make_labels(data_arr,cbar_tick_format)
         elif hover is None:
@@ -668,6 +689,13 @@ def plot(
 
 
     return ax
+
+def _map_to_face(data,faces):
+    numFaces = faces.shape[0]
+    face_value = np.zeros((3,numFaces,4),dtype = data.dtype)
+    for i in range(3):
+        face_value[i,:,:] = data[faces[:,i],:]
+    return face_value
 
 
 def _map_color(
@@ -694,7 +722,10 @@ def _map_color(
             (lower, upper) threshold for data display -
              only data x<lower and x>upper will be plotted
             if one value is given (-inf) is assumed for the lower
-
+    Returns: 
+        color_data(ndarray): N x 4 ndarray
+        cmap
+        cscale
     """
     # if scale not given, find it
     if cscale is None:
