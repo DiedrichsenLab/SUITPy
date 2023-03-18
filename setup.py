@@ -56,7 +56,7 @@ MAINTAINER = 'Jorn Diedrichsen'
 MAINTAINER_EMAIL = 'jdiedric@uwo.ca'
 URL = 'https://github.com/DiedrichsenLab/SUITPy'
 LICENSE = 'MIT'
-DOWNLOAD_URL = 'https://github.com/DiedrichsenLab/SUITPy/archive/refs/tags/v.1.1.1.tar.gz'
+DOWNLOAD_URL = 'https://github.com/DiedrichsenLab/SUITPy/archive/refs/tags/v.1.2.0.tar.gz'
 VERSION = _VERSION_GLOBALS['__version__']
 
 
