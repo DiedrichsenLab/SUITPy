@@ -199,7 +199,7 @@ def vol_to_surf(
             volsize[i]=0
         elif Vols[-1].ndim == 3:
             volsize[i]=1
-        else: 
+        else:
             volsize[i]=Vols[-1].shape[3]
 
 
@@ -225,7 +225,7 @@ def vol_to_surf(
             if ignore_zeros:
                 X[X==0] = np.nan
             data = X[indices[:,:,0],indices[:,:,1],indices[:,:,2]]
-            if data.ndim == 2: 
+            if data.ndim == 2:
                 data = data.reshape(data.shape + (1,))
             # Determine the right statistics - if function - call it
             if stats=='nanmean':
@@ -533,7 +533,7 @@ def plot(
             Colorscale [min, max] for the underlay (default: [-1, 0.5])
         overlay_type (str)
             'func': functional activation (default)
-            'label': categories 
+            'label': categories
             'rgb': RGB(A) values (0-1) directly specified. Alpha is optional
         threshold (scalar or array-like)
             Threshold for functional overlay. If one value is given, it is used as a positive threshold.
@@ -629,15 +629,15 @@ def plot(
             faces = mapfac, cscale=cscale,
             cmap=cmap, threshold=threshold)
     elif overlay_type=='rgb':
-        if mapfac is not None: 
+        if mapfac is not None:
             data  = _map_to_face(data,mapfac)
         if data.shape[1]==3:
             overlay_color = np.c_[data,np.ones(data.shape[0],1)]
 
-        elif data.shape[1]==4: 
+        elif data.shape[1]==4:
             overlay_color = data[:,0:4]
             alpha = data[:,3:4]
-        else: 
+        else:
             raise(NameError('for RGB(A), the data needs to have 3 or 4 columns'))
 
     # Load underlay and assign color
@@ -673,13 +673,13 @@ def plot(
     elif render == 'plotly':
         if hover == 'auto':
             if overlay_type=='func':
-                textlabel = _make_labels(data_arr,cbar_tick_format)
+                textlabel = _make_labels(data_arr,'{:' + cbar_tick_format[1:] + '}')
             if overlay_type=='label':
                 textlabel = _make_labels(data_arr,label_names)
             if overlay_type=='rgb':
-                textlabel = None
+                textlabel = _make_labels(data_arr,'({:.2f},{:.2f},{:.2f})')
         if hover == 'value':
-            textlabel = _make_labels(data_arr,cbar_tick_format)
+            textlabel = _make_labels(data_arr,'{:' + cbar_tick_format[1:] + '}')
         elif hover is None:
             textlabel=None
 
@@ -695,6 +695,9 @@ def _map_to_face(data,faces):
     face_value = np.zeros((3,numFaces,4),dtype = data.dtype)
     for i in range(3):
         face_value[i,:,:] = data[faces[:,i],:]
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", category=RuntimeWarning)
+        face_value = np.nanmean(face_value, axis=0)
     return face_value
 
 
@@ -722,7 +725,7 @@ def _map_color(
             (lower, upper) threshold for data display -
              only data x<lower and x>upper will be plotted
             if one value is given (-inf) is assumed for the lower
-    Returns: 
+    Returns:
         color_data(ndarray): N x 4 ndarray
         cmap
         cscale
@@ -935,7 +938,10 @@ def _make_labels(data,labelstr):
     labels = np.empty((data.shape[0],),dtype=np.object)
     if type(labelstr) is str:
         for i in range(numvert):
-            labels[i]=f"{data[i]:{labelstr[1:]}}"
+            if data.ndim==1:
+                labels[i]=labelstr.format(data[i])
+            else:
+                labels[i]=labelstr.format(*data[i])
     else:
         for i in range(numvert):
             labels[i]=labelstr[data[i]]

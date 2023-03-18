@@ -10,36 +10,34 @@ import plotly.graph_objs as go
 import nibabel as nb
 
 
-def test_flatmap_plot():
+def test_flatmap_plot(render='plotly'):
     ax = flatmap.plot('docs/source/notebooks/MDTB08_Math.func.gii',threshold=[0.01, 0.12],
-    bordersize=3,bordercolor='k',backgroundcolor='w',render='plotly')
+    bordersize=3,bordercolor='k',backgroundcolor='w',render=render,colorbar=True)
     ax.show()
     # ax = flatmap.plot('docs/source/notebooks/Buckner_17Networks.label.gii',overlay_type='label',new_figure=True, colorbar=False,render='plotly')
     # ax.show()
     pass
 
-def test_plot_label():
+def test_plot_label(render='plotly'):
     fname = 'docs/source/notebooks/Buckner_17Networks.label.gii'
-    fig=flatmap.plot(fname, overlay_type='label',new_figure=True, colorbar=True,
-    cscale=[1,5],render='plotly')
+    fig=flatmap.plot(fname, overlay_type='label',new_figure=True,
+    cscale=[1,5],render=render,colorbar=True)
     fig.show()
 
-def test_plot_rgba():
-    A = nb.load('docs/source/notebooks/MDTB08_Math.func.gii')
-    nvert = A.darrays[0].data.shape[0]
+def test_plot_rgba(render='plotly'):
+    fname = ['MDTB08_Math.func.gii','MDTB04_Action_Observation.func.gii','MDTB16_Finger_Sequence.func.gii']
+    nvert = 28935
     data = np.zeros((nvert,4))
-    data[:,0]=A.darrays[0].data
-    data[:,0]=data[:,0]/np.max(data[:,0])
-    data[data[:,0]<0.3,0]=0
-    data[:,1]=-A.darrays[0].data
-    data[:,1]=data[:,1]/np.max(data[:,1])
-    data[data[:,1]<0.3,1]=0
+    for i,f in enumerate(fname):
+        A = nb.load('docs/source/notebooks/'+f)
+        data[:,i]=np.nan_to_num(A.darrays[0].data)
+        data[:,i]=data[:,i]/np.max(data[:,i])
+        data[data[:,i]<0.3,i]=0
     data[data[:,0:3].sum(axis=1)==0]=np.nan
-    data[:,2]=data[:,0]
     data[:,3]=1
     ax = flatmap.plot(data,
                       overlay_type='rgb',
-                        bordersize=3,bordercolor='k',backgroundcolor='w',render='plotly')
+                        bordersize=3,bordercolor='k',backgroundcolor='w',render=render)
     ax.show()
     # ax = flatmap.plot('docs/source/notebooks/Buckner_17Networks.label.gii',overlay_type='label',new_figure=True, colorbar=False,render='plotly')
     # ax.show()
@@ -48,7 +46,7 @@ def test_plot_rgba():
 
 if __name__ == '__main__':
     # make_shapes()
-    # test_flatmap_plot()
-    # test_plot_label()
-    test_plot_rgba()
+    # test_flatmap_plot(render='matplotlib')
+    test_plot_label(render='matplotlib')
+    # test_plot_rgba(render='matplotlib')
     pass
