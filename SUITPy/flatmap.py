@@ -496,6 +496,39 @@ def save_colorbar(
 
     plt.savefig(outpath, bbox_inches='tight', dpi=150)
 
+def map_to_rgb(data,scale=None,threshold=[0,0,0]):
+    """_summary_
+
+    Args:
+        data (_type_): 
+            List of vectors or 3xP ndarray.
+            use [data,None,None] to skip color channels
+        scale (list): maximum brightness 
+        threshold (list): Threshold [0,0,0].
+    returns:
+        rgba (ndarray): Nx4 array of RGBA values
+    """
+    if isinstance(data,np.ndarray):
+        data = [data[:,0],data[:,1],data[:,2]]
+    nvert = data[0].shape[0]
+    rgba = np.zeros((nvert,4))
+    for i,d in enumerate(data):
+        if d is not None: 
+            rgba[:,i]=np.nan_to_num(d)
+            rgba[rgba[:,i]<threshold[i],i]=0
+            if scale is None: 
+                s = rgba[:,i].max()
+            else:
+                s=scale[i]
+            rgba[:,i]=rgba[:,i]/s
+            rgba[rgba[:,i]>1,i]=1.0
+            # Remove data below threshold 
+    # Set below-threshold areas to nan (transparent)
+    rgba[rgba[:,0:3].sum(axis=1)==0]=np.nan
+    rgba[:,3]=1
+    return rgba
+
+
 def plot(
         data,
         surf=None,
