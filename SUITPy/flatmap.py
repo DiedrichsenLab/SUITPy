@@ -516,7 +516,8 @@ def plot(
         new_figure=True,
         colorbar=False,
         cbar_tick_format="%.2g",
-        backgroundcolor = 'w'
+        backgroundcolor = 'w',
+        frame = [-110,110,-110,110]
         ):
     """Visualize cerebellar activity on a flatmap
 
@@ -564,6 +565,8 @@ def plot(
             Controls how to format the tick labels of the colorbar, and for the hover label.
             Ex: use "%i" to display as integers.
             Default='%.2g' for scientific notation.
+        frame (ndarray): [L,R,T,B] of the area of flatmap that is rendered
+            Defaults to entire flatmap
 
     Returns:
         ax (matplotlib.axis)
@@ -663,7 +666,7 @@ def plot(
     # Render with Matplotlib
     if render == 'matplotlib':
         ax = _render_matplotlib(vertices, faces, color, borders,
-                                bordercolor, bordersize, new_figure,backgroundcolor)
+                                bordercolor, bordersize, new_figure,backgroundcolor,frame)
         # set up colorbar
         if colorbar:
             if overlay_type=='label':
@@ -685,7 +688,7 @@ def plot(
 
         ax = _render_plotly(vertices,faces,color,borders,
                                 bordercolor,bordersize, new_figure,
-                                textlabel,backgroundcolor)
+                                textlabel,backgroundcolor,frame)
 
 
     return ax
@@ -783,7 +786,9 @@ def _map_color(
 
 
 def _render_matplotlib(vertices,faces,face_color,borders,
-                    bordercolor, bordersize, new_figure,backgroundcolor):
+                    bordercolor, bordersize, 
+                    new_figure,backgroundcolor,
+                    frame):
     """
     Render the data in matplotlib
 
@@ -802,18 +807,30 @@ def _render_matplotlib(vertices,faces,face_color,borders,
             Size of the border points
         new_figure (bool)
             Create new Figure or render in currrent axis
-
+        frame (ndarray)
+            [L,R,B,T] of the plotted area 
     Returns:
         ax (matplotlib.axes)
             Axis that was used to render the axis
     """
+    if frame is None:
+        frame = [np.nanmin(vertices[:,0]),
+                 np.nanmax(vertices[:,0]),
+                 np.nanmin(vertices[:,1]),
+                 np.nanmax(vertices[:,1])]
+    vertex_in = (vertices[:,0]>=frame[0]) & \
+                (vertices[:,0]<=frame[1]) & \
+                (vertices[:,1]>=frame[2]) & \
+                (vertices[:,1]<=frame[3])
+    face_in  = np.any(vertex_in[faces],axis=1)
     patches = []
-    for i in range(faces.shape[0]):
-        polygon = Polygon(vertices[faces[i],0:2], True)
+
+    for i,f in enumerate(faces[face_in]):
+        polygon = Polygon(vertices[f,0:2], True)
         patches.append(polygon)
     p = PatchCollection(patches)
-    p.set_facecolor(face_color)
-    p.set_edgecolor(face_color)
+    p.set_facecolor(face_color[face_in])
+    p.set_edgecolor(face_color[face_in])
     p.set_linewidth(0.5)
 
     # Get the current axis and plot it
@@ -821,11 +838,8 @@ def _render_matplotlib(vertices,faces,face_color,borders,
         fig = plt.figure(figsize=(7,7))
     ax = plt.gca()
     ax.add_collection(p)
-    xrang = [np.nanmin(vertices[:,0]),np.nanmax(vertices[:,0])]
-    yrang = [np.nanmin(vertices[:,1]),np.nanmax(vertices[:,1])]
-
-    ax.set_xlim(xrang[0],xrang[1])
-    ax.set_ylim(yrang[0],yrang[1])
+    ax.set_xlim(frame[0],frame[1])
+    ax.set_ylim(frame[2],frame[3])
     ax.axis('equal')
     ax.axis('off')
     fig=plt.gcf()
@@ -841,7 +855,8 @@ def _render_matplotlib(vertices,faces,face_color,borders,
 def _render_plotly(vertices,faces,color,borders,
             bordercolor, bordersize,
             new_figure, hovertext=None,
-            backgroundcolor='#ffffff'):
+            backgroundcolor='#ffffff',
+            frame=None):
     """
     Render the data in plotly
     Args:
@@ -861,6 +876,9 @@ def _render_plotly(vertices,faces,color,borders,
             Create new Figure or render in currrent axis
         hovertext (list of str)
             Text for hovering for each vertex
+        frame (ndarray)
+            [L,R,B,T] of the plotted area 
+
     Returns:
         ax (matplotlib.axes)
             Axis that was used to render the axis
@@ -882,13 +900,21 @@ def _render_plotly(vertices,faces,color,borders,
     traces = []
     colorbar = dict(exponentformat='none',tickformat='%.2f')
 
-    traces.append(go.Mesh3d(x=vertices[:, 0], y=vertices[:, 1], z=vertices[:, 2],
-                    i=faces[:, 0], j=faces[:, 1], k=faces[:, 2],
-                    facecolor = facecolor,
-                    vertexcolor = vertcolor,
-                    lightposition=dict(x=0, y=0, z=2.5),
-                    text = hovertext,
-                    hoverinfo=hi))
+    if frame is None:
+        frame = [np.nanmin(vertices[:,0]),
+                 np.nanmax(vertices[:,0]),
+                 np.nanmin(vertices[:,1]),
+                 np.nanmax(vertices[:,1])]
+    aspect_ratio = (frame[3]-frame[2])/(frame[1]-frame[0])
+
+    traces.append(go.Mesh3d(
+        x=vertices[:, 0], y=vertices[:, 1], z=vertices[:, 2],
+        i=faces[:, 0], j=faces[:, 1], k=faces[:, 2],
+        facecolor = facecolor,
+        vertexcolor = vertcolor,
+        lightposition=dict(x=0, y=0, z=2.5),
+        text = hovertext,
+        hoverinfo=hi))
     if borders is not None:
         bordercolor=_color_matplotlib_to_plotly(bordercolor)
         traces.append(go.Scatter3d(
@@ -908,18 +934,21 @@ def _render_plotly(vertices,faces,color,borders,
         center=dict(x=0, y=0, z=0),
         eye=dict(x=0, y=0, z=1.1)
     )
-    axis_dict= dict(visible=False,
+    xaxis_dict= dict(visible=False,
         showbackground=False,
         showline=False,
         showgrid=False,
         showspikes=False,
         showticklabels=False,
         title=None,
-        range=[-110,110])
-    scene = dict(xaxis=axis_dict,
-                yaxis=axis_dict,
-                zaxis=axis_dict,
-                aspectmode= 'cube')
+        range=frame[:2])
+    yaxis_dict= xaxis_dict.copy()
+    yaxis_dict['range']=frame[2:]
+    zaxis_dict= xaxis_dict.copy()
+    scene = dict(xaxis=xaxis_dict,
+                yaxis=yaxis_dict,
+                zaxis=zaxis_dict,
+                aspectmode= 'manual')
                 # aspectratio=dict(x=1, y=1, z=0.1))
     backgroundcolor=_color_matplotlib_to_plotly(backgroundcolor)
     fig = go.Figure(data=traces,)
@@ -928,7 +957,7 @@ def _render_plotly(vertices,faces,color,borders,
                 margin=dict(r=0, l=0, b=0, t=0),
                 scene = scene,
                 width=400,
-                height=400,
+                height=400*aspect_ratio,
                 paper_bgcolor=backgroundcolor
                 )
     return fig

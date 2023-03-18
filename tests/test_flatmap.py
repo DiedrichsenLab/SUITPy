@@ -47,6 +47,6 @@ def test_plot_rgba(render='plotly'):
 if __name__ == '__main__':
     # make_shapes()
     # test_flatmap_plot(render='matplotlib')
-    test_plot_label(render='matplotlib')
-    # test_plot_rgba(render='matplotlib')
+    # test_plot_label(render='matplotlib')
+    test_plot_rgba(render='matplotlib')
     pass
