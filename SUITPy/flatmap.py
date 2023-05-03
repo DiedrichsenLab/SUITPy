@@ -221,19 +221,21 @@ def vol_to_surf(
         if vol is None:
             pass
         else:
-            X = vol.get_data()
-            if ignore_zeros:
-                X[X==0] = np.nan
-            data = X[indices[:,:,0],indices[:,:,1],indices[:,:,2]]
-            if data.ndim == 2:
-                data = data.reshape(data.shape + (1,))
-            # Determine the right statistics - if function - call it
-            if stats=='nanmean':
-                mapped_data[:,index[v]:index[v+1]] = np.nanmean(data,axis=0)
-            elif stats=='mode':
-                mapped_data[:,index[v]:index[v+1]],_ = ss.mode(data,axis=0,keepdims=False)
-            elif callable(stats):
-                mapped_data[:,index[v]:index[v+1]] = stats(data)
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore", category=RuntimeWarning)
+                X = vol.get_data()
+                if ignore_zeros:
+                    X[X==0] = np.nan
+                data = X[indices[:,:,0],indices[:,:,1],indices[:,:,2]]
+                if data.ndim == 2:
+                    data = data.reshape(data.shape + (1,))
+                # Determine the right statistics - if function - call it
+                if stats=='nanmean':
+                    mapped_data[:,index[v]:index[v+1]] = np.nanmean(data,axis=0)
+                elif stats=='mode':
+                    mapped_data[:,index[v]:index[v+1]],_ = ss.mode(data,axis=0,keepdims=False)
+                elif callable(stats):
+                    mapped_data[:,index[v]:index[v+1]] = stats(data)
 
     return mapped_data
 
