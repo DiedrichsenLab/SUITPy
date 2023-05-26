@@ -600,6 +600,8 @@ def plot(
             Controls how to format the tick labels of the colorbar, and for the hover label.
             Ex: use "%i" to display as integers.
             Default='%.2g' for scientific notation.
+        backgroundcolor (str or matplotlib.color):
+            Axis background color (default: 'w') 
         frame (ndarray): [L,R,T,B] of the area of flatmap that is rendered
             Defaults to entire flatmap
 
@@ -725,7 +727,8 @@ def plot(
                                 bordercolor,bordersize, new_figure,
                                 textlabel,backgroundcolor,frame)
 
-
+    else:
+        raise(NameError('render needs to be matplotlib or plotly'))
     return ax
 
 def _map_to_face(data,faces):
