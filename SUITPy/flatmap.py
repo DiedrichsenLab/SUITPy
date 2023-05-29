@@ -223,7 +223,7 @@ def vol_to_surf(
         else:
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore", category=RuntimeWarning)
-                X = vol.get_data()
+                X = vol.get_fdata()
                 if ignore_zeros:
                     X[X==0] = np.nan
                 data = X[indices[:,:,0],indices[:,:,1],indices[:,:,2]]
