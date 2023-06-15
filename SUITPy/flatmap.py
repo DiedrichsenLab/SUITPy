@@ -13,6 +13,7 @@ import numpy as np
 import os
 import sys
 import nibabel as nb
+import nitools as nt
 import matplotlib.pyplot as plt
 import matplotlib as mpl
 import plotly.graph_objects as go
@@ -579,7 +580,7 @@ def plot(
         label_names (list)
             labelnames (default is None - extracts from .label.gii )
         borders (str)
-            Full filepath of the borders txt file (default: borders.txt in SUIT pkg)
+            Full filepath of the borders txt file or workbench border file (default: borders.txt in SUIT pkg)
         bordercolor (char or matplotlib.color)
             Color of border - defaults to 'k'
         bordersize (int)
@@ -705,8 +706,15 @@ def plot(
     # If present, get the borders
     if borders is not None:
         if not os.path.isfile(borders):
-            borders = os.path.join(os.path.join(_surf_dir, borders))
-        borders = np.genfromtxt(borders, delimiter=',')
+            borders = os.path.join(_surf_dir, borders)
+        if borders.endswith('.txt'):
+            borders = np.genfromtxt(borders, delimiter=',')
+        elif borders.endswith('.border'):
+            border_list = nt.read_borders(borders)
+            borders = [b.get_coords(flatsurf) for b in border_list]
+            borders = np.vstack(borders)
+        else:
+            raise ValueError('borders should be a txt or border file')
     # Render with Matplotlib
     if render == 'matplotlib':
         ax = _render_matplotlib(vertices, faces, color, borders,
