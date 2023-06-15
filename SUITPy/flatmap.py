@@ -617,7 +617,12 @@ def plot(
         surf = os.path.join(_surf_dir,'FLAT.surf.gii')
 
     # load topology
-    flatsurf = nb.load(surf)
+    if isinstance(surf,str):
+        flatsurf = nb.load(surf)
+    elif isinstance(surf,nb.gifti.gifti.GiftiImage):
+        flatsurf = surf
+    else: 
+        raise ValueError('surf should be a string or giftiImage')
     vertices = flatsurf.darrays[0].data
     faces    = flatsurf.darrays[1].data
     num_vert = vertices.shape[0]
@@ -681,6 +686,8 @@ def plot(
             raise(NameError('for RGB(A), the data needs to have 3 or 4 columns'))
 
     # Load underlay and assign color
+    if underlay is None:
+        underlay = np.zeros((num_vert,))
     if type(underlay) is not np.ndarray:
         if not os.path.isfile(underlay):
             underlay = os.path.join(os.path.join(_surf_dir, underlay))
