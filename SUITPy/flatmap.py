@@ -710,7 +710,7 @@ def plot(
         if borders.endswith('.txt'):
             borders = np.genfromtxt(borders, delimiter=',')
         elif borders.endswith('.border'):
-            border_list = nt.read_borders(borders)
+            border_list,_ = nt.read_borders(borders)
             borders = [b.get_coords(flatsurf) for b in border_list]
             borders = np.vstack(borders)
         else:
