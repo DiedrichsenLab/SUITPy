@@ -2,7 +2,7 @@
 """
 SUITPy version, required package versions, and utilities for checking
 
-@author: maedbhking
+@author: maedbhking, jdiedrichsen
 based heavily on `nilearn.version`
 """
 
