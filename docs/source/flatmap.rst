@@ -22,4 +22,4 @@ For more details, see:
 
 Did you know?
 -------------
-We also have an online version of our cerebellar atlases. Check it out at http://www.diedrichsenlab.org/imaging/AtlasViewer/index.html.
+We also have an online version of our cerebellar atlases. Check it out at http://www.diedrichsenlab.org/imaging/AtlasViewer/index.htm.
