@@ -7,7 +7,7 @@ authors:
 - family-names: "King"
   given-names: "Maedbh"
   orcid: "https://orcid.org/0000-0001-5374-1011"
-- family-namnes: "Zhi"
+- family-names: "Zhi"
   given-names: "Da"
   orcid: "https://orcid.org/0000-0001-6023-6523"
 title: "SUIT: A Python-based toolbox for cerebellar imaging analysis"
