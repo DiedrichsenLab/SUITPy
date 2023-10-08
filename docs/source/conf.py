@@ -22,7 +22,7 @@ copyright = '2020, Diedrichsenlab'
 author = 'Diedrichsenlab'
 
 # The full version, including alpha/beta/rc tags
-release = 'v.1.2.0'
+release = 'v.1.3.0'
 
 
 # -- General configuration ---------------------------------------------------
