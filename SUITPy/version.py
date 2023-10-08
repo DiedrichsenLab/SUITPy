@@ -2,11 +2,11 @@
 """
 SUITPy version, required package versions, and utilities for checking
 
-@author: maedbhking
+@author: maedbhking, jdiedrichsen
 based heavily on `nilearn.version`
 """
 
-__version__ = '1.2.0'
+__version__ = '1.3.0'
 
 _SUITPy_INSTALL_MSG = 'See %s for installation information.' % (
     'https://suitpy.readthedocs.io/en/latest/install.html#installation')
