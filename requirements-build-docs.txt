@@ -12,4 +12,4 @@ ipykernel
 nbsphinx
 scipy
 plotly
-neuroimagingtools
+neuroimagingtools>=1.1.1

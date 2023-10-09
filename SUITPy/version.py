@@ -6,7 +6,7 @@ SUITPy version, required package versions, and utilities for checking
 based heavily on `nilearn.version`
 """
 
-__version__ = '1.3.0'
+__version__ = '1.3.1'
 
 _SUITPy_INSTALL_MSG = 'See %s for installation information.' % (
     'https://suitpy.readthedocs.io/en/latest/install.html#installation')
@@ -20,6 +20,9 @@ REQUIRED_MODULE_METADATA = (
         'install_info': _SUITPy_INSTALL_MSG}),
     ('nibabel', {
         'min_version': '2.5',
+        'required_at_installation': True}),
+    ('neuroimagingtools', {
+        'min_version': '1.1.1',
         'required_at_installation': True}),
     ("requests", {
         "min_version": "2",
