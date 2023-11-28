@@ -1,11 +1,10 @@
 #! /usr/bin/env python
 
 """
-@author: maedbhking
 based heavily on flexible functionality of nilearn `setup.py`
 """
 
-descr = """A python package for cerebellar neuroimaging..."""
+descr = """A python package for cerebellar neuroimaging."""
 
 import sys
 import os
@@ -56,7 +55,7 @@ MAINTAINER = 'Jorn Diedrichsen'
 MAINTAINER_EMAIL = 'jdiedric@uwo.ca'
 URL = 'https://github.com/DiedrichsenLab/SUITPy'
 LICENSE = 'MIT'
-DOWNLOAD_URL = 'https://github.com/DiedrichsenLab/SUITPy/archive/refs/tags/v.1.2.0.tar.gz'
+DOWNLOAD_URL = 'https://github.com/DiedrichsenLab/SUITPy/archive/refs/tags/v.1.3.0.tar.gz'
 VERSION = _VERSION_GLOBALS['__version__']
 
 

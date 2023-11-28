@@ -18,19 +18,11 @@ from .atlas import (fetch_king_2019,
                     )
 
 from .flatmap import (vol_to_surf,
-                    make_func_gifti,
-                    make_label_gifti,
-                    get_gifti_column_names,
-                    get_gifti_colortable,
-                    get_gifti_anatomical_struct,
-                    get_gifti_labels,
                     save_colorbar,
                     plot)
 
 from .reslice import (reslice_image,
-                      reslice_img,
-                      check_range,
-                      sample_image)
+                      reslice_img)
 
 def _nibabel2_deprecation_warning():
     msg = ('Support for Nibabel 2.x is deprecated and will stop '
@@ -61,6 +53,4 @@ if hasattr(gzip.GzipFile, 'max_read_chunk'):
     gzip.GzipFile.max_read_chunk = 100 * 1024 * 1024  # 100Mb
 
 __all__ = [fetch_king_2019, fetch_buckner_2011, fetch_diedrichsen_2009,
-        fetch_ji_2019, fetch_xue_2021, vol_to_surf, make_func_gifti,
-        make_label_gifti, get_gifti_column_names, get_gifti_colortable,
-        get_gifti_anatomical_struct, plot]
+        fetch_ji_2019, fetch_xue_2021, vol_to_surf, plot]

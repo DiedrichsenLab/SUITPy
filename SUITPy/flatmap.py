@@ -29,85 +29,6 @@ import warnings
 _base_dir = os.path.dirname(os.path.abspath(__file__))
 _surf_dir = os.path.join(_base_dir, 'surfaces')
 
-def affine_transform(
-    x1,
-    x2,
-    x3,
-    M
-    ):
-    """
-    Returns affine transform of x
-
-    Args:
-        x1 (np-array):
-            X-coordinate of original
-        x2 (np-array):
-            Y-coordinate of original
-        x3 (np-array):
-            Z-coordinate of original
-        M (2d-array):
-            4x4 transformation matrix
-
-    Returns:
-        x1 (np-array):
-            X-coordinate of transform
-        x2 (np-array):
-            Y-coordinate of transform
-        x3 (np-array):
-            Z-coordinate of transform
-
-    """
-    y1 = np.multiply(M[0,0],x1) + np.multiply(M[0,1],x2) + np.multiply(M[0,2],x3) + M[0,3]
-    y2 = np.multiply(M[1,0],x1) + np.multiply(M[1,1],x2) + np.multiply(M[1,2],x3) + M[1,3]
-    y3 = np.multiply(M[2,0],x1) + np.multiply(M[2,1],x2) + np.multiply(M[2,2],x3) + M[2,3]
-    return (y1,y2,y3)
-
-def coords_to_voxelidxs(
-    coords,
-    vol_def
-    ):
-    """
-    Maps coordinates to linear voxel indices
-
-    Args:
-        coords (3*N matrix or 3xPxQ array):
-            (x,y,z) coordinates
-        vol_def (nibabel object):
-            Nibabel object with attributes .affine (4x4 voxel to coordinate transformation matrix from the images to be sampled (1-based)) and shape (1x3 volume dimension in voxels)
-
-    Returns:
-        linidxsrs (np.ndarray):
-            N-array or PxQ matrix of Linear voxel indices
-    """
-    mat = np.array(vol_def.affine)
-
-    # Check that coordinate transformation matrix is 4x4
-    if (mat.shape != (4,4)):
-        sys.exit('Error: Matrix should be 4x4')
-
-    rs = coords.shape
-    if (rs[0] != 3):
-        sys.exit('Error: First dimension of coords should be 3')
-
-    if (np.size(rs) == 2):
-        nCoordsPerNode = 1
-        nVerts = rs[1]
-    elif (np.size(rs) == 3):
-        nCoordsPerNode = rs[1]
-        nVerts = rs[2]
-    else:
-        sys.exit('Error: Coordindates have %d dimensions, not supported'.format(np.size(rs)))
-
-    # map to 3xP matrix (P coordinates)
-    coords = np.reshape(coords,[3,-1])
-    coords = np.vstack([coords,np.ones((1,rs[1]))])
-
-    ijk = np.linalg.solve(mat,coords)
-    ijk = np.rint(ijk)[0:3,:]
-    # Now set the indices out of range to -1
-    for i in range(3):
-        ijk[i,ijk[i,:]>=vol_def.shape[i]]=-1
-    return ijk
 
 def vol_to_surf(
     volumes,
@@ -211,7 +132,7 @@ def vol_to_surf(
     indices = np.zeros((numPoints,num_verts,3),dtype=int)
     for i in range(numPoints):
         c = (1-depths[i])*c1.T+depths[i]*c2.T
-        ijk = coords_to_voxelidxs(c,Vols[firstGood])
+        ijk = nt.coords_to_voxelidxs(c,Vols[firstGood])
         indices[i] = ijk.T
 
     # Read the data and map it
@@ -240,248 +161,23 @@ def vol_to_surf(
 
     return mapped_data
 
-def make_func_gifti(
-    data,
-    anatomical_struct='Cerebellum',
-    column_names=[]
-    ):
-    """Generates a function GiftiImage from a numpy array
-
-    Args:
-        data (np.array):
-             num_vert x num_col data
-        anatomical_struct (string):
-            Anatomical Structure for the Meta-data default= 'Cerebellum'
-        column_names (list):
-            List of strings for names for columns
-
-    Returns:
-        FuncGifti (GiftiImage): functional Gifti Image
-    """
-    num_verts, num_cols = data.shape
-    #
-    # Make columnNames if empty
-    if len(column_names)==0:
-        for i in range(num_cols):
-            column_names.append("col_{:02d}".format(i+1))
-
-    C = nb.gifti.GiftiMetaData.from_dict({
-    'AnatomicalStructurePrimary': anatomical_struct,
-    'encoding': 'XML_BASE64_GZIP'})
-
-    E = nb.gifti.gifti.GiftiLabel()
-    E.key = 0
-    E.label= '???'
-    E.red = 1.0
-    E.green = 1.0
-    E.blue = 1.0
-    E.alpha = 0.0
-
-    D = list()
-    for i in range(num_cols):
-        d = nb.gifti.GiftiDataArray(
-            data=np.float32(data[:, i]),
-            intent='NIFTI_INTENT_NONE',
-            datatype='NIFTI_TYPE_FLOAT32',
-            meta=nb.gifti.GiftiMetaData.from_dict({'Name': column_names[i]})
-        )
-        D.append(d)
-
-    gifti = nb.gifti.GiftiImage(meta=C, darrays=D)
-    gifti.labeltable.labels.append(E)
-
-    return gifti
-
-def make_label_gifti(
-                    data,
-                    anatomical_struct='Cerebellum',
-                    label_names=[],
-                    column_names=[],
-                    label_RGBA=[]
-                    ):
-    """Generates a label GiftiImage from a numpy array
-
-    Args:
-        data (np.array):
-             num_vert x num_col data
-        anatomical_struct (string):
-            Anatomical Structure for the Meta-data default= 'Cerebellum'
-        label_names (list):
-            List of strings for label names
-        column_names (list):
-            List of strings for names for columns
-        label_RGBA (list):
-            List of rgba vectors
-
-    Returns:
-        gifti (GiftiImage): Label gifti image
-
-    """
-    num_verts, num_cols = data.shape
-    num_labels = len(np.unique(data))
-
-    # check for 0 labels
-    zero_label = 0 in data
-
-    # Create naming and coloring if not specified in varargin
-    # Make columnNames if empty
-    if len(column_names) == 0:
-        for i in range(num_cols):
-            column_names.append("col_{:02d}".format(i+1))
-
-    # Determine color scale if empty
-    if len(label_RGBA) == 0:
-        hsv = plt.cm.get_cmap('hsv',num_labels)
-        color = hsv(np.linspace(0,1,num_labels))
-        # Shuffle the order so that colors are more visible
-        color = color[np.random.permutation(num_labels)]
-        label_RGBA = np.zeros([num_labels,4])
-        for i in range(num_labels):
-            label_RGBA[i] = color[i]
-        if zero_label:
-            label_RGBA = np.vstack([[0,0,0,1], label_RGBA[1:,]])
-
-    # Create label names
-    if len(label_names) == 0:
-        idx = 0
-        if not zero_label:
-            idx = 1
-        for i in range(num_labels):
-            label_names.append("label-{:02d}".format(i + idx))
-
-    # Create label.gii structure
-    C = nb.gifti.GiftiMetaData.from_dict({
-        'AnatomicalStructurePrimary': anatomical_struct,
-        'encoding': 'XML_BASE64_GZIP'})
-
-    num_labels = np.arange(num_labels)
-    E_all = []
-    for (label, rgba, name) in zip(num_labels, label_RGBA, label_names):
-        E = nb.gifti.gifti.GiftiLabel()
-        E.key = label
-        E.label= name
-        E.red = rgba[0]
-        E.green = rgba[1]
-        E.blue = rgba[2]
-        E.alpha = rgba[3]
-        E.rgba = rgba[:]
-        E_all.append(E)
-
-    D = list()
-    for i in range(num_cols):
-        d = nb.gifti.GiftiDataArray(
-            data=np.float32(data[:, i]),
-            intent='NIFTI_INTENT_LABEL',
-            datatype='NIFTI_TYPE_UINT8',
-            meta=nb.gifti.GiftiMetaData.from_dict({'Name': column_names[i]})
-        )
-        D.append(d)
-
-    # Make and return the gifti file
-    gifti = nb.gifti.GiftiImage(meta=C, darrays=D)
-    gifti.labeltable.labels.extend(E_all)
-    return gifti
-
-def get_gifti_column_names(gifti):
-    """Returns the column names from a gifti file (*.label.gii or *.func.gii)
-
-    Args:
-        gifti (gifti image):
-            Nibabel Gifti image
-
-    Returns:
-        names (list):
-            List of column names from gifti object attribute data arrays
-
-    """
-    N = len(gifti.darrays)
-    names = []
-    for n in range(N):
-        for i in range(len(gifti.darrays[n].meta.data)):
-            if 'Name' in gifti.darrays[n].meta.data[i].name:
-                names.append(gifti.darrays[n].meta.data[i].value)
-    return names
-
-def get_gifti_colortable(gifti):
-    """Returns the RGBA color table and matplotlib cmap from gifti object (*.label.gii)
-
-    Args:
-        gifti (gifti image):
-            Nibabel Gifti image
-
-    Returns:
-        rgba (np.ndarray):
-            N x 4 of RGB values
-
-        cmap (mpl obj):
-            matplotlib colormap
-
-    """
-    labels = gifti.labeltable.labels
-
-    rgba = np.zeros((len(labels),4))
-    for i,label in enumerate(labels):
-        rgba[i,] = labels[i].rgba
-
-    cmap = ListedColormap(rgba)
-    mpl.cm.unregister_cmap("mycolormap")
-    mpl.cm.register_cmap("mycolormap", cmap)
-
-    return rgba, cmap
-
-def get_gifti_anatomical_struct(gifti):
-    """
-    Returns the primary anatomical structure for a gifti object (*.label.gii or *.func.gii)
-
-    Args:
-        gifti (gifti image):
-            Nibabel Gifti image
-
-    Returns:
-        anatStruct (string):
-            AnatomicalStructurePrimary attribute from gifti object
-
-    """
-    N = len(gifti._meta.data)
-    anatStruct = []
-    for i in range(N):
-        if 'AnatomicalStructurePrimary' in gifti._meta.data[i].name:
-            anatStruct.append(gifti._meta.data[i].value)
-    return anatStruct
-
-def get_gifti_labels(gifti):
-    """Returns labels from gifti object (*.label.gii)
-
-    Args:
-        gifti (gifti image):
-            Nibabel Gifti image
-
-    Returns:
-        labels (list):
-            labels from gifti object
-    """
-    # labels = img.labeltable.get_labels_as_dict().values()
-    label_dict = gifti.labeltable.get_labels_as_dict()
-    labels = list(label_dict.values())
-    return labels
-
 def save_colorbar(
     gifti,
     outpath
     ):
     """plots colorbar for gifti object (*.label.gii)
-
+    and saves it to outpath
     Args:
         gifti (gifti image):
             Nibabel Gifti image
         outpath (str):
-            outpath for colorbar
+            outpath for colorbar image
 
     """
     _, ax = plt.subplots(figsize=(1,10)) # figsize=(1, 10)
 
-    _, cmap = get_gifti_colortable(gifti)
-    labels = get_gifti_labels(gifti)
+    _, cmap = nt.get_gifti_colortable(gifti)
+    labels = nt.get_gifti_labels(gifti)
 
     bounds = np.arange(cmap.N + 1)
 
@@ -500,13 +196,13 @@ def save_colorbar(
     plt.savefig(outpath, bbox_inches='tight', dpi=150)
 
 def map_to_rgb(data,scale=None,threshold=[0,0,0]):
-    """_summary_
+    """Maps data to RGB
 
     Args:
-        data (_type_): 
+        data (_type_):
             List of vectors or 3xP ndarray.
             use [data,None,None] to skip color channels
-        scale (list): maximum brightness 
+        scale (list): maximum brightness
         threshold (list): Threshold [0,0,0].
     returns:
         rgba (ndarray): Nx4 array of RGBA values
@@ -516,24 +212,23 @@ def map_to_rgb(data,scale=None,threshold=[0,0,0]):
     nvert = data[0].shape[0]
     rgba = np.zeros((nvert,4))
     for i,d in enumerate(data):
-        if d is not None: 
+        if d is not None:
             rgba[:,i]=np.nan_to_num(d)
             rgba[rgba[:,i]<threshold[i],i]=0
-            if scale is None: 
+            if scale is None:
                 s = rgba[:,i].max()
             else:
                 s=scale[i]
             rgba[:,i]=rgba[:,i]/s
             rgba[rgba[:,i]>1,i]=1.0
-            # Remove data below threshold 
+            # Remove data below threshold
     # Set below-threshold areas to nan (transparent)
     rgba[rgba[:,0:3].sum(axis=1)==0]=np.nan
     rgba[:,3]=1
     return rgba
 
 
-def plot(
-        data,
+def plot(data,
         surf=None,
         underlay='SUIT.shape.gii',
         undermap='Greys',
@@ -553,8 +248,7 @@ def plot(
         colorbar=False,
         cbar_tick_format="%.2g",
         backgroundcolor = 'w',
-        frame = [-110,110,-110,110]
-        ):
+        frame = [-110,110,-110,110]):
     """Visualize cerebellar activity on a flatmap
 
     Args:
@@ -572,9 +266,11 @@ def plot(
             'func': functional activation (default)
             'label': categories
             'rgb': RGB(A) values (0-1) directly specified. Alpha is optional
-        threshold (scalar or array-like)
-            Threshold for functional overlay. If one value is given, it is used as a positive threshold.
-            If two values are given, an positive and negative threshold is used.
+        threshold (scalar or 2-element array)
+            Threshold for functional overlay. If one value is given, only values above are shown
+            If two values are given, values below lower threshold or above upper threshold are shown
+        cscale (ndarray or list)
+            Colorscale [min, max] for the overlay (default: [data.min, data.max])
         cmap (str)
             A Matplotlib colormap or an equivalent Nx3 or Nx4 floating point array (N rgb or rgba values). (defaults to 'jet' if none given)
         label_names (list)
@@ -585,8 +281,6 @@ def plot(
             Color of border - defaults to 'k'
         bordersize (int)
             Size of the border points - defaults to 2
-        cscale (int array)
-            Colorscale [min, max] for the overlay, valid input values from -1 to 1 (default: [overlay.max, overlay.min])
         alpha (float)
             Opacity of the overlay (default: 1)
         render (str)
@@ -602,7 +296,7 @@ def plot(
             Ex: use "%i" to display as integers.
             Default='%.2g' for scientific notation.
         backgroundcolor (str or matplotlib.color):
-            Axis background color (default: 'w') 
+            Axis background color (default: 'w')
         frame (ndarray): [L,R,T,B] of the area of flatmap that is rendered
             Defaults to entire flatmap
 
@@ -622,7 +316,7 @@ def plot(
         flatsurf = nb.load(surf)
     elif isinstance(surf,nb.gifti.gifti.GiftiImage):
         flatsurf = surf
-    else: 
+    else:
         raise ValueError('surf should be a string or giftiImage')
     vertices = flatsurf.darrays[0].data
     faces    = flatsurf.darrays[1].data
@@ -635,7 +329,7 @@ def plot(
     # If it is a giftiImage, figure out colormap
     if type(data) is nb.gifti.gifti.GiftiImage:
         if overlay_type == 'label':
-            _, cmap = get_gifti_colortable(data)
+            _, cmap = nt.get_gifti_colortable(data)
             if label_names is None:
                 labels = data.labeltable
                 label_names = list(labels.get_labels_as_dict().values())
@@ -777,10 +471,8 @@ def _map_color(
             (min,max) of the scaling of the data
         cmap (str, or matplotlib.colors.Colormap)
             The Matplotlib colormap an equivalent Nx3 or Nx4 floating point array (N rgb or rgba values).
-        threshold (array like)
-            (lower, upper) threshold for data display -
-             only data x<lower and x>upper will be plotted
-            if one value is given (-inf) is assumed for the lower
+        threshold (scalae or array like)
+            threshold for data display - only values above threshold are displayed
     Returns:
         color_data(ndarray): N x 4 ndarray
         cmap
@@ -795,8 +487,11 @@ def _map_color(
         # if threshold is given, threshold the data
         if threshold is not None:
             if np.isscalar(threshold):
-                threshold=np.array([-np.inf,threshold])
-            data[~np.logical_and(data>threshold[0], data<threshold[1])]=np.nan
+                data[data<threshold]=np.nan
+            elif len(threshold)==2:
+                data[(data>threshold[0]) & (data<threshold[1])]=np.nan
+            else:
+                raise(NameError('Threshold needs to be scalar or 2-element array'))
 
         # scale the data
         data = ((data - cscale[0]) / (cscale[1] - cscale[0]))
@@ -839,7 +534,7 @@ def _map_color(
 
 
 def _render_matplotlib(vertices,faces,face_color,borders,
-                    bordercolor, bordersize, 
+                    bordercolor, bordersize,
                     new_figure,backgroundcolor,
                     frame):
     """
@@ -861,7 +556,7 @@ def _render_matplotlib(vertices,faces,face_color,borders,
         new_figure (bool)
             Create new Figure or render in currrent axis
         frame (ndarray)
-            [L,R,B,T] of the plotted area 
+            [L,R,B,T] of the plotted area
     Returns:
         ax (matplotlib.axes)
             Axis that was used to render the axis
@@ -930,7 +625,7 @@ def _render_plotly(vertices,faces,color,borders,
         hovertext (list of str)
             Text for hovering for each vertex
         frame (ndarray)
-            [L,R,B,T] of the plotted area 
+            [L,R,B,T] of the plotted area
 
     Returns:
         ax (matplotlib.axes)
