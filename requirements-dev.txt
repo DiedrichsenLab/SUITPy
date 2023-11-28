@@ -10,4 +10,4 @@ cython
 requests
 scipy>=1.9.0
 plotly
-neuroimagingtools>=1.0.0
+neuroimagingtools>=1.1.1

@@ -23,6 +23,7 @@ The required dependencies to use the software are:
 * pandas >= 0.24
 * matplotlib >= 1.5.1
 * scipy >=1.0
+* neuroimagingtools >= 1.1.1
 
 Install
 -------

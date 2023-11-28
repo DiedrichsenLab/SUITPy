@@ -45,9 +45,6 @@ def _nibabel_deprecation_warnings():
     if nib_version < '3.0':
         _nibabel2_deprecation_warning()
 
-_check_module_dependencies()
-_nibabel_deprecation_warnings()
-
 # Monkey-patch gzip to have faster reads on large gzip files
 if hasattr(gzip.GzipFile, 'max_read_chunk'):
     gzip.GzipFile.max_read_chunk = 100 * 1024 * 1024  # 100Mb
