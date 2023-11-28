@@ -9,6 +9,9 @@ The surface representation of the cerebellum is a group surface, designed to dis
 
 .. image:: suit_flat_2.jpg
 
+Using the flatmap involves two step: Mapping the data from volume space to the flatmap, followed by plotting the data. 
+
+
 .. toctree::
    :maxdepth: 2
 
