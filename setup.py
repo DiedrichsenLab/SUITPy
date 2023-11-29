@@ -8,45 +8,26 @@ descr = """A python package for cerebellar neuroimaging."""
 
 import sys
 import os
-
 from setuptools import setup, find_packages
 
-def load_version():
-    """Executes SUITPy/version.py in a globals dictionary and return it.
-    Note: importing SUITPy is not an option because there may be
-    dependencies like nibabel which are not installed and
-    setup.py is supposed to install them.
-    """
-    # load all vars into globals, otherwise
-    #   the later function call using global vars doesn't work.
-    globals_dict = {}
-    with open(os.path.join('SUITPy', 'version.py')) as fp:
-        exec(fp.read(), globals_dict)
+_SUITPy_INSTALL_MSG = 'See %s for installation information.' % (
+    'https://suitpy.readthedocs.io/en/latest/install.html#installation')
 
-    return globals_dict
-
+REQUIRED_MODULE_METADATA = ['numpy>=1.16',
+                            'nibabel>=2.5',
+                            'neuroimagingtools>=1.1.1',
+                            'requests>=2',
+                            'scipy>=1.0',
+                            'plotly>=5.3.1']
 
 def is_installing():
     # Allow command-lines such as "python setup.py build install"
     install_commands = set(['install', 'develop'])
     return install_commands.intersection(set(sys.argv))
 
-
-def list_required_packages():
-    required_packages = []
-    required_packages_orig = ['%s>=%s' % (mod, meta['min_version'])
-                              for mod, meta
-                              in _VERSION_GLOBALS['REQUIRED_MODULE_METADATA']
-                              ]
-    for package in required_packages_orig:
-        required_packages.append(package)
-    return required_packages
-
-
 # Make sources available using relative paths from this file's directory.
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
-_VERSION_GLOBALS = load_version()
 DISTNAME = 'SUITPy'
 DESCRIPTION = 'Mapping and plotting cerebellar fMRI data in Python'
 with open('README.rst') as fp:
@@ -56,13 +37,10 @@ MAINTAINER_EMAIL = 'jdiedric@uwo.ca'
 URL = 'https://github.com/DiedrichsenLab/SUITPy'
 LICENSE = 'MIT'
 DOWNLOAD_URL = 'https://github.com/DiedrichsenLab/SUITPy/archive/refs/tags/v.1.3.1.tar.gz'
-VERSION = _VERSION_GLOBALS['__version__']
+VERSION = '1.3.1'
 
 
 if __name__ == "__main__":
-    if is_installing():
-        module_check_fn = _VERSION_GLOBALS['_check_module_dependencies']
-        module_check_fn(is_SUITPy_installing=True)
 
     setup(name=DISTNAME,
           maintainer=MAINTAINER,
@@ -92,8 +70,11 @@ if __name__ == "__main__":
           ],
           packages=find_packages(),
           package_data={
-              'SUITPy': ['surfaces/*.surf.gii', 'surfaces/*.C.scene', 'surfaces/*.shape.gii', 'surfaces/*.txt'],
+              'SUITPy': ['surfaces/*.surf.gii',
+                         'surfaces/*.C.scene',
+                         'surfaces/*.shape.gii',
+                         'surfaces/*.txt'],
           },
-          install_requires=list_required_packages(),
+          install_requires=REQUIRED_MODULE_METADATA,
           python_requires='>=3.6',
           )

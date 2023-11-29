@@ -5,10 +5,9 @@ import gzip
 import os
 import pkg_resources
 import warnings
-
 from distutils.version import LooseVersion
 
-from .version import _check_module_dependencies, __version__
+__version__ = '1.3.1'
 
 from .atlas import (fetch_king_2019,
                     fetch_buckner_2011,
