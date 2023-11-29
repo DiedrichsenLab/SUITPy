@@ -37,7 +37,7 @@ MAINTAINER_EMAIL = 'jdiedric@uwo.ca'
 URL = 'https://github.com/DiedrichsenLab/SUITPy'
 LICENSE = 'MIT'
 DOWNLOAD_URL = 'https://github.com/DiedrichsenLab/SUITPy/archive/refs/tags/v.1.3.1.tar.gz'
-VERSION = '1.3.1'
+VERSION = '1.3.2'
 
 
 if __name__ == "__main__":
