@@ -21,6 +21,7 @@ Other contributors:
 
 *Carlos Hernandez-Castillo
 *Suzanne Witt
+*Ladan Shahshahani
 
 .. _citing:
 

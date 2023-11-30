@@ -2,10 +2,6 @@
 Helper functions to download NeuroImaging datasets
 """
 import gzip
-import os
-import pkg_resources
-import warnings
-from distutils.version import LooseVersion
 
 __version__ = '1.3.2'
 
@@ -22,27 +18,6 @@ from .flatmap import (vol_to_surf,
 
 from .reslice import (reslice_image,
                       reslice_img)
-
-def _nibabel2_deprecation_warning():
-    msg = ('Support for Nibabel 2.x is deprecated and will stop '
-           'in release 0.9.0. Please consider upgrading to '
-           'Nibabel 3.x.')
-    warnings.filterwarnings('once', message=msg)
-    warnings.warn(message=msg,
-                  category=FutureWarning,
-                  stacklevel=3)
-
-def _nibabel_deprecation_warnings():
-    """Give a deprecation warning is the version of
-    Nibabel is < 3.0.0.
-    """
-    # Nibabel should be installed or we would
-    # have had an error when calling
-    # _check_module_dependencies
-    dist = pkg_resources.get_distribution('nibabel')
-    nib_version = LooseVersion(dist.version)
-    if nib_version < '3.0':
-        _nibabel2_deprecation_warning()
 
 # Monkey-patch gzip to have faster reads on large gzip files
 if hasattr(gzip.GzipFile, 'max_read_chunk'):
