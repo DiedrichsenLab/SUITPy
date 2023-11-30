@@ -18,6 +18,7 @@ REQUIRED_MODULE_METADATA = ['numpy>=1.16',
                             'neuroimagingtools>=1.1.1',
                             'requests>=2',
                             'scipy>=1.0',
+                            'matplotlib>=3.4.2',
                             'plotly>=5.3.1']
 
 def is_installing():
@@ -28,26 +29,20 @@ def is_installing():
 # Make sources available using relative paths from this file's directory.
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
-DISTNAME = 'SUITPy'
 DESCRIPTION = 'Mapping and plotting cerebellar fMRI data in Python'
 with open('README.rst') as fp:
     LONG_DESCRIPTION = fp.read()
-MAINTAINER = 'Jorn Diedrichsen'
-MAINTAINER_EMAIL = 'jdiedric@uwo.ca'
-URL = 'https://github.com/DiedrichsenLab/SUITPy'
-LICENSE = 'MIT'
-DOWNLOAD_URL = 'https://github.com/DiedrichsenLab/SUITPy/archive/refs/tags/v.1.3.1.tar.gz'
+DOWNLOAD_URL = 'https://github.com/DiedrichsenLab/SUITPy/archive/refs/tags/v.1.3.2.tar.gz'
 VERSION = '1.3.2'
-
 
 if __name__ == "__main__":
 
-    setup(name=DISTNAME,
-          maintainer=MAINTAINER,
-          maintainer_email=MAINTAINER_EMAIL,
+    setup(name='SUITPy',
+          maintainer='Jorn Diedrichsen',
+          maintainer_email='joern.diedrichsen@googlemail.com',
           description=DESCRIPTION,
-          license=LICENSE,
-          url=URL,
+          license='MIT',
+          url='https://github.com/DiedrichsenLab/SUITPy',
           version=VERSION,
           download_url=DOWNLOAD_URL,
           long_description=LONG_DESCRIPTION,

@@ -9,9 +9,6 @@ https://github.com/nilearn/nilearn/blob/main/nilearn/datasets/atlas.py`
 import json
 import requests
 
-import nibabel as nb
-import numpy as np
-
 from SUITPy.utils import _get_dataset_dir, _fetch_files
 from SUITPy._utils import fill_doc
 
