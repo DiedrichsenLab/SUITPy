@@ -871,7 +871,7 @@ def _render_matplotlib(vertices,faces,face_color,borders,
     patches = []
 
     for i,f in enumerate(faces[face_in]):
-        polygon = Polygon(vertices[f,0:2], True)
+        polygon = Polygon(vertices[f,0:2])
         patches.append(polygon)
     p = PatchCollection(patches)
     p.set_facecolor(face_color[face_in])
@@ -1009,7 +1009,7 @@ def _render_plotly(vertices,faces,color,borders,
 
 def _make_labels(data,labelstr):
     numvert=data.shape[0]
-    labels = np.empty((data.shape[0],),dtype=np.object)
+    labels = np.empty((data.shape[0],),dtype=object)
     if type(labelstr) is str:
         for i in range(numvert):
             if data.ndim==1:
