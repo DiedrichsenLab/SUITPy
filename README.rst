@@ -23,6 +23,7 @@ The required dependencies to use the software are:
 * pandas >= 0.24
 * matplotlib >= 1.5.1
 * scipy >=1.0
+* neuroimagingtools >= 1.1.1
 
 Install
 -------
@@ -43,8 +44,8 @@ The Python version of the SUIT toolbox has been developed by the Diedrichsenlab 
 
 SUIT normalisation and template:
 
-- Diedrichsen, J. (2006). A spatially unbiased atlas template of the human cerebellum. Neuroimage. 33(1), 127-138.
+- Diedrichsen, J. (2006). A spatially unbiased atlas template of the human cerebellum. Neuroimage. 33(1), 127-138. doi: 10.1016/j.neuroimage.2006.05.056
 
 Surface-based representation and flatmap
 
-- Diedrichsen, J. & Zotow, E. (2015). Surface-based display of volume-averaged cerebellar data. PLOSOne.
+- Diedrichsen, J. & Zotow, E. (2015). Surface-based display of volume-averaged cerebellar data. PLOSOne. doi: 10.1371/journal.pone.0133402

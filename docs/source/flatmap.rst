@@ -9,6 +9,9 @@ The surface representation of the cerebellum is a group surface, designed to dis
 
 .. image:: suit_flat_2.jpg
 
+Using the flatmap involves two step: Mapping the data from volume space to the flatmap, followed by plotting the data. 
+
+
 .. toctree::
    :maxdepth: 2
 
@@ -22,4 +25,4 @@ For more details, see:
 
 Did you know?
 -------------
-We also have an online version of our cerebellar atlases. Check it out at http://www.diedrichsenlab.org/imaging/AtlasViewer/index.html.
+We also have an online version of our cerebellar atlases. Check it out at http://www.diedrichsenlab.org/imaging/AtlasViewer/index.htm.
