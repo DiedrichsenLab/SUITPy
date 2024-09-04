@@ -823,3 +823,72 @@ def _color_matplotlib_to_plotly(color):
     if color=='w':
         color='#ffffff'
     return color
+
+def plot_multi_flat(data, grid,
+                    cmap=None,
+                    dtype='label',
+                    cscale=None,
+                    titles=None,
+                    colorbar=False,
+                    space = 'SUIT',
+                    render='matplotlib',
+                    labels= None):
+    """Plots a grid of flatmaps with some data, requires data to be in volume space
+
+    Args:
+        data (array or list): NxP array of data or list of NxP arrays of data (if plotting Probabilities)
+        grid (tuple): (rows,cols) grid for subplot
+        cmap (colormap or list): Color map or list of color maps. Defaults to None.
+        dtype (str, optional):'label' or 'func'
+        cscale (_type_, optional): Scale of data (None)
+        titles (_type_, optional): _description_. Defaults to None.
+    """
+    if isinstance(data, np.ndarray):
+        n_subplots = data.shape[0]
+    elif isinstance(data, list):
+        n_subplots = len(data)
+
+    for i in np.arange(n_subplots):
+        plt.subplot(grid[0], grid[1], i + 1)
+        nifti = data[i]
+        # Mapping labels directly by the mode
+        if dtype == 'label':
+            surf_data = vol_to_surf(nifti, stats='mode',
+                                                space=space, ignore_zeros=True)
+            ax = plot(surf_data,
+                                render=render,
+                                cmap=cmap,
+                                new_figure=False,
+                                label_names=labels,
+                                overlay_type='label',
+                                colorbar=colorbar)
+        # Plotting one series of functional data
+        elif dtype == 'func':
+            surf_data = vol_to_surf(nifti, stats='nanmean',
+                                                space=space)
+            ax = plot(surf_data,
+                                render=render,
+                                cmap=cmap,
+                                cscale=cscale,
+                                new_figure=False,
+                                overlay_type='func',
+                                colorbar=colorbar)
+        # Mapping probabilities on the flatmap and then
+        # determining a winner from this (slightly better than label)
+        elif dtype == 'prob':
+            surf_data = vol_to_surf(nifti, stats='nanmean',
+                                                space=space)
+            label = np.argmax(surf_data, axis=1) + 1
+            ax = plot(label,
+                                render=render,
+                                cmap=cmap,
+                                new_figure=False,
+                                label_names=labels,
+                                overlay_type='label',
+                                colorbar=colorbar)
+        else:
+            raise (NameError('Unknown data type'))
+
+
+        plt.title(titles[i])
+        plt.tight_layout()
