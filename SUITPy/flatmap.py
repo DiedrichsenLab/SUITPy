@@ -833,7 +833,8 @@ def plot_multi_flat(data, grid,
                     space = 'SUIT',
                     render='matplotlib',
                     bordersize = 2,
-                    labels= None):
+                    labels= None,
+                    fig_size=(5, 5)):
     """Plots a grid of flatmaps with some data, requires data to be in volume space
 
     Args:
@@ -844,6 +845,8 @@ def plot_multi_flat(data, grid,
         cscale (_type_, optional): Scale of data (None)
         titles (_type_, optional): _description_. Defaults to None.
     """
+        
+    fig = plt.figure(figsize=fig_size)
     if isinstance(data, np.ndarray):
         n_subplots = data.shape[0]
     elif isinstance(data, list):
