@@ -11,9 +11,9 @@ import nibabel as nb
 
 
 def test_flatmap_plot(render='plotly'):
-    ax = flatmap.plot('docs/source/notebooks/MDTB08_Math.func.gii',threshold=[0.01, 0.12],
-    bordersize=3,bordercolor='k',backgroundcolor='w',render=render,colorbar=True)
-    ax.show()
+    ax = flatmap.plot('docs/source/notebooks/MDTB08_Math.func.gii',
+                      threshold=[-0.05,0.05],bordersize=3,bordercolor='k',backgroundcolor='w',render=render,colorbar=True)
+    #  ax.show()
     # ax = flatmap.plot('docs/source/notebooks/Buckner_17Networks.label.gii',overlay_type='label',new_figure=True, colorbar=False,render='plotly')
     # ax.show()
     pass
@@ -46,7 +46,7 @@ def test_plot_rgba(render='plotly'):
 
 if __name__ == '__main__':
     # make_shapes()
-    # test_flatmap_plot(render='matplotlib')
+    test_flatmap_plot(render='matplotlib')
     # test_plot_label(render='matplotlib')
-    test_plot_rgba(render='matplotlib')
+    # test_plot_rgba(render='matplotlib')
     pass
