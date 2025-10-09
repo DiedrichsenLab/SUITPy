@@ -253,7 +253,7 @@ def plot(data,
 
     Args:
         data (np.array, giftiImage, or name of gifti file):
-            Data to be plotted, should be a 28935x1 vector
+            Data to be plotted, should be a 28935-long vector
         surf (str or giftiImage):
             surface file for flatmap (default: FLAT.surf.gii in SUIT pkg)
         underlay (str, giftiImage, or np-array):
