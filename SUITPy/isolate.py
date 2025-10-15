@@ -21,7 +21,10 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 def from_nibabel(nib_image):
     """
     Convert a nibabel image to an ANTsImage (https://antspy.readthedocs.io/en/v0.3.8/index.html)
+    Args:
+    
     """
+    # COMMENT: TRY TO FIND A DIRECT WAY OF CONVERSION WITHOUT WRITING TO DISK 
     fd, tmpfile = mkstemp(suffix=".nii.gz")
     nib_image.to_filename(tmpfile)
     new_img = ants.image_read(tmpfile)
@@ -53,19 +56,23 @@ def standardize(x):
             standardized tensor
 
     """
+    # REMOVE THIS - FLAT
     x_mean, x_std = x.mean(), x.std()
     return (x - x_mean) / x_std
 
 
-class _MNITemplate(object):
+class TemplateCerebellarBoundingBox(object):
     """
         Basic MNI template class, which defines the cropped area. 
         All other template implementations should be registered to this template. (should not be instantiated directly)
     """
-    def __init__(self):
+    def __init__(name='MNINLin6Asym',bounding_box=None):
         # location and size of the cropped area (changing it might result worse performance as the model was trained on it)
-        self.cropped_size = (128, 128, 128)
-        self.cereb_center = [0, -50, -24]
+        self.cropped_size = (128, 128, 128) # Size of cropped area (in voxels)
+        self.bounding_box = np.array([[-64, xx, -xx],[64,xx,xx]])   # Center of cerebellar bounding box in MNI space (in mm)   
+
+        # For transforming voxels in mm and back, use nitools.volume.affine_transform
+        nitools.
 
         base_dir = os.path.dirname(__file__)
         self.MNI_template = os.path.join(base_dir, f'templates/MNI_2009.nii.gz')
@@ -398,13 +405,20 @@ def binarize(img):
             the binarized image
 
     """
-    img[img != 0] = 1
+    img[img != 0] = 1 
     # img.to(np.uint8)
     # return img.where(img != 0, 1, 0).to(np.uint8)
     return img
 
 
-def denoise(img):
+def remove_islands(img):
+    """ Removes parts of the mask that is not connected to the largest cluster
+    
+    Args:
+        img (ANTsImage): the input image
+    Returns:
+        mask (ANTsImage): Image containing the largest connected component
+    """
     clusters = ants.image_to_cluster_images(img)
 
     mask = None
@@ -654,11 +668,11 @@ def isolate(t1_path=None, t2_path=None, brain_path=None, brain_mask_path=None, l
     base_dir = os.path.dirname(os.path.abspath(__file__))
     params_path = os.path.join(base_dir, 'params', params)
     if template == 'adult':
-        template = AdultTemplate()
+        templateBB = TemplateCerebellarBoundingBox('MNINLin6Asym',[[-64,-90,-60],[64,-10,0]])
     elif template == 'neonate':
-        template = NeonateTemplate()
+        template = TemplateCerebellarBoundingBox('UNC_Neonate_T2',[[-64,-90,-60],[64,-10,0]])s
     elif template == 'elder':
-        template = ElderTemplate()
+        template = TemplateCerebellarBoundingBox('MNINLin6Asym',[[-64,-90,-60],[64,-10,0]])
     else:
         print('Unsupported template type')
         exit(0)

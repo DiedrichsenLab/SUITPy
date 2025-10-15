@@ -1,6 +1,12 @@
 Module and Function reference
 =============================
 
+Isolate module reference
+------------------------
+
+.. automodule:: isolate
+   :members:
+
 Reslice module reference
 ------------------------
 
