@@ -1,7 +1,7 @@
-Dataset and Import Module
-=========================
+Cerebellar Atlases
+==================
 
-The atlas module of the SUIT toolbox contains functions that download cerebellar atlases and contrast images from online open-source repositories (e.g., King et al., 2019; Ji et al., 2019). Both nifti and gifti files are downloaded but note that gifti files should be used for visualization purposes only.
+The atlas module of the SUIT toolbox contains functions that download cerebellar atlases and contrast maps from the cerebellar atlas directory. Data can be downloaded in both volume and surface format.
 
 .. image:: functional_atlas.png
 
@@ -10,7 +10,10 @@ The atlas module of the SUIT toolbox contains functions that download cerebellar
 
    notebooks/datasets_example
 
-For details on cerebellar projects currently included, see:
+For details on cerebellar atlases currently included, see:
+
+
+
 
 * King, M., Hernandez-Castillo, C.R., Poldrack, R.R., Ivry, R., and Diedrichsen, J. (2019). Functional Boundaries in the Human Cerebellum revealed by a Multi-Domain Task Battery. Nat. Neurosci.
 * Buckner, R. L., Krienen, F. M., Castellanos, A., Diaz, J. C. & Yeo, B. T. (2011). The organization of the human cerebellum estimated by intrinsic functional connectivity. J Neurophysiol 106, 2322–2345

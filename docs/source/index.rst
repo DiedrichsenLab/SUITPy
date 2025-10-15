@@ -13,9 +13,11 @@ Currently, only mapping of volume data to the flatmap and display of the flatmap
    :caption: Contents:
 
    install.rst
+   isolate.rst
+   normalize.rst
    reslice.rst
    flatmap.rst
-   datasets.rst
+   atlases.rst
    reference.rst
 
 Important links
@@ -24,6 +26,11 @@ Important links
 - SUIT website: http://diedrichsenlab.org/imaging/suit.htm
 - Repository of the Python version: https://github.com/diedrichsenlab/SUITPy
 - Repository of the Matlab version: https://github.com/jdiedrichsen/SUIT
+
+
+Acknowledgements
+----------------
+
 
 
 
