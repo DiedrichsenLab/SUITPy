@@ -30,7 +30,13 @@ Important links
 
 Acknowledgements
 ----------------
+SUITPy is developed by the Diedrichsenlab and collaborators, Carlos Hernandez-Castillo, Yao Li
 
+
+
+.. image:: CIHR.png
+
+.. image:: RCP.png
 
 
 
