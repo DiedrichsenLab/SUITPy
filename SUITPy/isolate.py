@@ -10,21 +10,26 @@ import nibabel as nib
 import ants
 import torch
 from torch import nn
-from tempfile import mkstemp
 import numpy as np
+from tempfile import mkstemp
+import nitools
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 
-
 def from_nibabel(nib_image):
     """
-    Convert a nibabel image to an ANTsImage (https://antspy.readthedocs.io/en/v0.3.8/index.html)
-    Args:
-    
+    Converts a given Nifti image into an ANTsPy image
+
+    Parameters
+    ----------
+        img: NiftiImage
+
+    Returns
+    -------
+        ants_image: ANTsImage
     """
-    # COMMENT: TRY TO FIND A DIRECT WAY OF CONVERSION WITHOUT WRITING TO DISK 
     fd, tmpfile = mkstemp(suffix=".nii.gz")
     nib_image.to_filename(tmpfile)
     new_img = ants.image_read(tmpfile)
@@ -32,33 +37,11 @@ def from_nibabel(nib_image):
     os.remove(tmpfile)
     return new_img
 
-
 def img_read(path):
 
     nib_img = nib.load(path)
-    header = nib_img.header
-    header.set_qform(None)
-    new_img = from_nibabel(nib.Nifti1Image(nib_img.dataobj, nib_img.affine, header))
+    new_img = from_nibabel(nib_img)
     return new_img
-
-
-def standardize(x):
-    """
-    Standardizes input tensor x to have mean 0 and standard deviation 1.
-    Args:
-    ----------
-        x: tensor
-            the tensor to be standardized
-
-    Returns:
-    ----------
-        data: tensor
-            standardized tensor
-
-    """
-    # REMOVE THIS - FLAT
-    x_mean, x_std = x.mean(), x.std()
-    return (x - x_mean) / x_std
 
 
 class TemplateCerebellarBoundingBox(object):
@@ -66,109 +49,49 @@ class TemplateCerebellarBoundingBox(object):
         Basic MNI template class, which defines the cropped area. 
         All other template implementations should be registered to this template. (should not be instantiated directly)
     """
-    def __init__(name='MNINLin6Asym',bounding_box=None):
+    def __init__(self, name='MNI152NLin6Asym', bounding_box=None, cerebellar_center=None, cropped_size=None):
         # location and size of the cropped area (changing it might result worse performance as the model was trained on it)
-        self.cropped_size = (128, 128, 128) # Size of cropped area (in voxels)
-        self.bounding_box = np.array([[-64, xx, -xx],[64,xx,xx]])   # Center of cerebellar bounding box in MNI space (in mm)   
+        self.cropped_size = (128, 128, 128) # Size of cropped area (in mm)
+        # cerebellar bounding box in MNI space (in mm)
+        if bounding_box is not None:
+            self.bounding_box = bounding_box
+            # need to resample
+            pass
+        else:
+            if cerebellar_center is not None and cropped_size is not None:
+                pass
+            else:
+                self.bounding_box = np.array([[64, -114, -88],[-64, 14, 40]])
 
-        # For transforming voxels in mm and back, use nitools.volume.affine_transform
-        nitools.
+
+        self.lowerleft = self.bounding_box[0]
+        self.upperright = self.bounding_box[1]
 
         base_dir = os.path.dirname(__file__)
-        self.MNI_template = os.path.join(base_dir, f'templates/MNI_2009.nii.gz')
-        self.mni_affine = nib.load(self.MNI_template).affine
-
-    def get_cropped_coordinates(self):
-        """
-        calculate the coordinates of the cropped area.
-        """
-        start = (self.cereb_center[0] - self.cropped_size[0] / 2 * self.mni_affine[0, 0],
-                 self.cereb_center[1] - self.cropped_size[1] / 2 * self.mni_affine[1, 1],
-                 self.cereb_center[2] - self.cropped_size[2] / 2 * self.mni_affine[2, 2])
-        end = (self.cereb_center[0] + self.cropped_size[0] / 2 * self.mni_affine[0, 0],
-               self.cereb_center[1] + self.cropped_size[1] / 2 * self.mni_affine[1, 1],
-               self.cereb_center[2] + self.cropped_size[2] / 2 * self.mni_affine[2, 2])
-        return start, end
-
-    def get_mni_template(self):
-        """
-        get the MNI template image
-        """
-        return ants.image_read(self.MNI_template)
-
-    def get_mni_affine(self):
-        """
-        get the MNI template affine
-        """
-        return self.mni_affine
+        self.template = ants.image_read(os.path.join(base_dir, f'templates/tpl-{name}_T1w.nii.gz'))
+        self.nib_template = nib.load(os.path.join(base_dir, f'templates/tpl-{name}_T1w.nii.gz'))
+        self.brainmask = ants.image_read(os.path.join(base_dir, f'templates/tpl-{name}-brain_mask.nii.gz'))
+        self.brain = ants.mask_image(self.template, self.brainmask)
+        self.affine = nib.load(os.path.join(base_dir, f'templates/tpl-{name}_T1w.nii.gz')).affine
 
     def get_crop_indices(self):
         """
-        calculate the indices of the cropped area.
+        calculate the lower left and upper right indices of the cropped area (in voxels).
         """
-        start_coords, end_coords = self.get_cropped_coordinates()
-        affine_inv = np.linalg.inv(self.mni_affine)
-        start = affine_inv @ np.array([start_coords[0], start_coords[1], start_coords[2], 1])
-        end = affine_inv @ np.array([end_coords[0], end_coords[1], end_coords[2], 1])
-
-        return start[0:3].astype('int'), end[0:3].astype('int')
+        return  nitools.coords_to_voxelidxs(self.bounding_box.T, self.nib_template).T
 
     def get_cropped_affine(self):
         """
         get the cropped area affine
         """
-        start_coords, end_coords = self.get_cropped_coordinates()
-        affine = np.diag([self.mni_affine[0, 0], self.mni_affine[1, 1], self.mni_affine[2, 2], 1])
-        affine[0, 3] = abs(affine[0, 0]) * start_coords[0]
-        affine[1, 3] = abs(affine[1, 1]) * start_coords[1]
-        affine[2, 3] = abs(affine[2, 2]) * start_coords[2]
+
+        ## This function needs to fix. It will fail if the template affine is not diagonal
+        affine = np.diag([self.affine[0, 0], self.affine[1, 1], self.affine[2, 2], 1])
+        affine[0, 3] = abs(affine[0, 0]) * self.lowerleft[0]
+        affine[1, 3] = abs(affine[1, 1]) * self.lowerleft[1]
+        affine[2, 3] = abs(affine[2, 2]) * self.lowerleft[2]
 
         return affine
-
-    # def crop(self, img, trans=None):
-    #     """
-    #
-    #     Args:
-    #     ----------
-    #         img: ANTsImage
-    #             image to be cropped
-    #         trans: ANTsTransform
-    #             transformation matrix from the image space to the MNI template space (only use it if img is not in the MNI template)
-    #
-    #     Returns:
-    #     ----------
-    #         cropped_img: ANTsImage
-    #             cropped image
-    #
-    #     """
-    #     start_indices, end_indices = self.get_crop_indices()
-    #     if trans is not None:
-    #         img = ants.apply_ants_transform_to_image(trans, img, self.get_mni_template())
-    #     return img[start_indices[0]:end_indices[0], start_indices[1]:end_indices[1], start_indices[2]:end_indices[2]]
-
-
-class AdultTemplate(_MNITemplate):
-    """
-    adult template
-    """
-    def __init__(self):
-        super().__init__()
-
-        base_dir = os.path.dirname(__file__)
-        self.template_head = os.path.join(base_dir, f'templates/adult/head.nii.gz')
-        self.template_brain = os.path.join(base_dir, f'templates/adult/brain.nii.gz')
-
-    def get_template(self):
-        """
-        get the template head
-        """
-        return ants.image_read(self.template_head)
-
-    def get_template_brain(self):
-        """
-        get the template brain
-        """
-        return ants.image_read(self.template_brain)
 
     def registration(self, img, type_of_transform='Affine'):
         """
@@ -189,8 +112,7 @@ class AdultTemplate(_MNITemplate):
                 the transformation from the subject space to the template space
 
         """
-        result = ants.registration(fixed=self.get_template(), moving=img, type_of_transform=type_of_transform)
-        img = result['warpedmovout']
+        result = ants.registration(fixed=self.template, moving=img, type_of_transform=type_of_transform)
         trans = ants.read_transform(result['fwdtransforms'][0])
 
         return trans
@@ -214,12 +136,37 @@ class AdultTemplate(_MNITemplate):
                 the transformation from the subject space to the template space
 
         """
-        result = ants.registration(fixed=self.get_template_brain(), moving=img, type_of_transform=type_of_transform)
-        img = result['warpedmovout']
+        result = ants.registration(fixed=self.brain, moving=img, type_of_transform=type_of_transform)
         trans = ants.read_transform(result['fwdtransforms'][0])
 
         return trans
 
+    def crop(self, img, trans=None):
+        """
+
+         Args:
+         ----------
+             img: ANTsImage
+                 image to be cropped
+             trans: ANTsTransform
+                 transformation matrix from the image space to the MNI template space (only use it if img is not in the MNI template)
+
+         Returns:
+         ----------
+             cropped_img: ANTsImage
+                 cropped image
+
+         """
+        start_indices, end_indices = self.get_crop_indices()
+        if trans is not None:
+            img = ants.apply_ants_transform_to_image(trans, img, self.template)
+        return img[start_indices[0]:end_indices[0], start_indices[1]:end_indices[1], start_indices[2]:end_indices[2]], img
+
+    def MNI2Subject(self, img, trans, ref):
+        trans_inv = ants.invert_ants_transform(trans)
+        result = ants.apply_ants_transform_to_image(trans_inv, img, ref)
+
+        return result
 
 class Subject(object):
     """
@@ -260,12 +207,12 @@ class Subject(object):
             t1_data = torch.zeros((128, 128, 128), dtype=torch.float)
         else:
             t1_data = torch.tensor(self.t1, dtype=torch.float)
-            t1_data = standardize(t1_data)
+            t1_data = (t1_data - t1_data.mean()) / t1_data.std()
         if self.t2 is None:
             t2_data = torch.zeros((128, 128, 128), dtype=torch.float)
         else:
             t2_data = torch.tensor(self.t2, dtype=torch.float)
-            t2_data = standardize(t2_data)
+            t2_data = (t2_data - t2_data.mean()) / t2_data.std()
 
         if self.label is None:
             label_data = torch.zeros((128, 128, 128), dtype=torch.float)
@@ -274,7 +221,7 @@ class Subject(object):
         return t1_data, t2_data, label_data
 
 
-def subject_preprocess(t1_path=None, t2_path=None, brain_path=None, brain_mask_path=None, label_path=None, template=AdultTemplate(),
+def subject_preprocess(t1_path=None, t2_path=None, brain_path=None, brain_mask_path=None, label_path=None, BoundingBox=TemplateCerebellarBoundingBox(),
                        type_of_transform='Affine'):
     """
     function to preprocess a single subject
@@ -338,29 +285,29 @@ def subject_preprocess(t1_path=None, t2_path=None, brain_path=None, brain_mask_p
             t2 = ants.registration(fixed=t1, moving=t2, type_of_transform='Rigid')['warpedmovout']
 
     if brain is not None:
-        trans = template.registration_brain(brain, type_of_transform=type_of_transform)
+        trans = BoundingBox.registration_brain(brain, type_of_transform=type_of_transform)
     else:
         if t1 is not None:
-            trans = template.registration(t1, type_of_transform=type_of_transform)
+            trans = BoundingBox.registration(t1, type_of_transform=type_of_transform)
         else:
-            trans = template.registration(t2, type_of_transform=type_of_transform)
+            trans = BoundingBox.registration(t2, type_of_transform=type_of_transform)
 
     if t1 is not None:
-        t1_crop, t1_whole = template.crop(t1, trans)
+        t1_crop, t1_whole = BoundingBox.crop(t1, trans)
         # t1_whole = ants.apply_ants_transform_to_image(trans, t1, template.get_mni_template())
     else:
         t1_crop = None
         t1_whole = None
 
     if t2 is not None:
-        t2_crop, t2_whole = template.crop(t2, trans)
+        t2_crop, t2_whole = BoundingBox.crop(t2, trans)
         # t2_whole = ants.apply_ants_transform_to_image(trans, t2, template.get_mni_template())
     else:
         t2_crop = None
         t2_whole = None
 
     if label is not None:
-        label_crop, _ = template.crop(label, trans)
+        label_crop, _ = BoundingBox.crop(label, trans)
     else:
         label_crop = None
 
@@ -390,27 +337,6 @@ def threshold(img, lower=0.95, upper=1.0):
     return img
 
 
-def binarize(img):
-    """
-    binarize the image
-
-    Args:
-    ----------
-        img: ANTsImage
-            the input image
-
-    Returns:
-    ----------
-        image : ANTsImage
-            the binarized image
-
-    """
-    img[img != 0] = 1 
-    # img.to(np.uint8)
-    # return img.where(img != 0, 1, 0).to(np.uint8)
-    return img
-
-
 def remove_islands(img):
     """ Removes parts of the mask that is not connected to the largest cluster
     
@@ -431,7 +357,7 @@ def remove_islands(img):
     return mask
 
 
-def subject_postprocess(mask, trans, template, ref):
+def subject_postprocess(mask, trans, BoundingBox, ref):
     """
     transform the predicted cerebellum mask to the original space
     Args:
@@ -449,9 +375,12 @@ def subject_postprocess(mask, trans, template, ref):
 
     """
 
-    result = template.warp_to_MNI(mask, trans, ref)
-    result = binarize(threshold(result))
-    result = denoise(result)
+    result = BoundingBox.MNI2Subject(mask, trans, ref)
+    # threshold and binarize the image
+    result = threshold(result)
+    result[result != 0] = 1
+
+    result = remove_islands(result)
     return result
 
 
@@ -624,7 +553,7 @@ def predict(model, params_path, t1=None, t2=None):
 
 
 
-def isolate(t1_path=None, t2_path=None, brain_path=None, brain_mask_path=None, label_path=None, result_folder=None, template='adult',
+def isolate(t1_path=None, t2_path=None, brain_path=None, brain_mask_path=None, label_path=None, result_folder=None, template='MNI152NLin6Asym',
             type_of_transform='Affine', model=UNet(), params='pre_trained.pkl', keepfiles=False):
     """
     main function for cerebellum isolation
@@ -666,21 +595,13 @@ def isolate(t1_path=None, t2_path=None, brain_path=None, brain_mask_path=None, l
         exit(0)
 
     base_dir = os.path.dirname(os.path.abspath(__file__))
-    params_path = os.path.join(base_dir, 'params', params)
-    if template == 'adult':
-        templateBB = TemplateCerebellarBoundingBox('MNINLin6Asym',[[-64,-90,-60],[64,-10,0]])
-    elif template == 'neonate':
-        template = TemplateCerebellarBoundingBox('UNC_Neonate_T2',[[-64,-90,-60],[64,-10,0]])s
-    elif template == 'elder':
-        template = TemplateCerebellarBoundingBox('MNINLin6Asym',[[-64,-90,-60],[64,-10,0]])
-    else:
-        print('Unsupported template type')
-        exit(0)
+    params_path = os.path.join(base_dir, 'parameters', params)
+    BoundingBox = TemplateCerebellarBoundingBox(name=template)
     trans, t1_crop, t2_crop, label_crop, t1_whole, t2_whole = subject_preprocess(t1_path=t1_path, t2_path=t2_path,
                                                                                  brain_path=brain_path,
                                                                                  brain_mask_path = brain_mask_path,
                                                                                  label_path=label_path,
-                                                                                 template=template,
+                                                                                 BoundingBox=BoundingBox,
                                                                                  type_of_transform=type_of_transform)
     if isinstance(t1_crop, ants.core.ants_image.ANTsImage):
         t1_crop_data = t1_crop.numpy()
@@ -698,13 +619,13 @@ def isolate(t1_path=None, t2_path=None, brain_path=None, brain_mask_path=None, l
     sub = Subject(t1=t1_crop_data, t2=t2_crop_data, label=label_crop_data)
     t1, t2, label = sub.get_data()
     mask = predict(model=model, params_path=params_path, t1=t1, t2=t2)
-    mask = nib.Nifti1Image(mask, template.get_cropped_affine())
+    mask = nib.Nifti1Image(mask, BoundingBox.get_cropped_affine())
     mask = from_nibabel(mask)
 
     if t1_path is not None:
-        result = subject_postprocess(mask=mask, trans=trans, template=template, ref=img_read(t1_path))
+        result = subject_postprocess(mask=mask, trans=trans, BoundingBox=BoundingBox, ref=img_read(t1_path))
     else:
-        result = subject_postprocess(mask=mask, trans=trans, template=template, ref=img_read(t2_path))
+        result = subject_postprocess(mask=mask, trans=trans, BoundingBox=BoundingBox, ref=img_read(t2_path))
     if result_folder is not None:
         os.makedirs(result_folder, exist_ok=True)
         ants.image_write(result, os.path.join(result_folder, 'cerebellum_Unet_dseg.nii.gz'))
