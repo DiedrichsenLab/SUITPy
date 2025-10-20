@@ -38,6 +38,17 @@ def from_nibabel(nib_image):
     return new_img
 
 def img_read(path):
+    """
+    basic function to read a nifti image
+    Args:
+        path: (string)
+            image path
+
+    Returns:
+        img (ANTs image)
+            An ANTs image
+
+    """
 
     nib_img = nib.load(path)
     new_img = from_nibabel(nib_img)
@@ -46,13 +57,24 @@ def img_read(path):
 
 class TemplateCerebellarBoundingBox(object):
     """
-        Basic MNI template class, which defines the cropped area. 
-        All other template implementations should be registered to this template. (should not be instantiated directly)
+        Basic cerebellar bounding box class, which defines the cropped area.
+        All other template implementations should be registered to this template.
     """
     def __init__(self, name='MNI152NLin6Asym', bounding_box=None, cerebellar_center=None, cropped_size=None):
-        # location and size of the cropped area (changing it might result worse performance as the model was trained on it)
-        self.cropped_size = (128, 128, 128) # Size of cropped area (in mm)
-        # cerebellar bounding box in MNI space (in mm)
+        """
+        Create a bounding box
+
+        Args:
+            name: (string)
+                The name of template used. It uses MNI152NLin6Asym by default.
+            bounding_box: (ndarray)
+                cerebellar bounding box in MNI space (in mm) (reserved for future development)
+            cerebellar_center: (ndarray)
+                (reserved for future development)
+            cropped_size: (ndarray)
+                (reserved for future development)
+        """
+        self.cropped_size = (128, 128, 128)
         if bounding_box is not None:
             self.bounding_box = bounding_box
             # need to resample
@@ -61,8 +83,7 @@ class TemplateCerebellarBoundingBox(object):
             if cerebellar_center is not None and cropped_size is not None:
                 pass
             else:
-                self.bounding_box = np.array([[64, -114, -88],[-64, 14, 40]])
-
+                self.bounding_box = np.array([[64, -114, -88], [-64, 14, 40]])
 
         self.lowerleft = self.bounding_box[0]
         self.upperright = self.bounding_box[1]
@@ -77,15 +98,22 @@ class TemplateCerebellarBoundingBox(object):
     def get_crop_indices(self):
         """
         calculate the lower left and upper right indices of the cropped area (in voxels).
+
+        Returns:
+            indices: (ndarray)
+                a 2 * 3 ndarray consists of two vertices defining the bounding box
         """
-        return  nitools.coords_to_voxelidxs(self.bounding_box.T, self.nib_template).T
+        return nitools.coords_to_voxelidxs(self.bounding_box.T, self.nib_template).T
 
     def get_cropped_affine(self):
         """
         get the cropped area affine
-        """
 
-        ## This function needs to fix. It will fail if the template affine is not diagonal
+        Returns:
+            affine: (ndarray)
+                The affine form for the cropped image
+        """
+        # This function needs to fix. It will fail if the template affine is not diagonal
         affine = np.diag([self.affine[0, 0], self.affine[1, 1], self.affine[2, 2], 1])
         affine[0, 3] = abs(affine[0, 0]) * self.lowerleft[0]
         affine[1, 3] = abs(affine[1, 1]) * self.lowerleft[1]
@@ -98,17 +126,13 @@ class TemplateCerebellarBoundingBox(object):
         register the image to this template
 
         Args:
-        ----------
-            img: ANTsImage
+            img: (ANTsImage)
                 image to be registered
-            type_of_transform: string, optional
+            type_of_transform: (string)
                 transform type (Affine by default, check ANTsPY[https://antspy.readthedocs.io/en/latest/registration.html] for details)
 
         Returns:
-        ----------
-            image: ANTsImage
-                the registered image
-            trans: ANTsTransform
+            trans: (ANTsTransform)
                 the transformation from the subject space to the template space
 
         """
@@ -122,17 +146,13 @@ class TemplateCerebellarBoundingBox(object):
         register the image to this template using the brain. The input image should be brain only.
 
         Args:
-        ----------
-            img: ANTsImage
+            img: (ANTsImage)
                 image to be registered
-            type_of_transform: string, optional
+            type_of_transform: (string)
                 transform type (Affine by default, check ANTsPY[https://antspy.readthedocs.io/en/latest/registration.html] for details)
 
         Returns:
-        ----------
-            image: ANTsImage
-                the registered image
-            trans: ANTsTransform
+            trans: (ANTsTransform)
                 the transformation from the subject space to the template space
 
         """
@@ -143,18 +163,19 @@ class TemplateCerebellarBoundingBox(object):
 
     def crop(self, img, trans=None):
         """
+        Crop the cerebellar area using the bounding box.
 
          Args:
-         ----------
-             img: ANTsImage
+             img: (ANTsImage)
                  image to be cropped
-             trans: ANTsTransform
-                 transformation matrix from the image space to the MNI template space (only use it if img is not in the MNI template)
+             trans: (ANTsTransform)
+                 transformation matrix from the image space to the template space (only use it if img is not in the MNI template)
 
          Returns:
-         ----------
-             cropped_img: ANTsImage
-                 cropped image
+             cropped_img: (ANTsImage)
+                cropped image
+             img : (ANTsImage)
+                the whole transformed image
 
          """
         start_indices, end_indices = self.get_crop_indices()
@@ -162,11 +183,25 @@ class TemplateCerebellarBoundingBox(object):
             img = ants.apply_ants_transform_to_image(trans, img, self.template)
         return img[start_indices[0]:end_indices[0], start_indices[1]:end_indices[1], start_indices[2]:end_indices[2]], img
 
-    def MNI2Subject(self, img, trans, ref):
+    def template2subject(self, img, trans, ref):
+        """
+        transform the image from template space to the subject space
+
+        Args:
+            img: (ANTsImage)
+                the image to be transformed
+            trans: (ANTs transformation)
+                transformation matrix (from subject space to template space)
+            ref: (ANTsImage)
+
+        Returns:
+
+        """
         trans_inv = ants.invert_ants_transform(trans)
         result = ants.apply_ants_transform_to_image(trans_inv, img, ref)
 
         return result
+
 
 class Subject(object):
     """
@@ -175,9 +210,9 @@ class Subject(object):
 
     def __init__(self, t1, t2, label):
         """
+        Create a subject
 
         Args:
-        ----------
             t1: ndarray/None
                 array of T1w cerebellar image (after cropping)
             t2: ndarray/None
@@ -193,13 +228,13 @@ class Subject(object):
     def get_data(self):
         """
         access data of subject. (0 paddings for None)
+
         Returns:
-        ----------
-            t1_data: Tensor
+            t1_data: (Tensor)
                 tensor of T1w cerebellar image (after cropping)
-            t2_data: Tensor
+            t2_data: (Tensor)
                 tensor of T2w cerebellar image (after cropping)
-            label_data: Tensor
+            label_data: (Tensor)
                 tensor of label cerebellar image (after cropping)
 
         """
@@ -224,35 +259,38 @@ class Subject(object):
 def subject_preprocess(t1_path=None, t2_path=None, brain_path=None, brain_mask_path=None, label_path=None, BoundingBox=TemplateCerebellarBoundingBox(),
                        type_of_transform='Affine'):
     """
-    function to preprocess a single subject
+    function to preprocess a single subject.
+    1. Transform the image from subject space to the template space
+    2. Using a pre-defined bounding box to crop the image in the template space
 
     Args:
-    ----------
-        t1_path: string
+        t1_path: (string)
             Path to T1w image
-        t2_path: string
+        t2_path: (string)
             Path to T2w image
-        brain_path: string, optional
-            Path to brain image
-        label_path: string, optional
+        brain_path: (string)
+            Path to brain image, optional
+        brain_mask_path: (string)
+            path to the brain mask image
+        label_path: (string)
             Path to label image (This image will be transformed into the template space using the same transformation.)
-        template:
-        type_of_transform: string, optional
+        BoundingBox: (TemplateCerebellarBoundingBox)
+            the bounding box
+        type_of_transform: (string)
             reserved for future use (see ANTspy)
 
     Returns:
-    ----------
-        trans: ANTsTransform
+        trans: (ANTsTransform)
             transformation from subject space to template space
-        t1_crop: ANTsImage
+        t1_crop: (ANTsImage)
             cropped cerebellar area from transformed T1w image
-        t2_crop: ANTsImage
+        t2_crop: (ANTsImage)
             cropped cerebellar area from transformed T2w image
-        label_crop: ANTsImage
+        label_crop: (ANTsImage)
             cropped cerebellar area from transformed label image
-        t1_whole: ANTsImage
+        t1_whole: (ANTsImage)
             whole transformed T1w image
-        t2_whole: ANTsImage
+        t2_whole: (ANTsImage)
             whole transformed T2w image
 
     """
@@ -294,14 +332,12 @@ def subject_preprocess(t1_path=None, t2_path=None, brain_path=None, brain_mask_p
 
     if t1 is not None:
         t1_crop, t1_whole = BoundingBox.crop(t1, trans)
-        # t1_whole = ants.apply_ants_transform_to_image(trans, t1, template.get_mni_template())
     else:
         t1_crop = None
         t1_whole = None
 
     if t2 is not None:
         t2_crop, t2_whole = BoundingBox.crop(t2, trans)
-        # t2_whole = ants.apply_ants_transform_to_image(trans, t2, template.get_mni_template())
     else:
         t2_crop = None
         t2_whole = None
@@ -320,16 +356,16 @@ def threshold(img, lower=0.95, upper=1.0):
 
     Args:
     ----------
-        img: ANTsImage
+        img: (ANTsImage)
             the input image
-        lower: float
+        lower: (float)
             lower threshold
-        upper: float
+        upper: (float)
             upper threshold
 
     Returns:
     ----------
-        image : ANTsImage
+        image : (ANTsImage)
             the thresholded image
     """
     img[img < lower] = 0
@@ -362,20 +398,22 @@ def subject_postprocess(mask, trans, BoundingBox, ref):
     transform the predicted cerebellum mask to the original space
     Args:
     ----------
-        mask: ANTsImage
+        mask: (ANTsImage)
             the predicted cerebellum mask from the template space
-        trans: ANTsTransform
+        trans: (ANTsTransform)
             the transformation from subject space to template space
-        ref: ANTsImage
+        BoundingBox: (TemplateCerebellarBoundingBox)
+            the bounding box
+        ref: (ANTsImage)
             the reference image
 
     Returns:
-        result: ANTsImage
+        result: (ANTsImage)
             the final cerebellum mask from the subject space
 
     """
 
-    result = BoundingBox.MNI2Subject(mask, trans, ref)
+    result = BoundingBox.template2subject(mask, trans, ref)
     # threshold and binarize the image
     result = threshold(result)
     result[result != 0] = 1
@@ -384,13 +422,21 @@ def subject_postprocess(mask, trans, BoundingBox, ref):
     return result
 
 
-
-
-
-
-# convolution block in Unet
 class _ConvNet(nn.Module):
+    """
+    convolution block in Unet
+    """
     def __init__(self, in_channels, out_channels, dropout_rate=0.0):
+        """
+
+        Args:
+            in_channels: (int)
+                the number of input channels
+            out_channels: (int)
+                the number of output channels
+            dropout_rate: (float)
+                reserved
+        """
         super(_ConvNet, self).__init__()
         self.layer = nn.Sequential(
             nn.Conv3d(in_channels, out_channels, kernel_size=3, padding=1),
@@ -403,11 +449,32 @@ class _ConvNet(nn.Module):
         )
 
     def forward(self, x):
+        """
+        calculation
+
+        Args:
+            x: (Tensor)
+                input
+
+        Returns:
+            y: (Tensor)
+                output
+
+        """
         return self.layer(x)
 
 
 class _DownSample(nn.Module):
+    """
+    downsample block in unet
+    """
     def __init__(self, channels):
+        """
+
+        Args:
+            channels: (int)
+                the number of input channels
+        """
         super(_DownSample, self).__init__()
         self.layer = nn.Sequential(
             nn.Conv3d(channels, channels, kernel_size=3, stride=2, padding=1),
@@ -416,11 +483,32 @@ class _DownSample(nn.Module):
         )
 
     def forward(self, x):
+        """
+        calculation
+
+        Args:
+            x: (Tensor)
+                input
+
+        Returns:
+            y: (Tensor)
+                output
+
+        """
         return self.layer(x)
 
 
 class _UpSample(nn.Module):
+    """
+    upsample block in unet
+    """
     def __init__(self, channels):
+        """
+
+        Args:
+            channels: (int)
+                the number of input channels
+        """
         super(_UpSample, self).__init__()
         self.up = nn.Sequential(
             nn.ConvTranspose3d(channels, channels, kernel_size=2, stride=2, padding=0),
@@ -434,6 +522,20 @@ class _UpSample(nn.Module):
         )
 
     def forward(self, x, feature_map):
+        """
+        calculation
+
+        Args:
+            x: (Tensor)
+                input
+            feature_map: (Tensor)
+                The feature map form the corresponding skip connection
+
+        Returns:
+            y: (Tensor)
+                output
+
+        """
         up = self.up(x)
         out = self.layer(torch.cat((up, feature_map), dim=1))
         return out
@@ -447,7 +549,6 @@ class UNet(nn.Module):
         """
 
         Args:
-        ----------
             init_features: int
                 Number of filters in the first convolutional block.
             dropout_rate: float
@@ -477,6 +578,22 @@ class UNet(nn.Module):
         )
 
     def forward(self, t1, t2, age=25):
+        """
+        Unet calculation
+
+        Args:
+            t1: (Tensor)
+                the cropped T1w image
+            t2: (Tensor)
+                the cropped T2w image
+            age: (float)
+                reserved
+
+        Returns:
+            pm: (Tensor)
+                the cerebellar probability map
+
+        """
 
         result_ini = torch.cat((t1, t2), dim=1)
 
@@ -500,14 +617,14 @@ def _load_model(model, params_path):
     load model with pretrained weights
 
     Args:
-    ----------
-        model: Unet model
-        params_path: string
+        model: (Unet)
+            Unet model
+        params_path: (string)
             path to the pretrained weights
 
     Returns:
-    ----------
-        net: the pretrained model
+        net: (Unet)
+            the pretrained model
     """
     net = model.to(device)
     if os.path.exists(params_path):
@@ -523,18 +640,17 @@ def predict(model, params_path, t1=None, t2=None):
     Run a prediction on a single subject using a trained UNet model
 
     Args:
-    ----------
-        model: Unet model
-        params_path: string
+        model: (Unet)
+            Unet model
+        params_path: (string)
             path to the pretrained weights
-        t1: Tensor
+        t1: (Tensor)
             tensor of T1w cerebellar image (after cropping)
-        t2: Tensor
+        t2: (Tensor)
             tensor of T2w cerebellar image (after cropping)
 
     Returns:
-    ----------
-        mask: ndarray
+        mask: (ndarray)
             the 3D numpy array of predicted mask (template space)
 
     """
@@ -550,42 +666,37 @@ def predict(model, params_path, t1=None, t2=None):
     return mask[0][0]
 
 
-
-
-
 def isolate(t1_path=None, t2_path=None, brain_path=None, brain_mask_path=None, label_path=None, result_folder=None, template='MNI152NLin6Asym',
             type_of_transform='Affine', model=UNet(), params='pre_trained.pkl', keepfiles=False):
     """
     main function for cerebellum isolation
 
     Args:
-    ----------
-        t1_path: string, optional
-            path to T1w image
-        t2_path: string, optional
-            path to T2w image
-        brain_path: string, optional
-            path to brain image
-        brain_mask_path: string, optional
-            path to brain mask
-        label_path: string, optional
-            path to label image
-        result_folder: string, optional
-            path to output folder (nothing will be saved if None)
-        template: string, optional
+        t1_path: (string)
+            path to T1w image, optional
+        t2_path: (string)
+            path to T2w image, optional
+        brain_path: (string)
+            path to brain image, optional
+        brain_mask_path: (string)
+            path to brain mask, optional
+        label_path: (string)
+            path to label image, optional
+        result_folder: (string)
+            path to output folder (optional, nothing will be saved if None)
+        template: (string)
             template to use (reserved)
-        type_of_transform: string, optional
+        type_of_transform: (string)
             reserved for future use (see ANTspy)
-        model: UNet, optional
+        model: (UNet)
             reserved
-        params: string, optional
-            path to params file
-        keepfiles: bool, optional
+        params: (string)
+            path to params file (reserved)
+        keepfiles: bool
             set to True to keep intermediate files, defaults to False (only works if result_folder is specified)
 
     Returns:
-    ----------
-        mask: ANTsImage
+        mask: (ANTsImage)
             predicted cerebellum mask
 
     """
@@ -599,7 +710,7 @@ def isolate(t1_path=None, t2_path=None, brain_path=None, brain_mask_path=None, l
     BoundingBox = TemplateCerebellarBoundingBox(name=template)
     trans, t1_crop, t2_crop, label_crop, t1_whole, t2_whole = subject_preprocess(t1_path=t1_path, t2_path=t2_path,
                                                                                  brain_path=brain_path,
-                                                                                 brain_mask_path = brain_mask_path,
+                                                                                 brain_mask_path=brain_mask_path,
                                                                                  label_path=label_path,
                                                                                  BoundingBox=BoundingBox,
                                                                                  type_of_transform=type_of_transform)
