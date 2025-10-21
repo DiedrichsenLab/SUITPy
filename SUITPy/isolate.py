@@ -350,7 +350,7 @@ def subject_preprocess(t1_path=None, t2_path=None, brain_path=None, brain_mask_p
     return trans, t1_crop, t2_crop, label_crop, t1_whole, t2_whole
 
 
-def threshold(img, lower=0.95, upper=1.0):
+def threshold(img, lower=0.5, upper=1.0):
     """
     remove all other values from the image
 
@@ -667,7 +667,7 @@ def predict(model, params_path, t1=None, t2=None):
 
 
 def isolate(t1_path=None, t2_path=None, brain_path=None, brain_mask_path=None, label_path=None, result_folder=None, template='MNI152NLin6Asym',
-            type_of_transform='Affine', model=UNet(), params='pre_trained.pkl', keepfiles=False):
+            type_of_transform='Affine', params='pre_trained.pkl', keepfiles=False):
     """
     main function for cerebellum isolation
 
@@ -708,7 +708,9 @@ def isolate(t1_path=None, t2_path=None, brain_path=None, brain_mask_path=None, l
     base_dir = os.path.dirname(os.path.abspath(__file__))
     params_path = os.path.join(base_dir, 'parameters', params)
     BoundingBox = TemplateCerebellarBoundingBox(name=template)
-    trans, t1_crop, t2_crop, label_crop, t1_whole, t2_whole = subject_preprocess(t1_path=t1_path, t2_path=t2_path,
+    print("preprocessing")
+    trans, t1_crop, t2_crop, label_crop, t1_whole, t2_whole = subject_preprocess(t1_path=t1_path,
+                                                                                 t2_path=t2_path,
                                                                                  brain_path=brain_path,
                                                                                  brain_mask_path=brain_mask_path,
                                                                                  label_path=label_path,
@@ -729,16 +731,20 @@ def isolate(t1_path=None, t2_path=None, brain_path=None, brain_mask_path=None, l
 
     sub = Subject(t1=t1_crop_data, t2=t2_crop_data, label=label_crop_data)
     t1, t2, label = sub.get_data()
+    print('predicting')
+    model = UNet()
     mask = predict(model=model, params_path=params_path, t1=t1, t2=t2)
     mask = nib.Nifti1Image(mask, BoundingBox.get_cropped_affine())
     mask = from_nibabel(mask)
 
+    print('postprocessing')
     if t1_path is not None:
         result = subject_postprocess(mask=mask, trans=trans, BoundingBox=BoundingBox, ref=img_read(t1_path))
     else:
         result = subject_postprocess(mask=mask, trans=trans, BoundingBox=BoundingBox, ref=img_read(t2_path))
     if result_folder is not None:
         os.makedirs(result_folder, exist_ok=True)
+        print(f"saving results into {result_folder}")
         ants.image_write(result, os.path.join(result_folder, 'cerebellum_Unet_dseg.nii.gz'))
 
         if keepfiles:
@@ -761,13 +767,14 @@ if __name__ == '__main__':
     parser.add_argument('--T1', type=str, help='path to T1w image')
     parser.add_argument('--T2', type=str, help='path to T2w image')
     parser.add_argument('--brain', type=str, help='path to brain image')
+    parser.add_argument('--brain_mask', type=str, help='path to brain mask image')
     parser.add_argument('--label', type=str, help='path to label image')
     parser.add_argument('--result_folder', type=str, help='path to save the isolation image (results will be saved to '
                                                           'T1w image folder (or T2w image folder if no T1w image is '
                                                           'specified))')
-    parser.add_argument('--template', type=str, default='adult', help='template for registration (adult by '
+    parser.add_argument('--template', type=str, default='MNI152NLin6Asym', help='template for registration (MNI152NLin6Asym by '
                                                                       'default)')
-    parser.add_argument('--params', type=str, default='best.pkl', help='pretrained parameter file')
+    parser.add_argument('--params', type=str, default='pre_trained.pkl', help='pretrained parameter file')
     parser.add_argument('--keepfiles', action='store_true', help='keep intermediate files')
 
     args = parser.parse_args()
@@ -782,5 +789,11 @@ if __name__ == '__main__':
         else:
             args.result_folder = os.path.dirname(os.path.abspath(args.T1))
 
-    result = isolate(t1_path=args.T1, t2_path=args.T2, brain_path=args.brain, label_path=args.label,
-                     result_folder=args.result_folder, template=args.template, params=args.params)
+    result = isolate(t1_path=args.T1,
+                     t2_path=args.T2,
+                     brain_path=args.brain,
+                     brain_mask_path=args.brain_mask,
+                     label_path=args.label,
+                     result_folder=args.result_folder,
+                     template=args.template,
+                     params=args.params)
