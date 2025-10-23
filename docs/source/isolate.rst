@@ -16,7 +16,6 @@ prerequisite
 If T1w and T2w images are fed, two images must be aligned.
 
 
-
 Usage
 ----------
 

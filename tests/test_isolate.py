@@ -7,8 +7,8 @@ test for isolation module
 import SUITPy as suit
 
 def test_isolate():
-    T1_path = '/Users/jdiedrichsen/Dropbox/projects/SUIT_test/subj_01/S11_T1w.nii'
-    suit.isolate(T1_path)
+    T1_file = 'docs/source/notebooks/anatomical_sess-01.nii'
+    suit.isolate(T1_file,save_cropped_files=True)
     pass
 
 if __name__ == '__main__':

@@ -17,7 +17,6 @@ import nitools
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-
 def from_nibabel(nib_image):
     """
     Converts a given Nifti image into an ANTsPy image
@@ -256,7 +255,7 @@ class Subject(object):
         return t1_data, t2_data, label_data
 
 
-def subject_preprocess(t1_path=None, t2_path=None, brain_path=None, brain_mask_path=None, label_path=None, BoundingBox=TemplateCerebellarBoundingBox(),
+def subject_preprocess(t1_file=None, t2_file=None, brain_file=None, brain_mask_file=None, label_file=None, BoundingBox=TemplateCerebellarBoundingBox(),
                        type_of_transform='Affine'):
     """
     function to preprocess a single subject.
@@ -264,16 +263,14 @@ def subject_preprocess(t1_path=None, t2_path=None, brain_path=None, brain_mask_p
     2. Using a pre-defined bounding box to crop the image in the template space
 
     Args:
-        t1_path: (string)
-            Path to T1w image
-        t2_path: (string)
-            Path to T2w image
-        brain_path: (string)
-            Path to brain image, optional
-        brain_mask_path: (string)
-            path to the brain mask image
-        label_path: (string)
-            Path to label image (This image will be transformed into the template space using the same transformation.)
+        t1_file: (string)
+            file to T1w image
+        t2_file: (string)
+            file to T2w image
+        brain_mask_file: (string)
+            file to the brain mask image (can be used to improve affine registration)
+        label_file: (string)
+            file to label image (This image will be transformed into the template space using the same transformation.)
         BoundingBox: (TemplateCerebellarBoundingBox)
             the bounding box
         type_of_transform: (string)
@@ -295,40 +292,40 @@ def subject_preprocess(t1_path=None, t2_path=None, brain_path=None, brain_mask_p
 
     """
 
-    if t1_path is not None:
-        t1 = img_read(t1_path)
+    if t1_file is not None:
+        t1 = img_read(t1_file)
     else:
         t1 = None
-    if t2_path is not None:
-        t2 = img_read(t2_path)
+    if t2_file is not None:
+        t2 = img_read(t2_file)
     else:
         t2 = None
-    if brain_mask_path is not None:
-        brain_mask = img_read(brain_mask_path)
+
+    # Read additional images
+    if label_file is not None:
+        label = img_read(label_file)
+    else:
+        label = None
+
+    # If T1 and T2 are both given, but not aligned, align T2 to T1 first
+    if t2 is not None and t1 is not None:
+        if ants.get_spacing(t1) != ants.get_spacing(t2):  # JD: is this a bullet-proof  way to check alignment?
+            t2 = ants.registration(fixed=t1, moving=t2, type_of_transform='Rigid')['warpedmovout']
+
+    # Apply the brain mask if provided    
+    if brain_mask_file is not None:
+        brain_mask = img_read(brain_mask_file)
         if t1 is not None:
             brain = ants.mask_image(image=t1, mask=brain_mask)
         else:
             brain = ants.mask_image(image=t2, mask=brain_mask)
-    elif brain_path is not None:
-        brain = img_read(brain_path)
-    else:
-        brain = None
-    if label_path is not None:
-        label = img_read(label_path)
-    else:
-        label = None
-
-    if t2 is not None and t1 is not None:
-        if ants.get_spacing(t1) != ants.get_spacing(t2):
-            t2 = ants.registration(fixed=t1, moving=t2, type_of_transform='Rigid')['warpedmovout']
-
-    if brain is not None:
         trans = BoundingBox.registration_brain(brain, type_of_transform=type_of_transform)
     else:
         if t1 is not None:
             trans = BoundingBox.registration(t1, type_of_transform=type_of_transform)
         else:
             trans = BoundingBox.registration(t2, type_of_transform=type_of_transform)
+
 
     if t1 is not None:
         t1_crop, t1_whole = BoundingBox.crop(t1, trans)
@@ -612,14 +609,14 @@ class UNet(nn.Module):
 
 
 
-def _load_model(model, params_path):
+def _load_model(model, params_file):
     """
     load model with pretrained weights
 
     Args:
         model: (Unet)
             Unet model
-        params_path: (string)
+        params_file: (string)
             path to the pretrained weights
 
     Returns:
@@ -627,23 +624,23 @@ def _load_model(model, params_path):
             the pretrained model
     """
     net = model.to(device)
-    if os.path.exists(params_path):
-        net.load_state_dict(torch.load(params_path, weights_only=True, map_location=device))
+    if os.path.exists(params_file):
+        net.load_state_dict(torch.load(params_file, weights_only=True, map_location=device))
     else:
         print('fail to load weights')
         exit(0)
     return net
 
 
-def predict(model, params_path, t1=None, t2=None):
+def predict(model, params_file, t1=None, t2=None):
     """
     Run a prediction on a single subject using a trained UNet model
 
     Args:
         model: (Unet)
             Unet model
-        params_path: (string)
-            path to the pretrained weights
+        params_file: (string)
+            filename of the pretrained weights
         t1: (Tensor)
             tensor of T1w cerebellar image (after cropping)
         t2: (Tensor)
@@ -654,7 +651,7 @@ def predict(model, params_path, t1=None, t2=None):
             the 3D numpy array of predicted mask (template space)
 
     """
-    net = _load_model(model, params_path)
+    net = _load_model(model, params_file)
     if t1 is None:
         t1 = torch.zeros((128, 128, 128), dtype=torch.float)
     if t2 is None:
@@ -666,24 +663,24 @@ def predict(model, params_path, t1=None, t2=None):
     return mask[0][0]
 
 
-def isolate(t1_path=None, t2_path=None, brain_path=None, brain_mask_path=None, label_path=None, result_folder=None, template='MNI152NLin6Asym',
-            type_of_transform='Affine', params='pre_trained.pkl', keepfiles=False):
+def isolate(t1_file=None, t2_file=None, brain_mask_file=None, label_file=None, result_folder=None, template='MNI152NLin6Asym',
+            type_of_transform='Affine', params='pre_trained.pkl', save_cropped_files=False,save_transform=True,verbose=True):
     """
     main function for cerebellum isolation
 
     Args:
-        t1_path: (string)
-            path to T1w image, optional
-        t2_path: (string)
-            path to T2w image, optional
-        brain_path: (string)
-            path to brain image, optional
-        brain_mask_path: (string)
-            path to brain mask, optional
-        label_path: (string)
-            path to label image, optional
+        t1_file: (string)
+            filename and path to T1w image, optional
+        t2_file: (string)
+            filename and path to T2w image, optional
+        brain_mask_file: (string)
+            filename and path to brain mask, optional
+        label_file: (string)
+            filename and path to label image, optional
         result_folder: (string)
-            path to output folder (optional, nothing will be saved if None)
+            path to output folder (optional, otherwise it is saved to input image folder)
+        mask_name: (string)
+            name of the output mask (optinal, defaults to '<t1_file>_dseg.nii.gz')
         template: (string)
             template to use (reserved)
         type_of_transform: (string)
@@ -692,28 +689,43 @@ def isolate(t1_path=None, t2_path=None, brain_path=None, brain_mask_path=None, l
             reserved
         params: (string)
             path to params file (reserved)
-        keepfiles: bool
-            set to True to keep intermediate files, defaults to False (only works if result_folder is specified)
-
+        save_cropped_files: bool
+            set to True to save files cropped to window (only works if result_folder is specified)
+        verbose: bool
+            whether to print out status information during processing
     Returns:
         mask: (ANTsImage)
             predicted cerebellum mask
 
     """
 
-    if t1_path is None and t2_path is None:
-        print('No input images found')
+    if t1_file is not None: 
+        result_folder = os.path.dirname(os.path.abspath(t1_file)) if result_folder is None else result_folder
+        basename = os.path.splitext(os.path.basename(t1_file))
+    elif t2_file is not None:
+        result_folder = os.path.dirname(os.path.abspath(t2_file)) if result_folder is None else result_folder
+        basename = os.path.splitext(os.path.basename(t2_file))
+    else: 
+        print('No input images given')
         exit(0)
 
+    # Strip .nii or .nii.gz extension 
+    if basename[1] == '.gz':
+        basename = os.path.splitext(basename[0])
+    basename = basename[0]
+
+    # find paramter file and template bounding box 
     base_dir = os.path.dirname(os.path.abspath(__file__))
-    params_path = os.path.join(base_dir, 'parameters', params)
+    params_file = os.path.join(base_dir, 'parameters', params)
     BoundingBox = TemplateCerebellarBoundingBox(name=template)
-    print("preprocessing")
-    trans, t1_crop, t2_crop, label_crop, t1_whole, t2_whole = subject_preprocess(t1_path=t1_path,
-                                                                                 t2_path=t2_path,
-                                                                                 brain_path=brain_path,
-                                                                                 brain_mask_path=brain_mask_path,
-                                                                                 label_path=label_path,
+    
+    # Crop the images to the Unet input window
+    if verbose:
+        print("preprocessing")
+    trans, t1_crop, t2_crop, label_crop, _, _ = subject_preprocess(t1_file=t1_file,
+                                                                                 t2_file=t2_file,
+                                                                                 brain_mask_file=brain_mask_file,
+                                                                                 label_file=label_file,
                                                                                  BoundingBox=BoundingBox,
                                                                                  type_of_transform=type_of_transform)
     if isinstance(t1_crop, ants.core.ants_image.ANTsImage):
@@ -731,33 +743,34 @@ def isolate(t1_path=None, t2_path=None, brain_path=None, brain_mask_path=None, l
 
     sub = Subject(t1=t1_crop_data, t2=t2_crop_data, label=label_crop_data)
     t1, t2, label = sub.get_data()
-    print('predicting')
+    
+    # Do a forward pass through the Unet model
+    if verbose: 
+        print('isolating cerebellum using UNet model')
     model = UNet()
-    mask = predict(model=model, params_path=params_path, t1=t1, t2=t2)
+    mask = predict(model=model, params_file=params_file, t1=t1, t2=t2)
     mask = nib.Nifti1Image(mask, BoundingBox.get_cropped_affine())
     mask = from_nibabel(mask)
 
-    print('postprocessing')
-    if t1_path is not None:
-        result = subject_postprocess(mask=mask, trans=trans, BoundingBox=BoundingBox, ref=img_read(t1_path))
+    # Postprocess and transform the mask back to subject space
+    if verbose:
+        print('postprocessing')
+    if t1_file is not None:
+        result = subject_postprocess(mask=mask, trans=trans, BoundingBox=BoundingBox, ref=img_read(t1_file))
     else:
-        result = subject_postprocess(mask=mask, trans=trans, BoundingBox=BoundingBox, ref=img_read(t2_path))
+        result = subject_postprocess(mask=mask, trans=trans, BoundingBox=BoundingBox, ref=img_read(t2_file))
     if result_folder is not None:
         os.makedirs(result_folder, exist_ok=True)
-        print(f"saving results into {result_folder}")
-        ants.image_write(result, os.path.join(result_folder, 'cerebellum_Unet_dseg.nii.gz'))
+        if verbose:
+            print(f"saving results into {result_folder}")
+        ants.image_write(result, os.path.join(result_folder, f'{basename}_cerebellum_dseg.nii.gz'))
 
-        if keepfiles:
+        if save_cropped_files:
             if t1_crop is not None:
-                ants.image_write(t1_crop, os.path.join(result_folder, 'T1w_crop.nii.gz'))
-                ants.image_write(t1_whole, os.path.join(result_folder, 'T1w_whole.nii.gz'))
-            if t2_crop is not None:
-                ants.image_write(t2_crop, os.path.join(result_folder, 'T2w_crop.nii.gz'))
-                ants.image_write(t2_whole, os.path.join(result_folder, 'T2w_whole.nii.gz'))
-            if label_crop is not None:
-                ants.image_write(label_crop, os.path.join(result_folder, 'label_crop.nii.gz'))
-            ants.image_write(mask, os.path.join(result_folder, 'Unet_pm_MNI.nii.gz'))
-            ants.write_transform(trans, os.path.join(result_folder, 'trans.mat'))
+                ants.image_write(t1_crop, os.path.join(result_folder, f'{basename}_crop.nii.gz'))
+            ants.image_write(mask, os.path.join(result_folder, f'{basename}_cerebellum_crop_dseg.nii.gz'))
+        if save_transform: 
+            ants.write_transform(trans, os.path.join(result_folder, f'{basename}_trans.mat'))
     return result
 
 
@@ -766,7 +779,6 @@ if __name__ == '__main__':
 
     parser.add_argument('--T1', type=str, help='path to T1w image')
     parser.add_argument('--T2', type=str, help='path to T2w image')
-    parser.add_argument('--brain', type=str, help='path to brain image')
     parser.add_argument('--brain_mask', type=str, help='path to brain mask image')
     parser.add_argument('--label', type=str, help='path to label image')
     parser.add_argument('--result_folder', type=str, help='path to save the isolation image (results will be saved to '
@@ -775,7 +787,8 @@ if __name__ == '__main__':
     parser.add_argument('--template', type=str, default='MNI152NLin6Asym', help='template for registration (MNI152NLin6Asym by '
                                                                       'default)')
     parser.add_argument('--params', type=str, default='pre_trained.pkl', help='pretrained parameter file')
-    parser.add_argument('--keepfiles', action='store_true', help='keep intermediate files')
+    parser.add_argument('--save_cropped_files', action='store_true', help='Save files cropped to UNet input window')
+    parser.add_argument('--save_transform', action='store_true', help='Save affine transform to MNI space')
 
     args = parser.parse_args()
 
@@ -789,11 +802,12 @@ if __name__ == '__main__':
         else:
             args.result_folder = os.path.dirname(os.path.abspath(args.T1))
 
-    result = isolate(t1_path=args.T1,
-                     t2_path=args.T2,
-                     brain_path=args.brain,
-                     brain_mask_path=args.brain_mask,
-                     label_path=args.label,
+    result = isolate(t1_file=args.T1,
+                     t2_file=args.T2,
+                     brain_mask_file=args.brain_mask,
+                     label_file=args.label,
                      result_folder=args.result_folder,
                      template=args.template,
-                     params=args.params)
+                     params=args.params,
+                     save_cropped_files=args.save_cropped_files,
+                     save_transform=args.save_transform)
