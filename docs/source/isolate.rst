@@ -21,24 +21,20 @@ Usage
 
 There are two ways to use the module
 
-1. import the isolate function in this SUITpy library (Recommended)
-::
-    from SUITPy import isolate
+1. Import the isolate function from the SUITpy library and use directly (recommended)
 
-The function will return the predicted mask. There are also others arguments available. See the function references for details.
+.. toctree::
+   :maxdepth: 2
 
-2. Alternatively, you can run the script directly via the terminal or CMD. This could be helpful if you need to use the function in a bash script.
+   notebooks/isolate_example
+
+
+2. Alternatively, you can run the script directly via the terminal or bash script. 
 ::
     python isolate.py --T1 T1w_image
 
 There are also other parameters available. Use the following command to see the details
 ::
     python isolate.py -help
-
-example
----------
-Here is an example.
-
-.. image:: isolate_example.png
 
 
