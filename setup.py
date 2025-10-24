@@ -75,7 +75,7 @@ if __name__ == "__main__":
                          'surfaces/*.C.scene',
                          'surfaces/*.shape.gii',
                          'surfaces/*.txt',
-                         'templates/*.nii.gz'
+                         'templates/*.nii.gz',
                          'parameters/*.pkl'],
           },
           install_requires=REQUIRED_MODULE_METADATA,
