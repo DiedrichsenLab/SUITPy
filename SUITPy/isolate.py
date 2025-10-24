@@ -17,9 +17,11 @@ import nitools
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
+
 def from_nibabel(nib_image):
     """
     Converts a given Nifti image into an ANTsPy image
+    (https://antspy.readthedocs.io/en/latest/index.html)
 
     Parameters
     ----------
@@ -36,6 +38,7 @@ def from_nibabel(nib_image):
     os.remove(tmpfile)
     return new_img
 
+
 def img_read(path):
     """
     basic function to read a nifti image
@@ -50,6 +53,8 @@ def img_read(path):
     """
 
     nib_img = nib.load(path)
+    # set q form identical to s form to avoid misalignment from ANTs
+    nib_img.set_qform(nib_img.get_sform())
     new_img = from_nibabel(nib_img)
     return new_img
 
@@ -59,6 +64,7 @@ class TemplateCerebellarBoundingBox(object):
         Basic cerebellar bounding box class, which defines the cropped area.
         All other template implementations should be registered to this template.
     """
+
     def __init__(self, name='MNI152NLin6Asym', bounding_box=None, cerebellar_center=None, cropped_size=None):
         """
         Create a bounding box
@@ -76,10 +82,9 @@ class TemplateCerebellarBoundingBox(object):
         self.cropped_size = (128, 128, 128)
         if bounding_box is not None:
             self.bounding_box = bounding_box
-            # need to resample
-            pass
         else:
             if cerebellar_center is not None and cropped_size is not None:
+                # reserved for future development
                 pass
             else:
                 self.bounding_box = np.array([[64, -114, -88], [-64, 14, 40]])
@@ -204,7 +209,7 @@ class TemplateCerebellarBoundingBox(object):
 
 class Subject(object):
     """
-    Subject holds information about a subject.
+    Instance holds information about a subject.
     """
 
     def __init__(self, t1, t2, label):
@@ -255,7 +260,8 @@ class Subject(object):
         return t1_data, t2_data, label_data
 
 
-def subject_preprocess(t1_file=None, t2_file=None, brain_file=None, brain_mask_file=None, label_file=None, BoundingBox=TemplateCerebellarBoundingBox(),
+def subject_preprocess(t1_file=None, t2_file=None, brain_mask_file=None, label_file=None,
+                       BoundingBox=TemplateCerebellarBoundingBox(),
                        type_of_transform='Affine'):
     """
     function to preprocess a single subject.
@@ -270,7 +276,7 @@ def subject_preprocess(t1_file=None, t2_file=None, brain_file=None, brain_mask_f
         brain_mask_file: (string)
             file to the brain mask image (can be used to improve affine registration)
         label_file: (string)
-            file to label image (This image will be transformed into the template space using the same transformation.)
+            file to label image (Optional, this image will be transformed into the template space using the same transformation.)
         BoundingBox: (TemplateCerebellarBoundingBox)
             the bounding box
         type_of_transform: (string)
@@ -325,7 +331,6 @@ def subject_preprocess(t1_file=None, t2_file=None, brain_file=None, brain_mask_f
             trans = BoundingBox.registration(t1, type_of_transform=type_of_transform)
         else:
             trans = BoundingBox.registration(t2, type_of_transform=type_of_transform)
-
 
     if t1 is not None:
         t1_crop, t1_whole = BoundingBox.crop(t1, trans)
@@ -423,6 +428,7 @@ class _ConvNet(nn.Module):
     """
     convolution block in Unet
     """
+
     def __init__(self, in_channels, out_channels, dropout_rate=0.0):
         """
 
@@ -465,6 +471,7 @@ class _DownSample(nn.Module):
     """
     downsample block in unet
     """
+
     def __init__(self, channels):
         """
 
@@ -499,6 +506,7 @@ class _UpSample(nn.Module):
     """
     upsample block in unet
     """
+
     def __init__(self, channels):
         """
 
@@ -542,6 +550,7 @@ class UNet(nn.Module):
     """
     Unet model architecture.
     """
+
     def __init__(self, init_features=16, dropout_rate=0.0):
         """
 
@@ -607,8 +616,6 @@ class UNet(nn.Module):
         return self.out(out_4)
 
 
-
-
 def _load_model(model, params_file):
     """
     load model with pretrained weights
@@ -663,8 +670,10 @@ def predict(model, params_file, t1=None, t2=None):
     return mask[0][0]
 
 
-def isolate(t1_file=None, t2_file=None, brain_mask_file=None, label_file=None, result_folder=None, template='MNI152NLin6Asym',
-            type_of_transform='Affine', params='pre_trained.pkl', save_cropped_files=False,save_transform=True,verbose=True):
+def isolate(t1_file=None, t2_file=None, brain_mask_file=None, label_file=None, result_folder=None,
+            template='MNI152NLin6Asym',
+            type_of_transform='Affine', params='pre_trained.pkl', save_cropped_files=False, save_transform=True,
+            verbose=True):
     """
     main function for cerebellum isolation
 
@@ -685,8 +694,6 @@ def isolate(t1_file=None, t2_file=None, brain_mask_file=None, label_file=None, r
             template to use (reserved)
         type_of_transform: (string)
             reserved for future use (see ANTspy)
-        model: (UNet)
-            reserved
         params: (string)
             path to params file (reserved)
         save_cropped_files: bool
@@ -699,13 +706,13 @@ def isolate(t1_file=None, t2_file=None, brain_mask_file=None, label_file=None, r
 
     """
 
-    if t1_file is not None: 
+    if t1_file is not None:
         result_folder = os.path.dirname(os.path.abspath(t1_file)) if result_folder is None else result_folder
         basename = os.path.splitext(os.path.basename(t1_file))
     elif t2_file is not None:
         result_folder = os.path.dirname(os.path.abspath(t2_file)) if result_folder is None else result_folder
         basename = os.path.splitext(os.path.basename(t2_file))
-    else: 
+    else:
         print('No input images given')
         exit(0)
 
@@ -718,16 +725,16 @@ def isolate(t1_file=None, t2_file=None, brain_mask_file=None, label_file=None, r
     base_dir = os.path.dirname(os.path.abspath(__file__))
     params_file = os.path.join(base_dir, 'parameters', params)
     BoundingBox = TemplateCerebellarBoundingBox(name=template)
-    
+
     # Crop the images to the Unet input window
     if verbose:
         print("preprocessing")
     trans, t1_crop, t2_crop, label_crop, _, _ = subject_preprocess(t1_file=t1_file,
-                                                                                 t2_file=t2_file,
-                                                                                 brain_mask_file=brain_mask_file,
-                                                                                 label_file=label_file,
-                                                                                 BoundingBox=BoundingBox,
-                                                                                 type_of_transform=type_of_transform)
+                                                                   t2_file=t2_file,
+                                                                   brain_mask_file=brain_mask_file,
+                                                                   label_file=label_file,
+                                                                   BoundingBox=BoundingBox,
+                                                                   type_of_transform=type_of_transform)
     if isinstance(t1_crop, ants.core.ants_image.ANTsImage):
         t1_crop_data = t1_crop.numpy()
     else:
@@ -743,9 +750,9 @@ def isolate(t1_file=None, t2_file=None, brain_mask_file=None, label_file=None, r
 
     sub = Subject(t1=t1_crop_data, t2=t2_crop_data, label=label_crop_data)
     t1, t2, label = sub.get_data()
-    
+
     # Do a forward pass through the Unet model
-    if verbose: 
+    if verbose:
         print('isolating cerebellum using UNet model')
     model = UNet()
     mask = predict(model=model, params_file=params_file, t1=t1, t2=t2)
@@ -769,7 +776,7 @@ def isolate(t1_file=None, t2_file=None, brain_mask_file=None, label_file=None, r
             if t1_crop is not None:
                 ants.image_write(t1_crop, os.path.join(result_folder, f'{basename}_crop.nii.gz'))
             ants.image_write(mask, os.path.join(result_folder, f'{basename}_cerebellum_crop_dseg.nii.gz'))
-        if save_transform: 
+        if save_transform:
             ants.write_transform(trans, os.path.join(result_folder, f'{basename}_trans.mat'))
     return result
 
@@ -784,8 +791,9 @@ if __name__ == '__main__':
     parser.add_argument('--result_folder', type=str, help='path to save the isolation image (results will be saved to '
                                                           'T1w image folder (or T2w image folder if no T1w image is '
                                                           'specified))')
-    parser.add_argument('--template', type=str, default='MNI152NLin6Asym', help='template for registration (MNI152NLin6Asym by '
-                                                                      'default)')
+    parser.add_argument('--template', type=str, default='MNI152NLin6Asym',
+                        help='template for registration (MNI152NLin6Asym by '
+                             'default)')
     parser.add_argument('--params', type=str, default='pre_trained.pkl', help='pretrained parameter file')
     parser.add_argument('--save_cropped_files', action='store_true', help='Save files cropped to UNet input window')
     parser.add_argument('--save_transform', action='store_true', help='Save affine transform to MNI space')
