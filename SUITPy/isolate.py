@@ -185,7 +185,7 @@ class TemplateCerebellarBoundingBox(object):
         start_indices, end_indices = self.get_crop_indices()
         if trans is not None:
             img = ants.apply_ants_transform_to_image(trans, img, self.template)
-        return img[start_indices[0]:end_indices[0], start_indices[1]:end_indices[1], start_indices[2]:end_indices[2]], img
+        return ants.crop_indices(img, tuple(start_indices.astype(int)), tuple(end_indices.astype(int))), img
 
     def template2subject(self, img, trans, ref):
         """

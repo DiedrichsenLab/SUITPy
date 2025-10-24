@@ -15,8 +15,7 @@ The required dependencies to use the software are:
 * scipy >= 1.9.0
 * neuroimagingtools >= 1.1.1
 * antspyx >= 0.6.1
-* pytorch >= 2.5.0
-* torchvision >= 0.20.0
+* torch >= 2.5.0
 
 (It is highly recommended to use the latest version of PyTorch as new generations of GPU (50 series, etc.) use the sm_120 CUDA architecture which is not compatible with older versions.)
 

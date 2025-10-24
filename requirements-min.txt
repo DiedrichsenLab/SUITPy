@@ -6,5 +6,4 @@ matplotlib>=3.5.0
 scipy>=1.9.0
 neuroimagingtools>=1.1.1
 antspyx>=0.6.1
-pytorch>=2.5.0
-torchvision>=0.20.0
+torch>=2.5.0
