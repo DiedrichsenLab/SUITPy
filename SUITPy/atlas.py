@@ -1,34 +1,28 @@
 """
-Downloading Cerebellum neuroImaging datasets: atlas datasets
+Importing Cerebellar atlases and templates from the cerebellar atlas
+repository
+https://github.com/DiedrichsenLab/cerebellar_atlases
 
-@author: maedbhking
-
-A lot of the functionality was based on `nilearn.datasets.atlas`
-https://github.com/nilearn/nilearn/blob/main/nilearn/datasets/atlas.py`
 """
 import json
 import requests
 
 from SUITPy.utils import _get_dataset_dir, _fetch_files
-from SUITPy._utils import fill_doc
 
-@fill_doc
-def fetch_king_2019(data='con', data_dir=None,
-                    base_url=None, resume=True, verbose=1,
-                    ):
-    """Download and return file names for the King et al. (2019) atlas or contrast images set by `data`.
-    The provided images are in SUIT and MNI spaces
+def fetch_atlas(atlas_name, atlas_dir=None, maps = 'all', space='all',
+                    base_url=None, resume=True, verbose=1):
+    """Download and install cerebellar atlas maps from github.com/DiedrichsenLab/cerebellar_atlases
 
     Parameters
     ----------
-    data : str, optional
-        Options are 'atl', 'con'
-        Default='atl'
-    %(data_dir)s
+    atlas_name (str): Name of the atlas (Diedrichsen_2009, King_2019, Nettekoven_2024, etc. )
+    atlas_dir (str): Base directory of Cerebellar atlases, files will be in atlas_dir/atlas_name/..
+    maps (list or str): Which maps to download within the altas (i.e. atl-Buckner7)
+    space (str): Volumetric files should be in 'SUIT', 'MNI', or 'MNISym' space (default 'all')
     base_url : string, optional
         base_url of files to download (None results in default base_url).
-    %(resume)s
-    %(verbose)s
+    resume (bool): REsume download after fail
+    verbose (int): Default 1
 
     Returns
     -------
@@ -41,10 +35,14 @@ def fetch_king_2019(data='con', data_dir=None,
     Notes
     -----
     For more details, see
-    https://github.com/DiedrichsenLab/cerebellar_atlases/tree/master/King_2019
+    https://github.com/DiedrichsenLab/cerebellar_atlases
     """
+    if base_url is None:
+        base_url = ('https://github.com/DiedrichsenLab/cerebellar_atlases/raw/master/King_2019')
 
-    valid_data = ['atl', 'con']
+    if atlas_dir is None:
+        atlas_dir =
+
 
     if data=='atl':
         suffixes = ['_dseg.label.gii', '_space-SUIT_dseg.nii'] # '_space-MNI_dseg.nii'
@@ -54,12 +52,8 @@ def fetch_king_2019(data='con', data_dir=None,
     if data not in valid_data:
         raise ValueError(f'Requested {data} not available. Valid options: {valid_data}')
 
-    if base_url is None:
-        base_url = ('https://github.com/DiedrichsenLab/cerebellar_atlases/raw/master/King_2019')
 
     dataset_name = 'king_2019'
-    data_dir = _get_dataset_dir(dataset_name, data_dir=data_dir,
-                                verbose=verbose)
 
     # get maps from `atlas_description.json`
     url = base_url + '/atlas_description.json'
@@ -88,7 +82,6 @@ def fetch_king_2019(data='con', data_dir=None,
                 'files': fpaths,
                 'description': fdescr})
 
-@fill_doc
 def fetch_buckner_2011(data_dir=None, base_url=None,
                     resume=True, verbose=1,
                     ):
@@ -152,7 +145,6 @@ def fetch_buckner_2011(data_dir=None, base_url=None,
                 'files': fpaths,
                 'description': fdescr})
 
-@fill_doc
 def fetch_diedrichsen_2009(data_dir=None, base_url=None,
                     resume=True, verbose=1):
     """Download and return file names for the Diedrichsen et al. (2009) atlas
@@ -218,7 +210,6 @@ def fetch_diedrichsen_2009(data_dir=None, base_url=None,
                 'files': fpaths,
                 'description': fdescr})
 
-@fill_doc
 def fetch_ji_2019(data_dir=None, base_url=None,
                     resume=True, verbose=1):
     """Download and return file names for the Ji et al. (2019) atlas
@@ -280,7 +271,6 @@ def fetch_ji_2019(data_dir=None, base_url=None,
                 'files': fpaths,
                 'description': fdescr})
 
-@fill_doc
 def fetch_xue_2021(data_dir=None, base_url=None,
                     resume=True, verbose=1):
     """"Download and return file names for the Xue et al. (2021) atlas

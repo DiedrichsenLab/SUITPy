@@ -161,18 +161,15 @@ def vol_to_surf(
 
     return mapped_data
 
-def save_colorbar(
-    gifti,
-    outpath
-    ):
+def save_colorbar(gifti,outpath):
     """plots colorbar for gifti object (*.label.gii)
     and saves it to outpath
+
     Args:
         gifti (gifti image):
             Nibabel Gifti image
         outpath (str):
             outpath for colorbar image
-
     """
     _, ax = plt.subplots(figsize=(1,10)) # figsize=(1, 10)
 
@@ -784,7 +781,6 @@ def _colorbar_func(
             Ex: use "%i" to display as integers.
             Default='%.2g' for scientific notation.
 
-    @author: maedbhking
     """
     nb_ticks = 5
     # ...unless we are dealing with integers with a small range
@@ -835,17 +831,19 @@ def plot_multi_flat(data, grid,
                     bordersize = 2,
                     labels= None,
                     fig_size=(5, 5)):
-    """Plots a grid of flatmaps with some data, requires data to be in volume space
+    """Maps and plots a grid of flatmaps with some data
+    , requires data to be in volume space
 
     Args:
-        data (array or list): NxP array of data or list of NxP arrays of data (if plotting Probabilities)
+        data (array or list): NxP array of data
         grid (tuple): (rows,cols) grid for subplot
         cmap (colormap or list): Color map or list of color maps. Defaults to None.
         dtype (str, optional):'label' or 'func'
         cscale (_type_, optional): Scale of data (None)
         titles (_type_, optional): _description_. Defaults to None.
+        colorbar (bool):
     """
-        
+
     fig = plt.figure(figsize=fig_size)
     if isinstance(data, np.ndarray):
         n_subplots = data.shape[0]

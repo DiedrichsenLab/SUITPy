@@ -5,7 +5,7 @@ Isolate module reference
 ------------------------
 
 .. automodule:: isolate
-   :members:
+   :members: isolate
 
 Reslice module reference
 ------------------------
@@ -13,12 +13,12 @@ Reslice module reference
 .. automodule:: reslice
    :members:
 
-      
+
 Flatmap module reference
 ------------------------
 
 .. automodule:: flatmap
-   :members:
+   :members: vol_to_surf,plot,save_colorbar,map_to_rgb, plot_multi_flat
 
 Datasets module reference
 -------------------------
