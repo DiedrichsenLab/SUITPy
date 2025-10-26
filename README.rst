@@ -7,7 +7,7 @@ Currently, only mapping of volume data to the flatmap and display of the flatmap
 Important links
 ---------------
 
-- SUIT website: http://diedrichsenlab.org/imaging/SUIT.htm
+- SUIT website: http://diedrichsenlab.org/imaging/suit.htm
 - Official source code repository: https://github.com/SUITPy/
 - HTML documentation (latest release): https://suitpy.readthedocs.io/
 
@@ -16,13 +16,17 @@ Dependencies
 
 The required dependencies to use the software are:
 
-* python >= 3.6
+* python >= 3.10,
 * setuptools
-* numpy >= 1.16
-* nibabel >= 2.5
-* pandas >= 0.24
-* matplotlib >= 1.5.1
-* scipy >=1.0
+* numpy >= 1.22.0
+* nibabel >= 3.2.1
+* pandas >= 2.0.0
+* matplotlib >= 3.5.0
+* plotly >= 5.10.0
+* scipy >= 1.9.0
+* neuroimagingtools >= 1.1.1
+* antspyx >= 0.6.1
+* torch >= 2.0.0
 
 Install
 -------
@@ -43,8 +47,8 @@ The Python version of the SUIT toolbox has been developed by the Diedrichsenlab 
 
 SUIT normalisation and template:
 
-- Diedrichsen, J. (2006). A spatially unbiased atlas template of the human cerebellum. Neuroimage. 33(1), 127-138.
+- Diedrichsen, J. (2006). A spatially unbiased atlas template of the human cerebellum. Neuroimage. 33(1), 127-138. doi: 10.1016/j.neuroimage.2006.05.056
 
 Surface-based representation and flatmap
 
-- Diedrichsen, J. & Zotow, E. (2015). Surface-based display of volume-averaged cerebellar data. PLOSOne.
+- Diedrichsen, J. & Zotow, E. (2015). Surface-based display of volume-averaged cerebellar data. PLOSOne. doi: 10.1371/journal.pone.0133402

@@ -13,8 +13,10 @@ import numpy as np
 import os
 import sys
 import nibabel as nb
+import nitools as nt
 import matplotlib.pyplot as plt
 import matplotlib as mpl
+import plotly.graph_objects as go
 import scipy.stats as ss
 from matplotlib.patches import Polygon
 from matplotlib.collections import PatchCollection
@@ -27,85 +29,6 @@ import warnings
 _base_dir = os.path.dirname(os.path.abspath(__file__))
 _surf_dir = os.path.join(_base_dir, 'surfaces')
 
-def affine_transform(
-    x1, 
-    x2, 
-    x3, 
-    M
-    ):
-    """
-    Returns affine transform of x
-
-    Args:
-        x1 (np-array):
-            X-coordinate of original
-        x2 (np-array):
-            Y-coordinate of original
-        x3 (np-array):
-            Z-coordinate of original
-        M (2d-array):
-            4x4 transformation matrix
-
-    Returns:
-        x1 (np-array):
-            X-coordinate of transform
-        x2 (np-array):
-            Y-coordinate of transform
-        x3 (np-array):
-            Z-coordinate of transform
-
-    """
-    y1 = np.multiply(M[0,0],x1) + np.multiply(M[0,1],x2) + np.multiply(M[0,2],x3) + M[0,3]
-    y2 = np.multiply(M[1,0],x1) + np.multiply(M[1,1],x2) + np.multiply(M[1,2],x3) + M[1,3]
-    y3 = np.multiply(M[2,0],x1) + np.multiply(M[2,1],x2) + np.multiply(M[2,2],x3) + M[2,3]
-    return (y1,y2,y3)
-
-def coords_to_voxelidxs(
-    coords,
-    vol_def
-    ):
-    """
-    Maps coordinates to linear voxel indices
-
-    Args:
-        coords (3*N matrix or 3xPxQ array):
-            (x,y,z) coordinates
-        vol_def (nibabel object):
-            Nibabel object with attributes .affine (4x4 voxel to coordinate transformation matrix from the images to be sampled (1-based)) and shape (1x3 volume dimension in voxels)
-
-    Returns:
-        linidxsrs (np.ndarray):
-            N-array or PxQ matrix of Linear voxel indices
-    """
-    mat = np.array(vol_def.affine)
-
-    # Check that coordinate transformation matrix is 4x4
-    if (mat.shape != (4,4)):
-        sys.exit('Error: Matrix should be 4x4')
-
-    rs = coords.shape
-    if (rs[0] != 3):
-        sys.exit('Error: First dimension of coords should be 3')
-
-    if (np.size(rs) == 2):
-        nCoordsPerNode = 1
-        nVerts = rs[1]
-    elif (np.size(rs) == 3):
-        nCoordsPerNode = rs[1]
-        nVerts = rs[2]
-    else:
-        sys.exit('Error: Coordindates have %d dimensions, not supported'.format(np.size(rs)))
-
-    # map to 3xP matrix (P coordinates)
-    coords = np.reshape(coords,[3,-1])
-    coords = np.vstack([coords,np.ones((1,rs[1]))])
-
-    ijk = np.linalg.solve(mat,coords)
-    ijk = np.rint(ijk)[0:3,:]
-    # Now set the indices out of range to -1
-    for i in range(3):
-        ijk[i,ijk[i,:]>=vol_def.shape[i]]=-1
-    return ijk
 
 def vol_to_surf(
     volumes,
@@ -181,6 +104,7 @@ def vol_to_surf(
         volumes = [volumes]
 
     # Make a list of the files to be mapped
+    volsize=np.zeros((len(volumes),),dtype=int)
     for i in range(len(volumes)):
         if (type(volumes[i]) is nb.Nifti2Image) or (type(volumes[i]) is nb.Nifti1Image):
             Vols.append(volumes[i])
@@ -193,6 +117,13 @@ def vol_to_surf(
             except:
                 print(f'File {volumes[i]} could not be opened')
                 Vols.append(None)
+        if Vols[-1] is None:
+            volsize[i]=0
+        elif Vols[-1].ndim == 3:
+            volsize[i]=1
+        else:
+            volsize[i]=Vols[-1].shape[3]
+
 
     if firstGood is None:
         sys.exit('Error: None of the images could be opened.')
@@ -201,309 +132,125 @@ def vol_to_surf(
     indices = np.zeros((numPoints,num_verts,3),dtype=int)
     for i in range(numPoints):
         c = (1-depths[i])*c1.T+depths[i]*c2.T
-        ijk = coords_to_voxelidxs(c,Vols[firstGood])
+        ijk = nt.coords_to_voxelidxs(c,Vols[firstGood])
         indices[i] = ijk.T
 
     # Read the data and map it
-    data = np.zeros((numPoints,num_verts))
-    mapped_data = np.zeros((num_verts,len(Vols)))
+    mapped_data = np.zeros((num_verts,volsize.sum()))
+    index=volsize.cumsum()
+    index=np.insert(index,0,0)
     for v,vol in enumerate(Vols):
         if vol is None:
             pass
         else:
-            X = vol.get_data()
-            if ignore_zeros:
-                X[X==0] = np.nan
-            for p in range(numPoints):
-                data[p,:] = X[indices[p,:,0],indices[p,:,1],indices[p,:,2]]
-                outside = (indices[p,:,:]<0).any(axis=1) # These are vertices outside the volume
-                data[p,outside] = np.nan
-
-            # Determine the right statistics - if function - call it
-            if stats=='nanmean':
-                mapped_data[:,v] = np.nanmean(data,axis=0)
-            elif stats=='mode':
-                mapped_data[:,v],_ = ss.mode(data,axis=0)
-            elif callable(stats):
-                mapped_data[:,v] = stats(data)
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore", category=RuntimeWarning)
+                X = vol.get_fdata()
+                if ignore_zeros:
+                    X[X==0] = np.nan
+                data = X[indices[:,:,0],indices[:,:,1],indices[:,:,2]]
+                if data.ndim == 2:
+                    data = data.reshape(data.shape + (1,))
+                # Determine the right statistics - if function - call it
+                if stats=='nanmean':
+                    mapped_data[:,index[v]:index[v+1]] = np.nanmean(data,axis=0)
+                elif stats=='mode':
+                    mapped_data[:,index[v]:index[v+1]],_ = ss.mode(data,axis=0,keepdims=False)
+                elif callable(stats):
+                    mapped_data[:,index[v]:index[v+1]] = stats(data)
 
     return mapped_data
 
-def make_func_gifti(
-    data,
-    anatomical_struct='Cerebellum',
-    column_names=[]
-    ):
-    """Generates a function GiftiImage from a numpy array
-
-    Args:
-        data (np.array):
-             num_vert x num_col data
-        anatomical_struct (string):
-            Anatomical Structure for the Meta-data default= 'Cerebellum'
-        column_names (list):
-            List of strings for names for columns
-
-    Returns:
-        FuncGifti (GiftiImage): functional Gifti Image
-    """
-    num_verts, num_cols = data.shape
-    #
-    # Make columnNames if empty
-    if len(column_names)==0:
-        for i in range(num_cols):
-            column_names.append("col_{:02d}".format(i+1))
-
-    C = nb.gifti.GiftiMetaData.from_dict({
-    'AnatomicalStructurePrimary': anatomical_struct,
-    'encoding': 'XML_BASE64_GZIP'})
-
-    E = nb.gifti.gifti.GiftiLabel()
-    E.key = 0
-    E.label= '???'
-    E.red = 1.0
-    E.green = 1.0
-    E.blue = 1.0
-    E.alpha = 0.0
-
-    D = list()
-    for i in range(num_cols):
-        d = nb.gifti.GiftiDataArray(
-            data=np.float32(data[:, i]),
-            intent='NIFTI_INTENT_NONE',
-            datatype='NIFTI_TYPE_FLOAT32',
-            meta=nb.gifti.GiftiMetaData.from_dict({'Name': column_names[i]})
-        )
-        D.append(d)
-
-    gifti = nb.gifti.GiftiImage(meta=C, darrays=D)
-    gifti.labeltable.labels.append(E)
-
-    return gifti
-
-def make_label_gifti(
-                    data,
-                    anatomical_struct='Cerebellum',
-                    label_names=[],
-                    column_names=[],
-                    label_RGBA=[]
-                    ):
-    """Generates a label GiftiImage from a numpy array
-
-    Args:
-        data (np.array):
-             num_vert x num_col data
-        anatomical_struct (string):
-            Anatomical Structure for the Meta-data default= 'Cerebellum'
-        label_names (list):
-            List of strings for label names
-        column_names (list):
-            List of strings for names for columns
-        label_RGBA (list):
-            List of rgba vectors
-
-    Returns:
-        gifti (GiftiImage): Label gifti image
-
-    """
-    num_verts, num_cols = data.shape
-    num_labels = len(np.unique(data))
-
-    # check for 0 labels
-    zero_label = 0 in data
-
-    # Create naming and coloring if not specified in varargin
-    # Make columnNames if empty
-    if len(column_names) == 0:
-        for i in range(num_cols):
-            column_names.append("col_{:02d}".format(i+1))
-
-    # Determine color scale if empty
-    if len(label_RGBA) == 0:
-        hsv = plt.cm.get_cmap('hsv',num_labels)
-        color = hsv(np.linspace(0,1,num_labels))
-        # Shuffle the order so that colors are more visible
-        color = color[np.random.permutation(num_labels)]
-        label_RGBA = np.zeros([num_labels,4])
-        for i in range(num_labels):
-            label_RGBA[i] = color[i]
-        if zero_label:
-            label_RGBA = np.vstack([[0,0,0,1], label_RGBA[1:,]])
-
-    # Create label names
-    if len(label_names) == 0:
-        idx = 0
-        if not zero_label:
-            idx = 1
-        for i in range(num_labels):
-            label_names.append("label-{:02d}".format(i + idx))
-
-    # Create label.gii structure
-    C = nb.gifti.GiftiMetaData.from_dict({
-        'AnatomicalStructurePrimary': anatomical_struct,
-        'encoding': 'XML_BASE64_GZIP'})
-
-    num_labels = np.arange(num_labels)
-    E_all = []
-    for (label, rgba, name) in zip(num_labels, label_RGBA, label_names):
-        E = nb.gifti.gifti.GiftiLabel()
-        E.key = label
-        E.label= name
-        E.red = rgba[0]
-        E.green = rgba[1]
-        E.blue = rgba[2]
-        E.alpha = rgba[3]
-        E.rgba = rgba[:]
-        E_all.append(E)
-
-    D = list()
-    for i in range(num_cols):
-        d = nb.gifti.GiftiDataArray(
-            data=np.float32(data[:, i]),
-            intent='NIFTI_INTENT_LABEL',
-            datatype='NIFTI_TYPE_UINT8',
-            meta=nb.gifti.GiftiMetaData.from_dict({'Name': column_names[i]})
-        )
-        D.append(d)
-
-    # Make and return the gifti file
-    gifti = nb.gifti.GiftiImage(meta=C, darrays=D)
-    gifti.labeltable.labels.extend(E_all)
-    return gifti
-
-def get_gifti_column_names(gifti):
-    """
-    Returns the column names from a gifti file (*.label.gii or *.func.gii)
-
-    Args:
-        gifti (gifti image):
-            Nibabel Gifti image 
-
-    Returns:
-        names (list):
-            List of column names from gifti object attribute data arrays
-
-    """
-    N = len(gifti.darrays)
-    names = []
-    for n in range(N):
-        for i in range(len(gifti.darrays[n].meta.data)):
-            if 'Name' in gifti.darrays[n].meta.data[i].name:
-                names.append(gifti.darrays[n].meta.data[i].value)
-    return names
-
-def get_gifti_colortable(gifti,ignore_0=True):
-    """Returns the RGBA color table and matplotlib cmap from gifti object (*.label.gii)
-
-    Args:
-        gifti (gifti image):
-            Nibabel Gifti image 
-
-    Returns:
-        rgba (np.ndarray):
-            N x 4 of RGB values
-        
-        cmap (mpl obj):
-            matplotlib colormap
-
-    """
-    labels = gifti.labeltable.labels
-
-    rgba = np.zeros((len(labels),4))
-    for i,label in enumerate(labels):
-        rgba[i,] = labels[i].rgba
-    
-    if ignore_0:
-        rgba = rgba[1:]
-        labels = labels[1:]
-
-    cmap = LinearSegmentedColormap.from_list('mylist', rgba, N=len(rgba))
-    mpl.cm.register_cmap("mycolormap", cmap)
-
-    return rgba, cmap
-
-def get_gifti_anatomical_struct(gifti):
-    """
-    Returns the primary anatomical structure for a gifti object (*.label.gii or *.func.gii)
-
-    Args:
-        gifti (gifti image):
-            Nibabel Gifti image 
-
-    Returns:
-        anatStruct (string):
-            AnatomicalStructurePrimary attribute from gifti object
-
-    """
-    N = len(gifti._meta.data)
-    anatStruct = []
-    for i in range(N):
-        if 'AnatomicalStructurePrimary' in gifti._meta.data[i].name:
-            anatStruct.append(gifti._meta.data[i].value)
-    return anatStruct
-
-def get_gifti_labels(gifti):
-    """Returns labels from gifti object (*.label.gii)
-
-    Args:
-        gifti (gifti image):
-            Nibabel Gifti image 
-
-    Returns:
-        labels (list):
-            labels from gifti object
-    """
-    # labels = img.labeltable.get_labels_as_dict().values()
-    label_dict = gifti.labeltable.get_labels_as_dict()
-    labels = list(label_dict.values())
-    return labels
-
-def save_colorbar(
-    gifti, 
-    outpath
-    ):
+def save_colorbar(gifti,outpath):
     """plots colorbar for gifti object (*.label.gii)
-        
+    and saves it to outpath
+
     Args:
         gifti (gifti image):
-            Nibabel Gifti image 
+            Nibabel Gifti image
         outpath (str):
-            outpath for colorbar
-    
+            outpath for colorbar image
     """
     _, ax = plt.subplots(figsize=(1,10)) # figsize=(1, 10)
 
-    _, cmap = get_gifti_colortable(gifti)
-    labels = get_gifti_labels(gifti)
+    _, cmap = nt.get_gifti_colortable(gifti)
+    labels = nt.get_gifti_labels(gifti)
 
     bounds = np.arange(cmap.N + 1)
 
     norm = mpl.colors.BoundaryNorm(bounds, cmap.N)
-    cb3 = mpl.colorbar.ColorbarBase(ax, cmap=cmap.reversed(cmap), 
+    cb3 = mpl.colorbar.ColorbarBase(ax, cmap=cmap.reversed(cmap),
                                     norm=norm,
                                     ticks=bounds,
                                     format='%s',
                                     orientation='vertical',
                                     )
-    cb3.set_ticklabels(labels[::-1])  
+    cb3.set_ticklabels(labels[::-1])
     cb3.ax.tick_params(size=0)
     cb3.set_ticks(bounds+.5)
     cb3.ax.tick_params(axis='y', which='major', labelsize=30)
 
     plt.savefig(outpath, bbox_inches='tight', dpi=150)
 
-def plot(
-        data, surf=None, underlay='SUIT.shape.gii',
-        undermap='Greys', underscale=[-1, 0.5], overlay_type='func', threshold=None,
-        cmap=None, label_names=None, cscale=None, borders='borders.txt', alpha=1.0,
-        outputfile=None, render='matplotlib', new_figure=False, colorbar=False, cbar_tick_format="%.2g"
-        ):
+def map_to_rgb(data,scale=None,threshold=[0,0,0]):
+    """Maps data to RGB
+
+    Args:
+        data (_type_):
+            List of vectors or 3xP ndarray.
+            use [data,None,None] to skip color channels
+        scale (list): maximum brightness
+        threshold (list): Threshold [0,0,0].
+    returns:
+        rgba (ndarray): Nx4 array of RGBA values
     """
-    Visualize cerebellar activity on a flatmap
+    if isinstance(data,np.ndarray):
+        data = [data[:,0],data[:,1],data[:,2]]
+    nvert = data[0].shape[0]
+    rgba = np.zeros((nvert,4))
+    for i,d in enumerate(data):
+        if d is not None:
+            rgba[:,i]=np.nan_to_num(d)
+            rgba[rgba[:,i]<threshold[i],i]=0
+            if scale is None:
+                s = rgba[:,i].max()
+            else:
+                s=scale[i]
+            rgba[:,i]=rgba[:,i]/s
+            rgba[rgba[:,i]>1,i]=1.0
+            # Remove data below threshold
+    # Set below-threshold areas to nan (transparent)
+    rgba[rgba[:,0:3].sum(axis=1)==0]=np.nan
+    rgba[:,3]=1
+    return rgba
+
+
+def plot(data,
+        surf=None,
+        underlay='SUIT.shape.gii',
+        undermap='Greys',
+        underscale=[-0.5, 0.5],
+        overlay_type='func',
+        threshold=None,
+        cmap=None,
+        cscale=None,
+        label_names=None,
+        borders='borders.txt',
+        bordercolor = 'k',
+        bordersize = 2,
+        alpha=1.0,
+        render='matplotlib',
+        hover = 'auto',
+        new_figure=True,
+        colorbar=False,
+        cbar_tick_format="%.2g",
+        backgroundcolor = 'w',
+        frame = [-110,110,-110,110]):
+    """Visualize cerebellar activity on a flatmap
 
     Args:
         data (np.array, giftiImage, or name of gifti file):
-            Data to be plotted, should be a 28935x1 vector
+            Data to be plotted, should be a 28935-long vector
         surf (str or giftiImage):
             surface file for flatmap (default: FLAT.surf.gii in SUIT pkg)
         underlay (str, giftiImage, or np-array):
@@ -513,36 +260,48 @@ def plot(
         underscale (array-like)
             Colorscale [min, max] for the underlay (default: [-1, 0.5])
         overlay_type (str)
-            'func': functional activation 'label': categories 'rgb': RGB values (default: func)
-        threshold (scalar or array-like)
-            Threshold for functional overlay. If one value is given, it is used as a positive threshold.
-            If two values are given, an positive and negative threshold is used.
+            'func': functional activation (default)
+            'label': categories
+            'rgb': RGB(A) values (0-1) directly specified. Alpha is optional
+        threshold (scalar or 2-element array)
+            Threshold for functional overlay. If one value is given, only values above are shown
+            If two values are given, values below lower threshold or above upper threshold are shown
+        cscale (ndarray or list)
+            Colorscale [min, max] for the overlay (default: [data.min, data.max])
         cmap (str)
-            Matplotlib colormap used for overlay (defaults to 'jet' if none given)
+            A Matplotlib colormap or an equivalent Nx3 or Nx4 floating point array (N rgb or rgba values). (defaults to 'jet' if none given)
         label_names (list)
-            labelnames for .label.gii (default is None)
+            labelnames (default is None - extracts from .label.gii )
         borders (str)
-            Full filepath of the borders txt file (default: borders.txt in SUIT pkg)
-        cscale (int array)
-            Colorscale [min, max] for the overlay, valid input values from -1 to 1 (default: [overlay.max, overlay.min])
+            Full filepath of the borders txt file or workbench border file (default: borders.txt in SUIT pkg)
+        bordercolor (char or matplotlib.color)
+            Color of border - defaults to 'k'
+        bordersize (int)
+            Size of the border points - defaults to 2
         alpha (float)
             Opacity of the overlay (default: 1)
-        outputfile (str)
-            Name / path to file to save figure (default None)
         render (str)
-            Renderer for graphic display 'matplot' / 'opengl'. Dafault is matplotlib
+            Renderer for graphic display 'matplot' / 'plotly'. Dafault is matplotlib
+        hover (str)
+            When renderer is plotly, it determines what is displayed in the hover label: 'auto', 'value', or None
         new_figure (bool)
-            By default, flatmap.plot renders the color map into matplotlib's current axis. It new_figure is set to True is will create a new figure
+            If False, plot renders into matplotlib's current axis. If True, it creates a new figure (default=True)
         colorbar (bool)
             By default, colorbar is not plotted into matplotlib's current axis (or new figure if new_figure is set to True)
         cbar_tick_format : str, optional
-            Controls how to format the tick labels of the colorbar.
+            Controls how to format the tick labels of the colorbar, and for the hover label.
             Ex: use "%i" to display as integers.
             Default='%.2g' for scientific notation.
+        backgroundcolor (str or matplotlib.color):
+            Axis background color (default: 'w')
+        frame (ndarray): [L,R,T,B] of the area of flatmap that is rendered
+            Defaults to entire flatmap
 
     Returns:
         ax (matplotlib.axis)
             If render is matplotlib, the function returns the axis
+        fig (plotly.go.Figure)
+            If render is plotly, it returns Figure object
 
     """
     # default directory
@@ -550,9 +309,15 @@ def plot(
         surf = os.path.join(_surf_dir,'FLAT.surf.gii')
 
     # load topology
-    flatsurf = nb.load(surf)
+    if isinstance(surf,str):
+        flatsurf = nb.load(surf)
+    elif isinstance(surf,nb.gifti.gifti.GiftiImage):
+        flatsurf = surf
+    else:
+        raise ValueError('surf should be a string or giftiImage')
     vertices = flatsurf.darrays[0].data
     faces    = flatsurf.darrays[1].data
+    num_vert = vertices.shape[0]
 
     # Load the overlay if it's a string
     if type(data) is str:
@@ -561,130 +326,189 @@ def plot(
     # If it is a giftiImage, figure out colormap
     if type(data) is nb.gifti.gifti.GiftiImage:
         if overlay_type == 'label':
-            _, cmap = get_gifti_colortable(data)
+            _, cmap = nt.get_gifti_colortable(data)
             if label_names is None:
                 labels = data.labeltable
                 label_names = list(labels.get_labels_as_dict().values())
         data_arr = data.darrays[0].data
 
-    # If it's a nd array, copy `data` arr
+    # If it's a nd array, copy data arr
     if type(data) is np.ndarray:
         data_arr = np.copy(data)
 
-    # If 2d-array, take the first column only
-    if data_arr.ndim>1:
-        data_arr = data_arr[:,0]
-    # depending on data type - type cast into int
+    # decide whether to map to faces
+    if (render=='plotly'):
+        mapfac=None    # Don't map to faces
+    else:
+        mapfac = faces # Map to faces
+
+    # Determine foreground color depending on type
     if overlay_type=='label':
+        # If 2d-array, take the first column only
+        if data_arr.ndim>1:
+            data_arr = data_arr[:,0]
         i = np.isnan(data_arr)
         data_arr = data_arr.astype(int)
         data_arr[i]=0
 
-    # create label names if they don't exist
-    if overlay_type=='label' and label_names is None:
-        num_labels = len(np.unique(data_arr))
-        label_names = []
-        # check for 0 labels
-        zero_label = 0 in data_arr
-        idx = 1
-        if zero_label:
-            idx = 0
-        for i in range(num_labels):
-            label_names.append("label-{:02d}".format(i + idx))
+        # create label names if they don't exist
+        if label_names is None:
+            label_names = [f"L-{i:02d}" for i in range(data_arr.max()+1)]
+        # map the overlay to colors:
+        overlay_color, cmap, cscale = _map_color(data=data_arr,
+            faces = mapfac, cscale=cscale,
+            cmap=cmap, threshold=threshold)
+    elif overlay_type=='func':
+        if data_arr.ndim>1:
+            data_arr = data_arr[:,0]
+        # map the overlay to colors:
+        overlay_color, cmap, cscale = _map_color(data=data_arr,
+            faces = mapfac, cscale=cscale,
+            cmap=cmap, threshold=threshold)
+    elif overlay_type=='rgb':
+        if mapfac is not None:
+            data  = _map_to_face(data,mapfac)
+        if data.shape[1]==3:
+            overlay_color = np.c_[data,np.ones(data.shape[0],1)]
 
-    # map the overlay to the faces
-    overlay_color, cmap, cscale = _map_color(faces=faces, data=data_arr, cscale=cscale, cmap=cmap, threshold=threshold)
+        elif data.shape[1]==4:
+            overlay_color = data[:,0:4]
+            alpha = data[:,3:4]
+        else:
+            raise(NameError('for RGB(A), the data needs to have 3 or 4 columns'))
 
     # Load underlay and assign color
+    if underlay is None:
+        underlay = np.zeros((num_vert,))
     if type(underlay) is not np.ndarray:
         if not os.path.isfile(underlay):
             underlay = os.path.join(os.path.join(_surf_dir, underlay))
         underlay = nb.load(underlay).darrays[0].data
-    underlay_color,_,_ = _map_color(faces=faces, data=underlay, cscale=underscale, cmap=undermap)
+    underlay_color,_,_ = _map_color(data=underlay,
+                    faces = mapfac,
+                    cscale=underscale, cmap=undermap)
 
     # Combine underlay and overlay: For Nan overlay, let underlay shine through
-    face_color = underlay_color * (1-alpha) + overlay_color * alpha
-    i = np.isnan(face_color.sum(axis=1))
-    face_color[i,:]=underlay_color[i,:]
-    face_color[i,3]=1.0
+    color = underlay_color * (1-alpha) + overlay_color * alpha
+    i = np.isnan(color.sum(axis=1))
+    color[i,:]=underlay_color[i,:]
+    color[i,3]=1.0
 
     # If present, get the borders
     if borders is not None:
         if not os.path.isfile(borders):
-            borders = os.path.join(os.path.join(_surf_dir, borders))
-        borders = np.genfromtxt(borders, delimiter=',')
-
+            borders = os.path.join(_surf_dir, borders)
+        if borders.endswith('.txt'):
+            borders = np.genfromtxt(borders, delimiter=',')
+        elif borders.endswith('.border'):
+            border_list,_ = nt.read_borders(borders)
+            borders = [b.get_coords(flatsurf) for b in border_list]
+            borders = np.vstack(borders)
+        else:
+            raise ValueError('borders should be a txt or border file')
     # Render with Matplotlib
-    ax = _render_matplotlib(vertices, faces, face_color, borders, new_figure)
+    if render == 'matplotlib':
+        ax = _render_matplotlib(vertices, faces, color, borders,
+                                bordercolor, bordersize, new_figure,backgroundcolor,frame)
+        # set up colorbar
+        if colorbar:
+            if overlay_type=='label':
+                cbar = _colorbar_label(ax, cmap, cbar_tick_format, label_names)
+            elif overlay_type=='func':
+                cbar = _colorbar_func(ax, cmap, cscale, cbar_tick_format)
+    elif render == 'plotly':
+        if hover == 'auto':
+            if overlay_type=='func':
+                textlabel = _make_labels(data_arr,'{:' + cbar_tick_format[1:] + '}')
+            if overlay_type=='label':
+                textlabel = _make_labels(data_arr,label_names)
+            if overlay_type=='rgb':
+                textlabel = _make_labels(data_arr,'({:.2f},{:.2f},{:.2f})')
+        if hover == 'value':
+            textlabel = _make_labels(data_arr,'{:' + cbar_tick_format[1:] + '}')
+        elif hover is None:
+            textlabel=None
 
-    # set up colorbar
-    if colorbar:
-        if overlay_type=='label':
-            cbar = _colorbar_label(ax, cmap, cscale, cbar_tick_format, label_names)
-        elif overlay_type=='func':
-            cbar = _colorbar_func(ax, cmap, cscale, cbar_tick_format)
+        ax = _render_plotly(vertices,faces,color,borders,
+                                bordercolor,bordersize, new_figure,
+                                textlabel,backgroundcolor,frame)
 
+    else:
+        raise(NameError('render needs to be matplotlib or plotly'))
     return ax
 
+def _map_to_face(data,faces):
+    numFaces = faces.shape[0]
+    face_value = np.zeros((3,numFaces,4),dtype = data.dtype)
+    for i in range(3):
+        face_value[i,:,:] = data[faces[:,i],:]
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", category=RuntimeWarning)
+        face_value = np.nanmean(face_value, axis=0)
+    return face_value
+
+
 def _map_color(
-    faces,
     data,
+    faces=None,
     cscale=None,
     cmap=None,
     threshold=None
     ):
-    """
-    Maps data from vertices to faces, scales the values, and
+    """Scales the values, and
     then looks up the RGB values in the color map
+    If faces are provided, maps the data to faces
 
     Args:
-        faces (nd.array)
-            Array of Faces
         data (1d-np-array)
             Numpy Array of values to scale. If integer, if it is not scaled
+        faces (nd.array)
+            Array of Faces, if provided, it maps to faces
         cscale (array like)
             (min,max) of the scaling of the data
         cmap (str, or matplotlib.colors.Colormap)
-            The Matplotlib colormap
-        threshold (array like)
-            (lower, upper) threshold for data display -
-             only data x<lower and x>upper will be plotted
-            if one value is given (-inf) is assumed for the lower
-
+            The Matplotlib colormap an equivalent Nx3 or Nx4 floating point array (N rgb or rgba values).
+        threshold (scalae or array like)
+            threshold for data display - only values above threshold are displayed
+    Returns:
+        color_data(ndarray): N x 4 ndarray
+        cmap
+        cscale
     """
+    # if scale not given, find it
+    if cscale is None:
+        cscale = np.array([np.nanmin(data), np.nanmax(data)])
 
     # When continuous data, scale and threshold
     if data.dtype.kind == 'f':
         # if threshold is given, threshold the data
         if threshold is not None:
             if np.isscalar(threshold):
-                threshold=np.array([-np.inf,threshold])
-            data[~np.logical_and(data>threshold[0], data<threshold[1])]=np.nan
-
-        # if scale not given, find it
-        if cscale is None:
-            cscale = np.array([np.nanmin(data), np.nanmax(data)])
+                data[data<threshold]=np.nan
+            elif len(threshold)==2:
+                data[(data>threshold[0]) & (data<threshold[1])]=np.nan
+            else:
+                raise(NameError('Threshold needs to be scalar or 2-element array'))
 
         # scale the data
         data = ((data - cscale[0]) / (cscale[1] - cscale[0]))
 
-    elif data.dtype.kind == 'i':
-        if cscale is None:
-            cscale = np.array([np.nanmin(data), np.nanmax(data)])
-
     # Map the values from vertices to faces and integrate
-    numFaces = faces.shape[0]
-    face_value = np.zeros((3,numFaces),dtype = data.dtype)
-    for i in range(3):
-        face_value[i,:] = data[faces[:,i]]
+    if faces is not None:
+        numFaces = faces.shape[0]
+        face_value = np.zeros((3,numFaces),dtype = data.dtype)
+        for i in range(3):
+            face_value[i,:] = data[faces[:,i]]
 
-    if data.dtype.kind == 'i':
-        face_value,_ = ss.mode(face_value,axis=0)
-        face_value = face_value.reshape((numFaces,))
+        if data.dtype.kind == 'i':
+            value,_ = ss.mode(face_value,axis=0,keepdims=False)
+            value = value.reshape((numFaces,))
+        else:
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore", category=RuntimeWarning)
+                value = np.nanmean(face_value, axis=0)
     else:
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore", category=RuntimeWarning)
-            face_value = np.nanmean(face_value, axis=0)
+        value = data
 
     # Get the color map
     if type(cmap) is str:
@@ -695,20 +519,211 @@ def _map_color(
         cmap = plt.get_cmap('jet')
 
     # Map the color
-    color_data = cmap(face_value)
+    color_data = cmap(value)
 
     # Set missing data 0 for int or NaN for float to NaN
     if data.dtype.kind == 'f':
-        color_data[np.isnan(face_value),:]=np.nan
+        color_data[np.isnan(value),:]=np.nan
     elif data.dtype.kind == 'i':
-        color_data[face_value==0,:]=np.nan
+        color_data[value==0,:]=np.nan
 
     return color_data, cmap, cscale
+
+
+def _render_matplotlib(vertices,faces,face_color,borders,
+                    bordercolor, bordersize,
+                    new_figure,backgroundcolor,
+                    frame):
+    """
+    Render the data in matplotlib
+
+    Args:
+        vertices (np.ndarray)
+            Array of vertices
+        faces (nd.array)
+            Array of Faces
+        face_color (nd.array)
+            RGBA array of color and alpha of all vertices
+        borders (np.ndarray)
+            default is None
+        bordercolor (char or matplotlib.color)
+            Color of border
+        bordersize (int)
+            Size of the border points
+        new_figure (bool)
+            Create new Figure or render in currrent axis
+        frame (ndarray)
+            [L,R,B,T] of the plotted area
+    Returns:
+        ax (matplotlib.axes)
+            Axis that was used to render the axis
+    """
+    if frame is None:
+        frame = [np.nanmin(vertices[:,0]),
+                 np.nanmax(vertices[:,0]),
+                 np.nanmin(vertices[:,1]),
+                 np.nanmax(vertices[:,1])]
+    vertex_in = (vertices[:,0]>=frame[0]) & \
+                (vertices[:,0]<=frame[1]) & \
+                (vertices[:,1]>=frame[2]) & \
+                (vertices[:,1]<=frame[3])
+    face_in  = np.any(vertex_in[faces],axis=1)
+    patches = []
+
+    for i,f in enumerate(faces[face_in]):
+        polygon = Polygon(vertices[f,0:2])
+        patches.append(polygon)
+    p = PatchCollection(patches)
+    p.set_facecolor(face_color[face_in])
+    p.set_edgecolor(face_color[face_in])
+    p.set_linewidth(0.5)
+
+    # Get the current axis and plot it
+    if new_figure:
+        fig = plt.figure(figsize=(7,7))
+    ax = plt.gca()
+    ax.add_collection(p)
+    ax.set_xlim(frame[0],frame[1])
+    ax.set_ylim(frame[2],frame[3])
+    ax.axis('equal')
+    ax.axis('off')
+    fig=plt.gcf()
+    fig.set_facecolor(backgroundcolor)
+
+    if borders is not None:
+        ax.plot(borders[:,0],borders[:,1],color=bordercolor,
+                marker='.', linestyle=None,
+                markersize=bordersize,linewidth=0)
+
+    return ax
+
+def _render_plotly(vertices,faces,color,borders,
+            bordercolor, bordersize,
+            new_figure, hovertext=None,
+            backgroundcolor='#ffffff',
+            frame=None):
+    """
+    Render the data in plotly
+    Args:
+        vertices (np.ndarray)
+            Array of vertices
+        faces (nd.array)
+            Array of Faces
+        face_color (nd.array)
+            RGBA array of color and alpha of all vertices
+        borders (np.ndarray)
+            default is None
+        bordercolor (char or matplotlib.color)
+            Color of border
+        bordersize (int)
+            Size of the border points
+        new_figure (bool)
+            Create new Figure or render in currrent axis
+        hovertext (list of str)
+            Text for hovering for each vertex
+        frame (ndarray)
+            [L,R,B,T] of the plotted area
+
+    Returns:
+        ax (matplotlib.axes)
+            Axis that was used to render the axis
+    """
+    # Check whether to color faces or vertices:
+    if color.shape[0]==vertices.shape[0]:
+        vertcolor=color
+        facecolor=None
+    elif color.shape[0]==faces.shape[0]:
+        vertcolor=None
+        facecolor=color
+    else:
+        raise(NameError('Color data not the correct shape'))
+
+    if hovertext is None:
+        hi = 'skip'
+    else:
+        hi = 'text'
+    traces = []
+    colorbar = dict(exponentformat='none',tickformat='%.2f')
+
+    if frame is None:
+        frame = [np.nanmin(vertices[:,0]),
+                 np.nanmax(vertices[:,0]),
+                 np.nanmin(vertices[:,1]),
+                 np.nanmax(vertices[:,1])]
+    aspect_ratio = (frame[3]-frame[2])/(frame[1]-frame[0])
+
+    traces.append(go.Mesh3d(
+        x=vertices[:, 0], y=vertices[:, 1], z=vertices[:, 2],
+        i=faces[:, 0], j=faces[:, 1], k=faces[:, 2],
+        facecolor = facecolor,
+        vertexcolor = vertcolor,
+        lightposition=dict(x=0, y=0, z=2.5),
+        text = hovertext,
+        hoverinfo=hi))
+    if borders is not None:
+        bordercolor=_color_matplotlib_to_plotly(bordercolor)
+        traces.append(go.Scatter3d(
+                x=borders[:,0],
+                y=borders[:,1],
+                z=np.ones((borders.shape[0],))*0.01,
+                marker = dict(
+                    color=bordercolor,
+                    size=bordersize,
+                    symbol='circle'),
+                mode='markers',
+                hoverinfo=None))
+
+
+    camera = dict(
+        up=dict(x=0, y=1, z=0),
+        center=dict(x=0, y=0, z=0),
+        eye=dict(x=0, y=0, z=1.1)
+    )
+    xaxis_dict= dict(visible=False,
+        showbackground=False,
+        showline=False,
+        showgrid=False,
+        showspikes=False,
+        showticklabels=False,
+        title=None,
+        range=frame[:2])
+    yaxis_dict= xaxis_dict.copy()
+    yaxis_dict['range']=frame[2:]
+    zaxis_dict= xaxis_dict.copy()
+    scene = dict(xaxis=xaxis_dict,
+                yaxis=yaxis_dict,
+                zaxis=zaxis_dict,
+                aspectmode= 'manual')
+                # aspectratio=dict(x=1, y=1, z=0.1))
+    backgroundcolor=_color_matplotlib_to_plotly(backgroundcolor)
+    fig = go.Figure(data=traces,)
+    fig.update_layout(scene_camera=camera,
+                dragmode=False,
+                margin=dict(r=0, l=0, b=0, t=0),
+                scene = scene,
+                width=400,
+                height=400*aspect_ratio,
+                paper_bgcolor=backgroundcolor
+                )
+    return fig
+
+def _make_labels(data,labelstr):
+    numvert=data.shape[0]
+    labels = np.empty((data.shape[0],),dtype=object)
+    if type(labelstr) is str:
+        for i in range(numvert):
+            if data.ndim==1:
+                labels[i]=labelstr.format(data[i])
+            else:
+                labels[i]=labelstr.format(*data[i])
+    else:
+        for i in range(numvert):
+            labels[i]=labelstr[data[i]]
+    return labels
 
 def _colorbar_label(
     ax,
     cmap,
-    cscale,
     cbar_tick_format,
     label_names
     ):
@@ -719,8 +734,6 @@ def _colorbar_label(
             Pre-existing axes for the plot.
         cmap (str, or matplotlib.colors.Colormap)
             The Matplotlib colormap
-        cscale (array like)
-            (min,max) of the scaling of the data
         cbar_tick_format : str, optional
             Controls how to format the tick labels of the colorbar.
             Ex: use "%i" to display as integers.
@@ -732,16 +745,12 @@ def _colorbar_label(
         cbar (matplotlib.colorbar)
             Colorbar object
     """
-    # check if there is a 0 label and adjust colorbar accordingly
-    if cscale[0]==0:
-        cmap.N = cmap.N-1
-        label_names = label_names[1:]
-    # set up colorbar
+    N = len(label_names) # Length of the colormap
     cax, _ = make_axes(ax, location='right', fraction=.15,
                         shrink=.5, pad=.0, aspect=10.)
-    norm = Normalize(vmin=cscale[0], vmax=cscale[1])
-    ticks = np.arange(1,len(label_names)+1)+0.5
-    bounds = np.arange(1,len(label_names)+2)
+    norm = Normalize(vmin=0, vmax=cmap.N)
+    ticks = np.arange(0,N)+0.5
+    bounds = np.arange(0,N+1)
     proxy_mappable = ScalarMappable(cmap=cmap, norm=norm)
     cbar = plt.colorbar(
         proxy_mappable, cax=cax, ticks=ticks,
@@ -772,7 +781,6 @@ def _colorbar_func(
             Ex: use "%i" to display as integers.
             Default='%.2g' for scientific notation.
 
-    @author: maedbhking
     """
     nb_ticks = 5
     # ...unless we are dealing with integers with a small range
@@ -796,50 +804,96 @@ def _colorbar_func(
 
     return cbar
 
-def _render_matplotlib(vertices,faces,face_color,borders,new_figure):
-    """
-    Render the data in matplotlib: This is segmented to allow for openGL renderer
+
+def _color_matplotlib_to_plotly(color):
+    """Transforms Matplotlib color string to
+    plotly/html hexadecimal representation
 
     Args:
-        vertices (np.ndarray)
-            Array of vertices
-        faces (nd.array)
-            Array of Faces
-        face_color (nd.array)
-            RGBA array of color and alpha of all vertices
-        borders (np.ndarray)
-            default is None
-        new_figure (bool)
-            Create new Figure or render in currrent axis
-
+        color (str): color string
     Returns:
-        ax (matplotlib.axes)
-            Axis that was used to render the axis
+        colorhex (str): web-based color, e.g., '#000000'
     """
-    patches = []
-    for i in range(faces.shape[0]):
-        polygon = Polygon(vertices[faces[i],0:2], True)
-        patches.append(polygon)
-    p = PatchCollection(patches)
-    p.set_facecolor(face_color)
-    p.set_linewidth(0.0)
+    if color=='k':
+        color='#000000'
+    if color=='w':
+        color='#ffffff'
+    return color
 
-    # Get the current axis and plot it
-    if new_figure:
-        fig = plt.figure(figsize=(7,7))
-    ax = plt.gca()
-    ax.add_collection(p)
-    xrang = [np.nanmin(vertices[:,0]),np.nanmax(vertices[:,0])]
-    yrang = [np.nanmin(vertices[:,1]),np.nanmax(vertices[:,1])]
+def plot_multi_flat(data, grid,
+                    cmap=None,
+                    dtype='label',
+                    cscale=None,
+                    titles=None,
+                    colorbar=False,
+                    space = 'SUIT',
+                    render='matplotlib',
+                    bordersize = 2,
+                    labels= None,
+                    fig_size=(5, 5)):
+    """Maps and plots a grid of flatmaps with some data
+    , requires data to be in volume space
 
-    ax.set_xlim(xrang[0],xrang[1])
-    ax.set_ylim(yrang[0],yrang[1])
-    ax.axis('equal')
-    ax.axis('off')
+    Args:
+        data (array or list): NxP array of data
+        grid (tuple): (rows,cols) grid for subplot
+        cmap (colormap or list): Color map or list of color maps. Defaults to None.
+        dtype (str, optional):'label' or 'func'
+        cscale (_type_, optional): Scale of data (None)
+        titles (_type_, optional): _description_. Defaults to None.
+        colorbar (bool):
+    """
 
-    if borders is not None:
-        ax.plot(borders[:,0],borders[:,1],color='k',
-                marker='.', linestyle=None,
-                markersize=2,linewidth=0)
-    return ax
+    fig = plt.figure(figsize=fig_size)
+    if isinstance(data, np.ndarray):
+        n_subplots = data.shape[0]
+    elif isinstance(data, list):
+        n_subplots = len(data)
 
+    for i in np.arange(n_subplots):
+        plt.subplot(grid[0], grid[1], i + 1)
+        nifti = data[i]
+        # Mapping labels directly by the mode
+        if dtype == 'label':
+            surf_data = vol_to_surf(nifti, stats='mode',
+                                                space=space, ignore_zeros=True)
+            ax = plot(surf_data,
+                                render=render,
+                                cmap=cmap,
+                                bordersize=bordersize,
+                                new_figure=False,
+                                label_names=labels,
+                                overlay_type='label',
+                                colorbar=colorbar)
+        # Plotting one series of functional data
+        elif dtype == 'func':
+            surf_data = vol_to_surf(nifti, stats='nanmean',
+                                                space=space)
+            ax = plot(surf_data,
+                                render=render,
+                                cmap=cmap,
+                                bordersize=bordersize,
+                                cscale=cscale,
+                                new_figure=False,
+                                overlay_type='func',
+                                colorbar=colorbar)
+        # Mapping probabilities on the flatmap and then
+        # determining a winner from this (slightly better than label)
+        elif dtype == 'prob':
+            surf_data = vol_to_surf(nifti, stats='nanmean',
+                                                space=space)
+            label = np.argmax(surf_data, axis=1) + 1
+            ax = plot(label,
+                                render=render,
+                                cmap=cmap,
+                                bordersize=bordersize,
+                                new_figure=False,
+                                label_names=labels,
+                                overlay_type='label',
+                                colorbar=colorbar)
+        else:
+            raise (NameError('Unknown data type'))
+
+
+        plt.title(titles[i])
+        plt.tight_layout()

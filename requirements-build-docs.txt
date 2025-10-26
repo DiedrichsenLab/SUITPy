@@ -1,13 +1,7 @@
+sphinx>=1.4
+sphinx-rtd-theme
 numpy
 cython
-flake8
-lxml
-mkl
-sphinx>=1.4
-sphinx-gallery
-sphinxcontrib-bibtex
-sphinx-copybutton
-numpydoc
 coverage
 pillow
 pandas
@@ -17,3 +11,7 @@ matplotlib
 ipykernel
 nbsphinx
 scipy
+plotly
+neuroimagingtools>=1.1.1
+antspyx>=0.6.1
+torch>=2.5.0

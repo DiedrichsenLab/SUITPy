@@ -24,7 +24,6 @@ import json
 
 import requests
 
-from ._utils import fill_doc
 
 _REQUESTS_TIMEOUT = (15.1, 61)
 
@@ -122,7 +121,6 @@ def _chunk_report_(bytes_so_far, total_size, initial_size, t0):
                _format_time(time_remaining)))
 
 
-@fill_doc
 def _chunk_read_(response, local_file, chunk_size=8192, report_hook=None,
                  initial_size=0, total_size=None, verbose=1):
     """Download a file chunk by chunk and show advancement
@@ -186,7 +184,6 @@ def _chunk_read_(response, local_file, chunk_size=8192, report_hook=None,
     return
 
 
-@fill_doc
 def get_data_dirs(data_dir=None):
     """Returns the directories in which SUITPy looks for data.
 
@@ -195,7 +192,7 @@ def get_data_dirs(data_dir=None):
 
     Parameters
     ----------
-    %(data_dir)s
+    data_dir: path to atlas directories
 
     Returns
     -------
@@ -223,22 +220,21 @@ def get_data_dirs(data_dir=None):
     if data_dir is not None:
         paths.extend(str(data_dir).split(os.pathsep))
 
-    # If data_dir has not been specified, then we crawl default locations
+    # If data_dir has not been specified, try to see if envor
     if data_dir is None:
-        global_data = os.getenv('SUITPy_SHARED_DATA')
+        global_data = os.getenv('SUITPy_SHARED_ATLASES')
         if global_data is not None:
             paths.extend(global_data.split(os.pathsep))
 
-        local_data = os.getenv('SUITPy_DATA')
+        local_data = os.getenv('SUITPy_ATLASES')
         if local_data is not None:
             paths.extend(local_data.split(os.pathsep))
 
-        paths.append(os.path.expanduser('~/SUITPy_data'))
+        paths.append(os.path.expanduser('~/cerebellar_atlases'))
     return paths
 
 
-@fill_doc
-def _get_dataset_dir(dataset_name, data_dir=None, default_paths=None,
+def _get_dataset_dir(dataset_name, atlas_dir=None, default_paths=None,
                      verbose=1):
     """Creates if necessary and returns data directory of given dataset.
 
@@ -246,15 +242,15 @@ def _get_dataset_dir(dataset_name, data_dir=None, default_paths=None,
     ----------
     dataset_name : string
         The unique name of the dataset.
-    %(data_dir)s
-    default_paths : list of string, optional
+    atlas_dir (str): Base directory of Cerebellar atlases, files will be in atlas_dir/dataset_name/..
+    default_paths (list of string) optional
         Default system paths in which the dataset may already have been
         installed by a third party software. They will be checked first.
-    %(verbose)s
+    verbose : int, optional
 
     Returns
     -------
-    data_dir : string
+    data_dir (string)
         Path of the given dataset directory.
 
     Notes
@@ -278,7 +274,7 @@ def _get_dataset_dir(dataset_name, data_dir=None, default_paths=None,
                 for d in str(default_path).split(os.pathsep)]
             )
 
-    paths.extend([(d, False) for d in get_data_dirs(data_dir=data_dir)])
+    paths.extend([(d, False) for d in get_data_dirs(data_dir=atlas_dir)])
 
     if verbose > 2:
         print('Dataset search paths: %s' % paths)
@@ -304,7 +300,7 @@ def _get_dataset_dir(dataset_name, data_dir=None, default_paths=None,
             try:
                 os.makedirs(path)
                 if verbose > 0:
-                    print('\nDataset created in %s\n' % path)
+                    print('\Atlas directory created in %s\n' % path)
                 return path
             except Exception as exc:
                 short_error_message = getattr(exc, 'strerror', str(exc))
@@ -315,7 +311,6 @@ def _get_dataset_dir(dataset_name, data_dir=None, default_paths=None,
                   'directories, but:' + ''.join(errors))
 
 
-@fill_doc
 def _uncompress_file(file_, delete_archive=True, verbose=1):
     """Uncompress files contained in a data_set.
 
@@ -488,7 +483,6 @@ class _NaiveFTPAdapter(requests.adapters.BaseAdapter):
         pass
 
 
-@fill_doc
 def _fetch_file(url, data_dir, resume=True, overwrite=False,
                 md5sum=None, username=None, password=None,
                 verbose=1, session=None):
@@ -672,7 +666,6 @@ def movetree(src, dst):
         raise Exception(errors)
 
 
-@fill_doc
 def _fetch_files(data_dir, files, resume=True, verbose=1, session=None):
     """Load requested dataset, downloading it if needed or requested.
 
@@ -685,7 +678,7 @@ def _fetch_files(data_dir, files, resume=True, verbose=1, session=None):
 
     Parameters
     ----------
-    %(data_dir)s
+    data_dir (path): Target directory for the download
     files : list of (string, string, dict)
         List of files and their corresponding url with dictionary that contains
         options regarding the files. Eg. (file_path, url, opt). If a file_path
@@ -696,8 +689,8 @@ def _fetch_files(data_dir, files, resume=True, verbose=1, session=None):
             * 'uncompress' to indicate that the file is an archive
             * 'md5sum' to check the md5 sum of the file
             * 'overwrite' if the file should be re-downloaded even if it exists
-    %(resume)s
-    %(verbose)s
+    resume (bool): Resume after failure
+    verbose (int): 0: no output, 1: basic, 2: detailed
     session : `requests.Session`, optional
         Session to use to send requests.
 
