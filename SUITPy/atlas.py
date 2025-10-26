@@ -41,7 +41,6 @@ def fetch_atlas(atlas, atlas_dir=None, maps = 'all', space='all',
     if base_url is None:
         base_url = ('https://github.com/DiedrichsenLab/cerebellar_atlases/raw/master/')
 
-    atlas_dir = _get_dataset_dir(atlas_dir)
 
     # get information from `package_description.json`
     url = base_url + '/package_description.json'
@@ -52,27 +51,35 @@ def fetch_atlas(atlas, atlas_dir=None, maps = 'all', space='all',
     atlases = list(package_dict.keys())
     if atlas not in atlases:
         raise(NameError(f'{atlas} is found: Available atlases are {atlases}'))
-    atlas_dir = os.path.join(atlas_dir,atlas)
+
+    # Determine the download directory
+    atlas_dir = _get_dataset_dir(atlas,atlas_dir)
+
 
     # get map names and description
     atlas_dict = package_dict[atlas]
-    maps = atlas_dict['Maps']
     fdescr = atlas_dict['ShortDesc']
 
     # get space for volumes
     if space=='all':
-        space =['SUIT','MNI','MNISym']
+        space =atlas_dict['Spaces']
     elif isinstance(space,str):
         space = [space]
+    for s in space:
+        if s not in atlas_dict['Spaces']:
+            raise(NameError(f'{s} is found: Available spaces for {atlas} are {atlas_dict["Spaces"]}'))
 
     # Get names of different maps
     if maps=='all':
         maps = atlas_dict['Maps']
     elif isinstance(maps,str):
         maps = [maps]
+    for m in maps:
+        if m not in atlas_dict['Maps']:
+            raise(NameError(f'{m} is found: Available maps for {atlas} are {atlas_dict['Maps']}'))
 
     # Generale the list of all possible files
-    at_ex = ['_dseg.label.gii','.lut','.tsv']
+    at_ex = ['_dseg.label.gii','.lut']
     con_ex = ['.func.gii']
     file_names = ['atlas_description.json']
     for m in maps:
@@ -99,7 +106,3 @@ def fetch_atlas(atlas, atlas_dir=None, maps = 'all', space='all',
                 'files': fpaths,
                 'description': fdescr})
 
-
-if __name__=="__main__":
-    fetch_atlas('Buckner_2011',atlas_dir='/Users/jdiedrichsen/Data/cb_test')
-    pass

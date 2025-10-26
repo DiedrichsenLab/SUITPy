@@ -234,7 +234,7 @@ def get_data_dirs(data_dir=None):
     return paths
 
 
-def _get_dataset_dir(dataset_name, data_dir=None, default_paths=None,
+def _get_dataset_dir(dataset_name, atlas_dir=None, default_paths=None,
                      verbose=1):
     """Creates if necessary and returns data directory of given dataset.
 
@@ -242,15 +242,15 @@ def _get_dataset_dir(dataset_name, data_dir=None, default_paths=None,
     ----------
     dataset_name : string
         The unique name of the dataset.
-    %(data_dir)s
-    default_paths : list of string, optional
+    atlas_dir (str): Base directory of Cerebellar atlases, files will be in atlas_dir/dataset_name/..
+    default_paths (list of string) optional
         Default system paths in which the dataset may already have been
         installed by a third party software. They will be checked first.
-    %(verbose)s
+    verbose : int, optional
 
     Returns
     -------
-    data_dir : string
+    data_dir (string)
         Path of the given dataset directory.
 
     Notes
@@ -274,7 +274,7 @@ def _get_dataset_dir(dataset_name, data_dir=None, default_paths=None,
                 for d in str(default_path).split(os.pathsep)]
             )
 
-    paths.extend([(d, False) for d in get_data_dirs(data_dir=data_dir)])
+    paths.extend([(d, False) for d in get_data_dirs(data_dir=atlas_dir)])
 
     if verbose > 2:
         print('Dataset search paths: %s' % paths)
