@@ -192,7 +192,7 @@ def get_data_dirs(data_dir=None):
 
     Parameters
     ----------
-    %(data_dir)s
+    data_dir: path to atlas directories
 
     Returns
     -------
@@ -220,17 +220,17 @@ def get_data_dirs(data_dir=None):
     if data_dir is not None:
         paths.extend(str(data_dir).split(os.pathsep))
 
-    # If data_dir has not been specified, then we crawl default locations
+    # If data_dir has not been specified, try to see if envor
     if data_dir is None:
-        global_data = os.getenv('SUITPy_SHARED_DATA')
+        global_data = os.getenv('SUITPy_SHARED_ATLASES')
         if global_data is not None:
             paths.extend(global_data.split(os.pathsep))
 
-        local_data = os.getenv('SUITPy_DATA')
+        local_data = os.getenv('SUITPy_ATLASES')
         if local_data is not None:
             paths.extend(local_data.split(os.pathsep))
 
-        paths.append(os.path.expanduser('~/SUITPy_data'))
+        paths.append(os.path.expanduser('~/cerebellar_atlases'))
     return paths
 
 
@@ -300,7 +300,7 @@ def _get_dataset_dir(dataset_name, data_dir=None, default_paths=None,
             try:
                 os.makedirs(path)
                 if verbose > 0:
-                    print('\nDataset created in %s\n' % path)
+                    print('\Atlas directory created in %s\n' % path)
                 return path
             except Exception as exc:
                 short_error_message = getattr(exc, 'strerror', str(exc))
