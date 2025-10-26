@@ -12,12 +12,11 @@ The required dependencies to use the software are:
 * nibabel >= 3.2.1
 * pandas >= 2.0.0
 * matplotlib >= 3.5.0
+* plotly >= 5.10.0
 * scipy >= 1.9.0
 * neuroimagingtools >= 1.1.1
 * antspyx >= 0.6.1
-* torch >= 2.5.0
-
-(It is highly recommended to use the latest version of PyTorch as new generations of GPU (50 series, etc.) use the sm_120 CUDA architecture which is not compatible with older versions.)
+* torch >= 2.0.0
 
 Install over pip
 ----------------

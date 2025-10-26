@@ -11,6 +11,6 @@ authors:
   given-names: "Da"
   orcid: "https://orcid.org/0000-0001-6023-6523"
 title: "SUIT: A Python-based toolbox for cerebellar imaging analysis"
-version: 1.3.0
-date-released: 2023-10-08
+version: 2.0.0
+date-released: 2025-10-26
 url: "https://github.com/DiedrichsenLab/SUITPy"

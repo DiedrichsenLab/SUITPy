@@ -3,7 +3,7 @@ Helper functions to download NeuroImaging datasets
 """
 import gzip
 
-__version__ = '1.3.2'
+__version__ = '2.0.0'
 
 from .atlas import (fetch_atlas)
 

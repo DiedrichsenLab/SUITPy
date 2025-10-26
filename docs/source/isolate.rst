@@ -28,10 +28,11 @@ The optional input parameters are
 
     --T1: T1w- image
     --T2: Additional (or standalone T2w image)
-    --result_folder dir:
-    --brain_mask Mask_image: Binary mask image from skull stripping step to improve affine normalization
-    --template template: Templa] [--params PARAMS] [--save_cropped_files] [--save_transform]
-
+    --result_folder: Folder to save the results (default: current folder)
+    --brain_mask: Binary mask image from skull stripping step to improve affine normalization (optional)
+    --template: Template for affine normalization
+    --save_cropped_files: Save the images cropped and resampled to the UNet window
+    --save_transform: Save the affine transformation matrix
 
 
 Architecture

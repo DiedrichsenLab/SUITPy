@@ -1,12 +1,9 @@
-.. SUITPy documentation master file, created by
-   sphinx-quickstart on Tue Aug 11 12:46:22 2020.
-   You can adapt this file completely to your liking, but it should at least
-   contain the root `toctree` directive.
+.. SUITPy documentation master file
 
 SUITPy Documentation
 ====================
-SUITPy is a Python toolbox dedicated to the analysis of imaging data of the human cerebellum. It provides a subset of the SUIT toolbox for Matlab (https://github.com/jdiedrichsen/suit).
-Currently, only mapping of volume data to the flatmap and display of the flatmap are implemented.
+SUITPy is a Python toolbox for the analysis of imaging data from the human cerebellum. With the new version 2 release it will have most of the functionality of the SUIT toolbox for Matlab (https://github.com/jdiedrichsen/suit).
+The newest developments will be implemented in the Python version.
 
 .. toctree::
    :maxdepth: 1
@@ -30,18 +27,18 @@ Important links
 
 Acknowledgements
 ----------------
-SUITPy is developed by the Diedrichsenlab and collaborators, Carlos Hernandez-Castillo, Yao Li
+SUITPy is developed by the Diedrichsenlab and collaborators, including
+Carlos Hernandez-Castillo, Yao Li, Yaping Wang, Bassel Arafat, Caroline Nettekoven, Ladan Shahshahani, Da Zhi, Maedbh King, Jorn Diedrichsen, and many others.
 
-
-
-.. image::
-   images/CIHR.png
-   :width: 200 px
+Funding for this work was provided by:
 
 .. image::
    images/RCP.png
    :width: 200 px
 
+.. image::
+   images/CIHR.png
+   :width: 200 px
 
 Indices and tables
 ------------------

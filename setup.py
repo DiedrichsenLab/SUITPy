@@ -14,7 +14,7 @@ _SUITPy_INSTALL_MSG = 'See %s for installation information.' % (
     'https://suitpy.readthedocs.io/en/latest/install.html#installation')
 
 REQUIRED_MODULE_METADATA = ['numpy>=1.22.0',
-                            'nibabel>=3.5.0',
+                            'nibabel>=3.2.1',
                             'neuroimagingtools>=1.1.1',
                             'requests>=2',
                             'scipy>=1.9.0',
@@ -24,7 +24,7 @@ REQUIRED_MODULE_METADATA = ['numpy>=1.22.0',
                             'joblib>=1.2.0',
                             'scipy>=1.9.0',
                             'antspyx>=0.6.1',
-                            'torch>=2.5.0',]
+                            'torch>=2.2.0',]
 
 def is_installing():
     # Allow command-lines such as "python setup.py build install"
@@ -34,11 +34,11 @@ def is_installing():
 # Make sources available using relative paths from this file's directory.
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
-DESCRIPTION = 'Mapping and plotting cerebellar fMRI data in Python'
+DESCRIPTION = 'Analysis toolbox for cerebellar fMRI data in Python'
 with open('README.rst') as fp:
     LONG_DESCRIPTION = fp.read()
-DOWNLOAD_URL = 'https://github.com/DiedrichsenLab/SUITPy/archive/refs/tags/v.1.3.3.tar.gz'
-VERSION = '1.3.3'
+DOWNLOAD_URL = 'https://github.com/DiedrichsenLab/SUITPy/archive/refs/tags/v.2.0.0.tar.gz'
+VERSION = '2.0.0'
 
 if __name__ == "__main__":
 
@@ -63,11 +63,9 @@ if __name__ == "__main__":
               'Operating System :: POSIX',
               'Operating System :: Unix',
               'Operating System :: MacOS',
-              'Programming Language :: Python :: 3.6',
-              'Programming Language :: Python :: 3.7',
-              'Programming Language :: Python :: 3.8',
-              'Programming Language :: Python :: 3.9',
               'Programming Language :: Python :: 3.10',
+              'Programming Language :: Python :: 3.11',
+              'Programming Language :: Python :: 3.12'
           ],
           packages=find_packages(),
           package_data={

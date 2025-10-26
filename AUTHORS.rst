@@ -8,20 +8,22 @@ the diedrichsenlab lab at `Western University <http://www.diedrichsenlab.org//>`
 
 .. _core_devs:
 
-Core developers
-...............
+Developers
+..........
 
-The SUITPy core developers are:
+Contributors to SUITPy include:
 
-*Joern Diedrichsen
+*Jörn Diedrichsen
 *Maedbh King
 *Da Zhi
-
-Other contributors:
-
+*Ladan Shahshahani
+*Yao Li
 *Carlos Hernandez-Castillo
 *Suzanne Witt
-*Ladan Shahshahani
+*Bassel Arafat
+*Caroline Nettekoven
+*Yaping Wang
+
 
 .. _citing:
 
