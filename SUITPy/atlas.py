@@ -76,7 +76,7 @@ def fetch_atlas(atlas, atlas_dir=None, maps = 'all', space='all',
         maps = [maps]
     for m in maps:
         if m not in atlas_dict['Maps']:
-            raise(NameError(f'{m} is found: Available maps for {atlas} are {atlas_dict['Maps']}'))
+            raise(NameError(f'{m} is found: Available maps for {atlas} are {atlas_dict["Maps"]}'))
 
     # Generale the list of all possible files
     at_ex = ['_dseg.label.gii','.lut']
