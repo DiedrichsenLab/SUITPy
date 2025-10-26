@@ -14,24 +14,22 @@ def fetch_atlas(atlas, atlas_dir=None, maps = 'all', space='all',
                     base_url=None, resume=True, verbose=1):
     """Download and install cerebellar atlas maps from github.com/DiedrichsenLab/cerebellar_atlases
 
-    Parameters
-    ----------
-    atlas (str): Name of the atlas (Diedrichsen_2009, King_2019, Nettekoven_2024, etc. )
-    atlas_dir (str): Base directory of Cerebellar atlases, files will be in atlas_dir/atlas_name/..
-    maps (list or str): Which maps to download within the altas (i.e. atl-Buckner7)
-    space (str): Volumetric files should be in 'SUIT', 'MNI', or 'MNISym' space (default 'all')
-    base_url : string, optional
-        base_url of files to download (None results in default base_url).
-    resume (bool): REsume download after fail
-    verbose (int): Default 1
+    Args:
+        atlas (str): Name of the atlas (Diedrichsen_2009, King_2019, Nettekoven_2024, etc. )
+        atlas_dir (str): Base directory of Cerebellar atlases, files will be in atlas_dir/atlas_name/..
+        maps (list or str): Which maps to download within the altas (i.e. atl-Buckner7)
+        space (str): Volumetric files should be in 'SUIT', 'MNI', or 'MNISym' space (default 'all')
+        base_url : string, optional
+            base_url of files to download (None results in default base_url).
+        resume (bool): REsume download after fail
+        verbose (int): Default 1
 
-    Returns
-    -------
-    data : data dict
-        Dictionary, contains keys:
-            - data_dir: Absolute path of downloaded folder
-            - files: list of string. Absolute paths of downloaded files on disk.
-            - description: A short description of `data` and some references.
+    Returns:
+        data (data dict):
+            Dictionary, contains keys:
+                - data_dir: Absolute path of downloaded folder
+                - files: list of string. Absolute paths of downloaded files on disk.
+                - description: A short description of `data` and some references.
 
     Notes
     -----
