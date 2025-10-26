@@ -36,7 +36,7 @@ The optional input parameters are
 
 Architecture
 ------------
-.. image:: Unet.png
+.. image:: images/Unet.png
 
 The model then has a classic U-Net architecture with 4 layers depth.
 It takes 2 input channels which are filled with T1w and T2w images respectively. 0 padding is used if any input channel is empty.

@@ -35,11 +35,11 @@ SUITPy is developed by the Diedrichsenlab and collaborators, Carlos Hernandez-Ca
 
 
 .. image::
-   CIHR.png
+   images/CIHR.png
    :width: 200 px
 
 .. image::
-   RCP.png
+   images/RCP.png
    :width: 200 px
 
 

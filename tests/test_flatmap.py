@@ -8,7 +8,7 @@ import SUITPy.flatmap as flatmap
 import numpy as np
 import plotly.graph_objs as go
 import nibabel as nb
-
+import matplotlib.pyplot as plt
 
 def test_flatmap_plot(render='plotly'):
     ax = flatmap.plot('docs/source/notebooks/MDTB08_Math.func.gii',
@@ -43,10 +43,22 @@ def test_plot_rgba(render='plotly'):
     # ax.show()
     pass
 
+def make_atlas_plots(atlas,map):
+    plt.figure(figsize=(6,5))
+    file = '~/Data/cerebellar_atlases/'+atlas+'/'+map+'_dseg.label.gii'
+    flatmap.plot(file,overlay_type='label',new_figure=False)
+    plt.tight_layout()
+    plt.savefig(f'docs/source/images/{atlas}.png',dpi=300)
 
 if __name__ == '__main__':
     # make_shapes()
-    test_flatmap_plot(render='matplotlib')
+    # make_atlas_plots('Diedrichsen_2009','atl-Anatom')
+    # make_atlas_plots('King_2019','atl-MDTB10')
+    make_atlas_plots('Xue_2021','atl-Xue10Sub1')
+    make_atlas_plots('Ji_2019','atl-Ji10')
+    make_atlas_plots('Nettekoven_2024','atl-NettekovenSym32')
+    # make_atlas_plots('Buckner_2011','atl-Buckner17')
+    # test_flatmap_plot(render='matplotlib')
     # test_plot_label(render='matplotlib')
     # test_plot_rgba(render='matplotlib')
     pass
