@@ -7,6 +7,8 @@ https://github.com/DiedrichsenLab/cerebellar_atlases
 import json
 import requests
 import os
+import numpy as np
+import nibabel as nib
 
 from SUITPy.utils import _get_dataset_dir, _fetch_files
 
@@ -104,3 +106,34 @@ def fetch_atlas(atlas, atlas_dir=None, maps = 'all', space='all',
                 'files': fpaths,
                 'description': fdescr})
 
+
+def summarize_data(images,
+                   atlas='Nettekoven_2024',
+                   map='atl-Nettekoven32Sym',
+                   space = 'SUIT',
+                   atlas_dir=None,
+                   function=np.mean)->dict:
+    """ Summarize the data from the images by the ROIs defined in the atlas map. Works optimally together with the files provided in the cerebellar atlas repository
+
+    Args:
+        images (list): List of str. Absolute paths of images to summarize
+        atlas (str): Name of the atlas (Diedrichsen_2009, King_2019, Nettekoven_2024, etc. )
+        map (str): Name of the map within the atlas (atl-Buckner7, atl-Anatomical)
+        atlas_dir (str): Base directory of Cerebellar atlases, files will be in atlas_dir/atlas_name/..
+        function (callable): Function to summarize the data within each ROI (default: np.mean)
+    Returns:
+        summary (dict):
+            Dictionary, contains keys:
+                - image: Name of the image files summarized
+                - region_id: list of int. IDs of the regions in the atlas map
+                - region_name: list of str. Names of the regions in the atlas map, defined in the .lut file
+                - values: statistics in each region for each image
+    """
+    dict = {}
+    # Load the map
+    pass
+    # Load the lut file - give wanrnign if not present, but set regions names to reg_01..
+    pass
+    # Load files and calculate summary
+    pass
+    return dict
