@@ -11,14 +11,15 @@ import numpy as np
 
 
 
-def normalize(source_file, mask_file,template='SUIT',write_normalized_image=True,result_folder=None):
+def normalize(source_file, mask_file,space='SUIT',template_file=None, write_normalized_image=True,result_folder=None):
     """
     Normalizes a T1w image to the SUIT template using ANTsPy
 
     Args:
         source_file (str): File name (wuth path) to the source T1w image
         mask_file (str): File name (with path) to the cerebellar mask image
-        template (str): Cerebellar-only template (`SUIT`, `MNI152NLin6AsymC`, `MNI152NLin2009cSymC`)
+        space (str): Cerebellar-only template (`SUIT`, `MNI152NLin6AsymC` / 'MNI', `MNI152NLin2009cSymC` / 'MNISym')
+        template_file (str): Optional path to a custom template file
         write_normalized_image (bool): Whether to write the normalized image to disk
 
     Returns:
@@ -35,21 +36,31 @@ def normalize(source_file, mask_file,template='SUIT',write_normalized_image=True
     mask_img = ants.image_read(mask_file)
 
     # Determine name of template file
-    template_dir = os.path.join(os.path.dirname(__file__),'templates')
-    if template == 'MNI':
-        template = 'MNI152NLin6AsymC'
-    if template == 'MNISym':
-        template = 'MNI152NLin2009cSymC'
-    template_file = os.path.join(template_dir,f'tpl-{template}_T1w.nii')
+    if template_file is None:
+        template_dir = os.path.join(os.path.dirname(__file__),'templates')
+        if space == 'MNI':
+            template = 'MNI152NLin6AsymC'
+        elif space == 'MNISym':
+            template = 'MNI152NLin2009cSymC'
+        else:
+            template = space
+        template_file = os.path.join(template_dir,f'tpl-{template}_T1w.nii.gz')
     if os.path.exists(template_file)==False:
-        raise(NameError(f'Unknown template {template}: Choose from `SUIT`, `MNI` /`MNI152NLin6AsymC`, `MNISym`/`MNI152NLin2009cSymC`'))
+        raise(NameError(f'Unknown template {template}: Set space to `SUIT`, `MNI` /`MNI152NLin6AsymC`, `MNISym`/`MNI152NLin2009cSymC` or provide custom template_file'))
     template_img = ants.image_read(template_file)
 
-    prefix = f'{result_folder}/xfm-{basename}-to-{template}'
-    mytx = ants.registration(fixed=template_img , moving=source_img * mask_img,type_of_transform='SyN',outprefix=prefix,write_composite_transform=False)
+    # mask the source image and normalize 
+    prefix = f'{result_folder}/{basename}_xfm-{space}_'
+    masked_source_img = source_img * mask_img
+    mytx = ants.registration(fixed=template_img , moving=masked_source_img,type_of_transform='SyN',outprefix=prefix,write_composite_transform=True)
+    
+    # Write the normalized image in template space
+    if write_normalized_image:
+        normalized_img = ants.apply_transforms(fixed=template_img, moving=masked_source_img,transformlist=mytx['fwdtransforms'],interpolator='linear')
+        ants.image_write(normalized_img, f'{result_folder}/{basename}_space-{space}.nii.gz')
     return mytx
 
 
-# Use main to make function callable from command line
+# Use main to make function callable from command line (see isolate.py)
 if __name__ == '__main__':
-
+    pass 
