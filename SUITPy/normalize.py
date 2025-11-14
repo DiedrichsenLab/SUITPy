@@ -11,7 +11,7 @@ import numpy as np
 
 
 
-def normalize(source_file, mask_file,space='SUIT',template_file=None, write_normalized_image=True,result_folder=None):
+def normalize(source_file, mask_file, space='SUIT', template_file=None, write_normalized_image=True, result_folder=None, verbose=True):
     """
     Normalizes a T1w image to the SUIT template using ANTsPy
 
@@ -21,8 +21,15 @@ def normalize(source_file, mask_file,space='SUIT',template_file=None, write_norm
         space (str): Cerebellar-only template (`SUIT`, `MNI152NLin6AsymC` / 'MNI', `MNI152NLin2009cSymC` / 'MNISym')
         template_file (str): Optional path to a custom template file
         write_normalized_image (bool): Whether to write the normalized image to disk
+        verbose (bool): Whether to print out status information during processing
 
     Returns:
+        mytx (dict): A dictionary returned by `ants.registration`, containing:
+            fwdtransforms (str): Paths to the forward transforms (native → template)
+            invtransforms (str): Paths to the inverse transforms (template → native).
+            warpedmovout (ants.ANTsImage): The moving image warped into template space.
+            warpedfixout (ants.ANTsImage): The fixed image warped into moving space (rarely used).
+            Other registration metadata such as metric values, iterations, and composite transforms.
 
     """
     # Get result folder and base name
@@ -52,12 +59,18 @@ def normalize(source_file, mask_file,space='SUIT',template_file=None, write_norm
     # mask the source image and normalize 
     prefix = f'{result_folder}/{basename}_xfm-{space}_'
     masked_source_img = source_img * mask_img
-    mytx = ants.registration(fixed=template_img , moving=masked_source_img,type_of_transform='SyN',outprefix=prefix,write_composite_transform=True)
-    
+    if verbose:
+        print(f"registering to template of {template_file}")
+    mytx = ants.registration(fixed=template_img,moving=masked_source_img,type_of_transform='SyN',outprefix=prefix,write_composite_transform=True)
+    if verbose:
+        print(f"Saving the forward transforms into {mytx['fwdtransforms']}")
+
     # Write the normalized image in template space
     if write_normalized_image:
-        normalized_img = ants.apply_transforms(fixed=template_img, moving=masked_source_img,transformlist=mytx['fwdtransforms'],interpolator='linear')
+        normalized_img = ants.apply_transforms(fixed=template_img,moving=masked_source_img,transformlist=mytx['fwdtransforms'],interpolator='linear')
         ants.image_write(normalized_img, f'{result_folder}/{basename}_space-{space}.nii.gz')
+        if verbose:
+            print(f"Saving the normalized image into {result_folder}")
     return mytx
 
 
