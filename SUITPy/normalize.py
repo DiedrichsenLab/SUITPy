@@ -26,10 +26,10 @@ def normalize(source_file, mask_file, space='SUIT', template_file=None, write_no
     Returns:
         mytx (dict): A dictionary returned by `ants.registration`, containing:
             fwdtransforms (str): Paths to the forward transforms (native → template)
-            invtransforms (str): Paths to the inverse transforms (template → native).
-            warpedmovout (ants.ANTsImage): The moving image warped into template space.
-            warpedfixout (ants.ANTsImage): The fixed image warped into moving space (rarely used).
-            Other registration metadata such as metric values, iterations, and composite transforms.
+            invtransforms (str): Paths to the inverse transforms (template → native)
+            warpedmovout (ants.ANTsImage): The moving image warped into template space
+            warpedfixout (ants.ANTsImage): The fixed image warped into moving space (rarely used)
+            Other registration metadata such as metric values, iterations, and composite transforms
 
     """
     # Get result folder and base name
