@@ -82,7 +82,8 @@ def normalize(source_file, mask_file, space='SUIT', template_file=None, write_de
             fwdtransforms=mytx["fwdtransforms"],
             deformation_file=deformation_file
         )
-        # store inside mytx
+        if verbose:
+            print(f"Saving the deformation field into {deformation_file}")
         mytx["deformation_file"] = deformation_file
     return mytx
 
