@@ -4,12 +4,13 @@ repository
 https://github.com/DiedrichsenLab/cerebellar_atlases
 
 """
-import json
-import requests
+
 import os
+import json
 import numpy as np
 import nibabel as nib
-
+import pandas as pd
+import requests
 from SUITPy.utils import _get_dataset_dir, _fetch_files
 
 def fetch_atlas(atlas, atlas_dir=None, maps = 'all', space='all',
@@ -107,33 +108,205 @@ def fetch_atlas(atlas, atlas_dir=None, maps = 'all', space='all',
                 'description': fdescr})
 
 
-def summarize_data(images,
-                   atlas='Nettekoven_2024',
-                   map='atl-Nettekoven32Sym',
-                   space = 'SUIT',
-                   atlas_dir=None,
-                   function=np.mean)->dict:
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+# ROI summarization
+
+def _read_lut(lut_path):
+    """
+    Read a simple LUT file: each non-empty, non-comment line
+    starts with an integer label followed by the region name.
+    """
+    lut = {}
+    with open(lut_path, "r") as f:
+        for line in f:
+            line = line.strip()
+            if not line or line.startswith("#"):
+                continue
+            parts = line.split()
+            try:
+                lab = int(parts[0])
+            except ValueError:
+                continue
+            name = " ".join(parts[1:]) if len(parts) > 1 else f"region {lab}"
+            lut[lab] = name
+    return lut
+
+
+def summarize_data(
+    images,
+    atlas,
+    maps,
+    space="SUIT",
+    atlas_dir=None,
+    stats=("mean", "std", "abs"),
+    region_names=None,
+    outfilename=None,
+    resume=True,
+    verbose=1,):
+    
     """ Summarize the data from the images by the ROIs defined in the atlas map. Works optimally together with the files provided in the cerebellar atlas repository
 
     Args:
         images (list): List of str. Absolute paths of images to summarize
         atlas (str): Name of the atlas (Diedrichsen_2009, King_2019, Nettekoven_2024, etc. )
-        map (str): Name of the map within the atlas (atl-Buckner7, atl-Anatomical)
+        maps (str): Name of the map within the atlas (atl-Buckner7, atl-Anatomical)
+        space (str): Default 'SUIT', space for the volumetric atlas file: 'SUIT', 'MNI', 'MNISym', etc.
         atlas_dir (str): Base directory of Cerebellar atlases, files will be in atlas_dir/atlas_name/..
-        function (callable): Function to summarize the data within each ROI (default: np.mean)
+        stats (sequence of str): Default ('mean','std','abs'). Which statistics to compute inside each ROI. Supported keys: 'mean', 'nanmean', 'std', 'nanstd', 'max', 'min', 'median', 'abs'.
+        region_names (sequence of str or None): Optional list of region names. If provided and length >= number of non-zero labels, it overrides names from the LUT.
+        outfilename (str or None): If not None, write the resulting table as a tab-delimited text file.
     Returns:
-        summary (dict):
+        summary (df : pandas.DataFrame):
             Dictionary, contains keys:
                 - image: Name of the image files summarized
                 - region_id: list of int. IDs of the regions in the atlas map
                 - region_name: list of str. Names of the regions in the atlas map, defined in the .lut file
                 - values: statistics in each region for each image
     """
-    dict = {}
-    # Load the map
-    pass
-    # Load the lut file - give wanrnign if not present, but set regions names to reg_01..
-    pass
-    # Load files and calculate summary
-    pass
-    return dict
+
+    # ----------------------------
+    # Image input
+    # ----------------------------
+    if not isinstance(images, (list, tuple)):
+        images = [images]
+
+    def _load_img(img_obj):
+        if isinstance(img_obj, str):
+            return nib.load(img_obj), os.path.basename(img_obj)
+        elif hasattr(img_obj, "get_fdata"):
+            return img_obj, "<nibabel_image>"
+        else:
+            raise TypeError("Images must be file paths or nibabel NIfTI images.")
+
+    # ----------------------------
+    # Fetch atlas files 
+    # ----------------------------
+    atlas_info = fetch_atlas(
+        atlas=atlas,
+        atlas_dir=atlas_dir,
+        maps=maps,
+        space=space,
+        resume=resume,
+        verbose=verbose,)
+    
+    fpaths = atlas_info["files"]
+
+    # Find the label image and LUT for the requested map / space
+    label_img_path = None
+    lut_path = None
+    map_basename = maps  # e.g. 'atl-Buckner7'
+
+    for f in fpaths:
+        fname = os.path.basename(f)
+        if fname == f"{map_basename}_space-{space}_dseg.nii":
+            label_img_path = f
+        elif fname == f"{map_basename}.lut":
+            lut_path = f
+
+    if label_img_path is None:
+        raise FileNotFoundError(
+            f"Could not find label image for map '{maps}' in space '{space}'. "
+            "Make sure this combination exists in cerebellar_atlases."
+        )
+
+    # Load atlas label image
+    atlas_img = nib.load(label_img_path)
+    atlas_data = np.asarray(atlas_img.get_fdata()).astype(int)
+    voxel_vol_mm3 = np.abs(np.linalg.det(atlas_img.affine[:3, :3]))
+
+    # Region labels (ignore 0 = background)
+    region_labels = np.sort(np.unique(atlas_data))
+    region_labels = region_labels[region_labels != 0]
+
+    # Region names from LUT (if present)
+    lut = _read_lut(lut_path) if lut_path is not None else {}
+
+    # Optionally override with user-supplied names
+    def _region_name(label):
+        if region_names is not None and label > 0:
+            idx = label - 1  # 1-based labels
+            if idx < len(region_names):
+                return str(region_names[idx])
+        if label in lut:
+            return lut[label]
+        return f"region {label}"
+
+    # ----------------------------
+    # Stats functions
+    # ----------------------------
+    def _nanmean(x):
+        return np.nanmean(x) if x.size > 0 else np.nan
+
+    def _nanstd(x):
+        return np.nanstd(x) if x.size > 0 else np.nan
+
+    stat_fns = {
+        "mean": _nanmean,
+        "nanmean": _nanmean,
+        "std": _nanstd,
+        "nanstd": _nanstd,
+        "max": lambda x: np.nanmax(x) if x.size > 0 else np.nan,
+        "min": lambda x: np.nanmin(x) if x.size > 0 else np.nan,
+        "median": lambda x: np.nanmedian(x) if x.size > 0 else np.nan,
+        "abs": lambda x: _nanmean(np.abs(x)),  # mean absolute value
+    }
+
+    stats = list(stats)
+    for s in stats:
+        if s not in stat_fns:
+            raise ValueError(f"Unsupported stat '{s}'. Supported: {list(stat_fns.keys())}")
+
+    # ----------------------------
+    # Loop over images and regions
+    # ----------------------------
+    rows = []
+
+    for img_idx, img_spec in enumerate(images, start=1):
+        img, img_name = _load_img(img_spec)
+        data = np.asarray(img.get_fdata())
+
+        if data.shape != atlas_data.shape:
+            raise ValueError(
+                "Atlas and image have different shapes. "
+                "Please reslice your image to the SUIT atlas grid first."
+            )
+
+        for r in region_labels:
+            mask = atlas_data == r
+            if not np.any(mask):
+                continue
+
+            roi_vals = data[mask]
+            size_mm3 = float(mask.sum() * voxel_vol_mm3)
+
+            row = {
+                "image": img_idx,
+                "image_name": img_name,
+                "atlas": atlas,
+                "map": maps,
+                "space": space,
+                "region": int(r),
+                "regionname": _region_name(int(r)),
+                "size": size_mm3,
+            }
+
+            for s in stats:
+                row[s] = float(stat_fns[s](roi_vals))
+
+            rows.append(row)
+
+    df = pd.DataFrame(rows)
+    if outfilename is not None:
+        # Save TXT (tab-delimited)
+        df.to_csv(outfilename, sep="\t", index=False)
+    
+        # --- Save Excel (.xlsx) 
+        # If outfilename ends with .txt → create same name with .xlsx
+        xlsx_filename = outfilename.replace(".txt", ".xlsx")
+        df.to_excel(xlsx_filename, index=False)
+        if verbose:
+            print(f"Saved TXT → {outfilename}")
+            print(f"Saved XLSX → {xlsx_filename}")
+
+    return df
+
