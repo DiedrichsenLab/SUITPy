@@ -8,9 +8,9 @@ The newest developments will be implemented in the Python version.
 .. toctree::
    :maxdepth: 1
    :caption: Contents:
-
+   
    install.rst
-   tutorials/1.quickstart_fMRI.ipynb
+   quickstart.rst
    isolate.rst
    tutorials/3.normalize_example.ipynb
    reslice.rst
