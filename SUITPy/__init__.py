@@ -5,7 +5,7 @@ import gzip
 
 __version__ = '2.0.0'
 
-from .atlas import (fetch_atlas)
+from .atlas import (fetch_atlas,summarize_data)
 
 from .flatmap import (vol_to_surf,
                     save_colorbar,

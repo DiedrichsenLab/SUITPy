@@ -11,7 +11,7 @@ import numpy as np
 import nibabel as nib
 import pandas as pd
 import requests
-from SUITPy.utils import _get_dataset_dir, _fetch_files
+import SUITPy.utils as utils
 
 def fetch_atlas(atlas, atlas_dir=None, maps = 'all', space='all',
                     base_url=None, resume=True, verbose=1):
@@ -54,7 +54,7 @@ def fetch_atlas(atlas, atlas_dir=None, maps = 'all', space='all',
         raise(NameError(f'{atlas} is found: Available atlases are {atlases}'))
 
     # Determine the download directory
-    atlas_dir = _get_dataset_dir(atlas,atlas_dir)
+    atlas_dir = utils._get_atlas_dir(atlas,atlas_dir)
 
 
     # get map names and description
@@ -101,15 +101,12 @@ def fetch_atlas(atlas, atlas_dir=None, maps = 'all', space='all',
         files.append((f, base_url + '/' + atlas + '/' + f, {}))
 
     # get local fullpath(s) of downloaded file(s)
-    fpaths = _fetch_files(atlas_dir, files, resume=resume, verbose=verbose)
+    fpaths = utils._fetch_files(atlas_dir, files, resume=resume, verbose=verbose)
 
     return dict({'data_dir': atlas_dir,
                 'files': fpaths,
                 'description': fdescr})
 
-
-#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-# ROI summarization
 
 def _read_lut(lut_path):
     """
@@ -134,25 +131,26 @@ def _read_lut(lut_path):
 
 def summarize_data(
     images,
-    atlas,
-    maps,
+    label_image = None,
+    atlas=None,
+    maps=None,
     space="SUIT",
     atlas_dir=None,
     stats=("mean", "std", "abs"),
     region_names=None,
     outfilename=None,
-    resume=True,
-    verbose=1,):
-    
+    verbose=1):
+
     """ Summarize the data from the images by the ROIs defined in the atlas map. Works optimally together with the files provided in the cerebellar atlas repository
 
     Args:
         images (list): List of str. Absolute paths of images to summarize
+        label_image (str or Nift1Image): Image file with with ROI/Atlas definition
         atlas (str): Name of the atlas (Diedrichsen_2009, King_2019, Nettekoven_2024, etc. )
         maps (str): Name of the map within the atlas (atl-Buckner7, atl-Anatomical)
         space (str): Default 'SUIT', space for the volumetric atlas file: 'SUIT', 'MNI', 'MNISym', etc.
         atlas_dir (str): Base directory of Cerebellar atlases, files will be in atlas_dir/atlas_name/..
-        stats (sequence of str): Default ('mean','std','abs'). Which statistics to compute inside each ROI. Supported keys: 'mean', 'nanmean', 'std', 'nanstd', 'max', 'min', 'median', 'abs'.
+        stats (sequence of str): Default ('nanmean'). Which statistics to compute inside each ROI. Supported keys: 'mean', 'nanmean', 'std', 'nanstd', 'max', 'min', 'median', 'abs'.
         region_names (sequence of str or None): Optional list of region names. If provided and length >= number of non-zero labels, it overrides names from the LUT.
         outfilename (str or None): If not None, write the resulting table as a tab-delimited text file.
     Returns:
@@ -164,9 +162,6 @@ def summarize_data(
                 - values: statistics in each region for each image
     """
 
-    # ----------------------------
-    # Image input
-    # ----------------------------
     if not isinstance(images, (list, tuple)):
         images = [images]
 
@@ -178,39 +173,25 @@ def summarize_data(
         else:
             raise TypeError("Images must be file paths or nibabel NIfTI images.")
 
-    # ----------------------------
-    # Fetch atlas files 
-    # ----------------------------
-    atlas_info = fetch_atlas(
-        atlas=atlas,
-        atlas_dir=atlas_dir,
-        maps=maps,
-        space=space,
-        resume=resume,
-        verbose=verbose,)
-    
-    fpaths = atlas_info["files"]
+    if label_image is None:
+        my_atlas_dir = utils._get_atlas_dir(atlas,atlas_dir,)
+        if my_atlas_dir is None:
+            raise(NameError(f'{atlas} not found. Set atlas_dir correctly or call suit.fetch_atlas {atlas}.'))
+        map_image_name  = os.path.join(my_atlas_dir,f"{maps}_space-{space}_dseg.nii")
+        lut_file_name =  os.path.join(my_atlas_dir,f"{maps}.lut")
 
-    # Find the label image and LUT for the requested map / space
-    label_img_path = None
-    lut_path = None
-    map_basename = maps  # e.g. 'atl-Buckner7'
-
-    for f in fpaths:
-        fname = os.path.basename(f)
-        if fname == f"{map_basename}_space-{space}_dseg.nii":
-            label_img_path = f
-        elif fname == f"{map_basename}.lut":
-            lut_path = f
-
-    if label_img_path is None:
+    if not os.path.isfile(map_image_name):
         raise FileNotFoundError(
             f"Could not find label image for map '{maps}' in space '{space}'. "
             "Make sure this combination exists in cerebellar_atlases."
         )
 
+    # Use read_lut in neuroimaging tools
+    if os.path.isfile(lut_file_name):
+        lut = _read_lut(lut_file_name)
+
     # Load atlas label image
-    atlas_img = nib.load(label_img_path)
+    atlas_img = nib.load(map_image_name)
     atlas_data = np.asarray(atlas_img.get_fdata()).astype(int)
     voxel_vol_mm3 = np.abs(np.linalg.det(atlas_img.affine[:3, :3]))
 
@@ -218,8 +199,6 @@ def summarize_data(
     region_labels = np.sort(np.unique(atlas_data))
     region_labels = region_labels[region_labels != 0]
 
-    # Region names from LUT (if present)
-    lut = _read_lut(lut_path) if lut_path is not None else {}
 
     # Optionally override with user-supplied names
     def _region_name(label):
@@ -299,14 +278,6 @@ def summarize_data(
     if outfilename is not None:
         # Save TXT (tab-delimited)
         df.to_csv(outfilename, sep="\t", index=False)
-    
-        # --- Save Excel (.xlsx) 
-        # If outfilename ends with .txt → create same name with .xlsx
-        xlsx_filename = outfilename.replace(".txt", ".xlsx")
-        df.to_excel(xlsx_filename, index=False)
-        if verbose:
-            print(f"Saved TXT → {outfilename}")
-            print(f"Saved XLSX → {xlsx_filename}")
 
     return df
 

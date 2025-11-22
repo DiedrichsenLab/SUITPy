@@ -3,13 +3,15 @@
 """
 Created on Wed Nov 19 12:57:40 2025
 
-@author: vashkani
+@author: vashkani, jdiedrichsen
 """
 
 from SUITPy.atlas import summarize_data
+import os
+base_dir = '/Users/jdiedrichsen/Python/SUITPy'
 
 def test_roi_summarize():
-    image_file = "/home/UWO/vashkani/Github/anatomical_sess-01_crop_space-SUIT_resliced_test.nii.gz"
+    image_file = os.path.join(base_dir,'docs','source','tutorials','MDTB08_Math.nii')
 
     df = summarize_data(
         images=[image_file],
@@ -17,9 +19,8 @@ def test_roi_summarize():
         maps="atl-Buckner7",
         space="SUIT",
         stats=("mean", "std", "abs"),
-        outfilename="buckner7_ROI_summary.txt"
+        outfilename=None
     )
-
     print(df.head())
     pass
 
