@@ -179,12 +179,14 @@ def summarize_data(
             raise(NameError(f'{atlas} not found. Set atlas_dir correctly or call suit.fetch_atlas {atlas}.'))
         map_image_name  = os.path.join(my_atlas_dir,f"{maps}_space-{space}_dseg.nii")
         lut_file_name =  os.path.join(my_atlas_dir,f"{maps}.lut")
-
-    if not os.path.isfile(map_image_name):
-        raise FileNotFoundError(
-            f"Could not find label image for map '{maps}' in space '{space}'. "
-            "Make sure this combination exists in cerebellar_atlases."
-        )
+        if not os.path.isfile(map_image_name):
+            raise FileNotFoundError(
+                f"Could not find label image for map '{maps}' in space '{space}'. "
+                "Make sure this combination exists in cerebellar_atlases."
+            )
+    else: 
+        map_image_file = label_image
+        
 
     # Use read_lut in neuroimaging tools
     if os.path.isfile(lut_file_name):
