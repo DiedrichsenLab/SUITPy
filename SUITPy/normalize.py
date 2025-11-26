@@ -76,7 +76,7 @@ def normalize(source_file, mask_file, space='SUIT', template_file=None, write_de
         if verbose:
             print(f"Saving the normalized image into {result_folder}")
     if write_deformation_field:
-        deformation_file = f"{result_folder}/{basename}_from-SUIT_mode-point_xfm.nii.gz"
+        deformation_file = f"{result_folder}/{basename}_to-SUIT_mode-image_xfm.nii.gz"
         built_xfm_from_ants(
             template_file=template_file,
             fwdtransforms=mytx["fwdtransforms"],
