@@ -19,7 +19,7 @@ def fetch_atlas(atlas, atlas_dir=None, maps = 'all', space='all',
     """Download and install cerebellar atlas maps from github.com/DiedrichsenLab/cerebellar_atlases
 
     Args:
-        atlas (str): Name of the atlas (Diedrichsen_2009, King_2019, Nettekoven_2024, etc. )
+        atlas (str): Name of the atlas (Diedrichsen_2009, King_2019, etc. )
         atlas_dir (str): Base directory of Cerebellar atlases, files will be in atlas_dir/atlas_name/..
         maps (list or str): Which maps to download within the altas (i.e. atl-Buckner7)
         space (str): Volumetric files should be in 'SUIT', 'MNI', or 'MNISym' space (default 'all')
@@ -120,11 +120,11 @@ def _read_lut(fname):
         colors (ndarray): N x 3 ndarray of colors
         labels (list): List of labels
     """
-    L = pd.read_csv(fname, header=None, sep=" ", names=["ind", "R", "G", "B", "label"])
+    L = pd.read_csv(fname,header=None,sep=' ',names=['ind','R','G','B','label'])
     index = L.ind.to_numpy()
-    colors = np.c_[L.R.to_numpy(), L.G.to_numpy(), L.B.to_numpy()]
+    colors = np.c_[L.R.to_numpy(),L.G.to_numpy(),L.B.to_numpy()]
     labels = list(L.label)
-    return index, colors, labels
+    return index,colors,labels
 
 
 # Helper functions
@@ -164,7 +164,7 @@ def summarize_data(
     maps=None,
     space="SUIT",
     atlas_dir=None,
-    stats=("mean", "std", "abs"),
+    stats=("nanmean", "nanstd"),
     region_names=None,
     outfilename=None,
     verbose=1,):
@@ -202,8 +202,7 @@ def summarize_data(
             directory used by SUITPy is used.
         stats (sequence of str):
             Which statistics to compute inside each ROI. Supported keys:
-            'mean', 'nanmean', 'std', 'nanstd', 'max', 'min',
-            'median', 'abs' (mean absolute value).
+            'mean', 'nanmean', 'std', 'nanstd'.
         region_names (sequence of str or None):
             Optional list of region names. If provided and length >= number of
             non-zero labels, it overrides names from the LUT.
@@ -308,10 +307,6 @@ def summarize_data(
         "nanmean": _nanmean,
         "std": _nanstd,
         "nanstd": _nanstd,
-        "max": lambda x: np.nanmax(x) if x.size > 0 else np.nan,
-        "min": lambda x: np.nanmin(x) if x.size > 0 else np.nan,
-        "median": lambda x: np.nanmedian(x) if x.size > 0 else np.nan,
-        "abs": lambda x: _nanmean(np.abs(x)),
     }
 
     stats = list(stats)
