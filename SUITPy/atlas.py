@@ -252,14 +252,12 @@ def summarize_data(
     # CASE B — USE CEREBELLAR ATLAS 
     else:
         if atlas is None or maps is None:
-            raise ValueError(
-                "If no 'label_image' is provided, both 'atlas' and 'maps' must be specified.")
+            raise ValueError("If no 'label_image' is provided, both 'atlas' and 'maps' must be specified.")
 
         atlas_path = utils._get_atlas_dir(atlas, atlas_dir)
 
         if atlas_path is None or not os.path.isdir(atlas_path):
-            raise FileNotFoundError(
-                f"Atlas '{atlas}' not found in: {atlas_dir}\n"
+            raise FileNotFoundError(f"Atlas '{atlas}' not found in: {atlas_dir}\n"
                 "Please download it manually using fetch_atlas(atlas=..., atlas_dir=...).")
 
         map_file = os.path.join(atlas_path, f"{maps}_space-{space}_dseg.nii")
@@ -276,8 +274,7 @@ def summarize_data(
                 f"atlas_dir=r'{atlas_dir}', "
                 f"maps='{maps}', space='{space}', "
                 "base_url=None)\n\n"
-                "After this has finished successfully, rerun roi_summarize()."
-            )
+                "After this has finished successfully, rerun roi_summarize().")
 
         atlas_img = nib.load(map_file)
 
@@ -285,7 +282,8 @@ def summarize_data(
         lut_file = os.path.join(atlas_path, f"{maps}.lut")
         if os.path.isfile(lut_file):
             index, colors, labels = _read_lut(lut_file)
-            lut = {int(i): lab for i, lab in zip(index, colors, labels)}
+            # FIX: map index -> label (do not try to unpack colors here)
+            lut = {int(i): lbl for i, lbl in zip(index, labels)}
 
     # Extract region IDs
     atlas_data = np.asarray(atlas_img.get_fdata()).astype(int)
@@ -296,18 +294,14 @@ def summarize_data(
 
     # Precompute atlas-voxel world coordinates for resampling
     nx, ny, nz = atlas_data.shape
-    ii, jj, kk = np.meshgrid(
-        np.arange(nx), np.arange(ny), np.arange(nz), indexing="ij"
-    )
+    ii, jj, kk = np.meshgrid(np.arange(nx), np.arange(ny), np.arange(nz), indexing="ij")
     xm, ym, zm = affine_transform(ii, jj, kk, atlas_img.affine)
 
     # Stats functions
-    stat_fns = {
-        "mean": _nanmean,
+    stat_fns = {"mean": _nanmean,
         "nanmean": _nanmean,
         "std": _nanstd,
-        "nanstd": _nanstd,
-    }
+        "nanstd": _nanstd,}
 
     stats = list(stats)
     for s in stats:
@@ -322,37 +316,77 @@ def summarize_data(
         data = img.get_fdata()
 
         # If image is not in the same voxel grid, resample into atlas space
-        if data.shape != atlas_data.shape:
+        # For 4D images we check only the spatial part (first 3 dims)
+        if data.ndim < 3:
+            raise ValueError("Input image must be at least 3D.")
+        if data.shape[:3] != atlas_data.shape:
             if verbose:
-                print(
-                    f"Resampling image '{img_name}' from shape {data.shape} "
-                    f"to atlas shape {atlas_data.shape}."
-                )
-            data = sample_image(img, xm, ym, zm, interpolation=1)
+                print(f"Resampling image '{img_name}' from shape {data.shape} "
+                    f"to atlas spatial shape {atlas_data.shape}.")
+            if data.ndim == 3:
+                # 3D case: same as before
+                data = sample_image(img, xm, ym, zm, interpolation=1)
+            elif data.ndim == 4:
+                # 4D case: resample each frame separately into atlas space
+                n_frames = data.shape[3]
+                resampled = np.zeros(atlas_data.shape + (n_frames,), dtype=float)
+                for t in range(n_frames):
+                    frame_img = nib.Nifti1Image(data[..., t], img.affine)
+                    resampled[..., t] = sample_image(frame_img, xm, ym, zm, interpolation=1)
+                data = resampled
+            else:
+                raise ValueError("Images with more than 4 dimensions are not supported.")
 
-        for r in region_labels:
-            mask = (atlas_data == r)
-            if not np.any(mask):
-                continue
+        # Now handle 3D vs 4D summarization
+        if data.ndim == 3:
+            # Single 3D volume -> treat as frame 0
+            frame_indices = [0]
+        elif data.ndim == 4:
+            # 4D NIfTI: iterate over each frame sequentially
+            frame_indices = range(data.shape[3])
+        else:
+            raise ValueError("Images with more than 4 dimensions are not supported.")
 
-            roi_vals = data[mask]
-            vol = mask.sum() * voxel_vol
+        is_4d = (data.ndim == 4)
 
-            row = {
-                "image": idx,
-                "image_name": img_name,
-                "atlas": atlas,
-                "map": maps,
-                "space": space,
-                "region": int(r),
-                "regionname": _region_name(int(r), lut, region_names),
-                "size": float(vol),
-            }
+        for frame in frame_indices:
+            # Select the appropriate 3D volume
+            if data.ndim == 3:
+                frame_data = data
+            else:
+                frame_data = data[..., frame]
 
-            for s in stats:
-                row[s] = float(stat_fns[s](roi_vals))
+            # Decide how to label image / image_name
+            if is_4d:
+                image_id = int(frame)
+                image_name_frame = f"{img_name}_frame{frame:04d}"
+            else:
+                image_id = idx
+                image_name_frame = img_name
 
-            rows.append(row)
+            for r in region_labels:
+                mask = (atlas_data == r)
+                if not np.any(mask):
+                    continue
+
+                roi_vals = frame_data[mask]
+                vol = mask.sum() * voxel_vol
+
+                row = {
+                    "image": image_id,
+                    "image_name": image_name_frame,
+                    "atlas": atlas,
+                    "map": maps,
+                    "space": space,
+                    "frame": int(frame),  # 0 for 3D, 0..T-1 for 4D
+                    "region": int(r),
+                    "regionname": _region_name(int(r), lut, region_names),
+                    "size": float(vol),}
+
+                for s in stats:
+                    row[s] = float(stat_fns[s](roi_vals))
+
+                rows.append(row)
 
     df = pd.DataFrame(rows)
     
