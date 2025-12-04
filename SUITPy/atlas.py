@@ -14,8 +14,8 @@ import SUITPy.utils as utils
 from nitools.volume import sample_image, affine_transform
 
 
-def fetch_atlas(atlas, atlas_dir=None, maps = 'all', space='all',
-                    base_url=None, resume=True, verbose=1):
+def fetch_atlas(atlas, atlas_dir=None, maps = 'all', space='all', 
+                base_url=None, resume=True, verbose=1):
     """Download and install cerebellar atlas maps from github.com/DiedrichsenLab/cerebellar_atlases
 
     Args:
@@ -183,7 +183,8 @@ def summarize_data(
           directly and ignore the atlas / maps / space for determining
           ROIs.
         - If images are not in the same voxel grid as the label image / atlas,
-          they are resampled into atlas voxel space using the affine transform.
+          they are resampled into a common space using the affine transform
+          (here: the atlas is resampled into the data image space).
 
     Args:
         images (list or str or nib image):
@@ -278,7 +279,7 @@ def summarize_data(
 
         atlas_img = nib.load(map_file)
 
-        # Read atlas LUT using YOUR exact function
+        # Read atlas LUT 
         lut_file = os.path.join(atlas_path, f"{maps}.lut")
         if os.path.isfile(lut_file):
             index, colors, labels = _read_lut(lut_file)
@@ -291,11 +292,6 @@ def summarize_data(
 
     region_labels = np.unique(atlas_data)
     region_labels = region_labels[region_labels != 0]
-
-    # Precompute atlas-voxel world coordinates for resampling
-    nx, ny, nz = atlas_data.shape
-    ii, jj, kk = np.meshgrid(np.arange(nx), np.arange(ny), np.arange(nz), indexing="ij")
-    xm, ym, zm = affine_transform(ii, jj, kk, atlas_img.affine)
 
     # Stats functions
     stat_fns = {"mean": _nanmean,
@@ -315,29 +311,34 @@ def summarize_data(
         img, img_name = _load_img(img_path)
         data = img.get_fdata()
 
-        # If image is not in the same voxel grid, resample into atlas space
-        # For 4D images we check only the spatial part (first 3 dims)
+        # If image is not in the same voxel grid, resample data into atlas space
         if data.ndim < 3:
             raise ValueError("Input image must be at least 3D.")
-        if data.shape[:3] != atlas_data.shape:
-            if verbose:
-                print(f"Resampling image '{img_name}' from shape {data.shape} "
-                    f"to atlas spatial shape {atlas_data.shape}.")
-            if data.ndim == 3:
-                # 3D case: same as before
-                data = sample_image(img, xm, ym, zm, interpolation=1)
-            elif data.ndim == 4:
-                # 4D case: resample each frame separately into atlas space
-                n_frames = data.shape[3]
-                resampled = np.zeros(atlas_data.shape + (n_frames,), dtype=float)
-                for t in range(n_frames):
-                    frame_img = nib.Nifti1Image(data[..., t], img.affine)
-                    resampled[..., t] = sample_image(frame_img, xm, ym, zm, interpolation=1)
-                data = resampled
-            else:
-                raise ValueError("Images with more than 4 dimensions are not supported.")
 
-        # Now handle 3D vs 4D summarization
+        if (data.shape[:3] != atlas_data.shape) or (not np.allclose(img.affine, atlas_img.affine)):
+            if verbose:
+                print(
+                    f"Resampling atlas to data space for image '{img_name}'. "
+                    f"Data shape: {data.shape[:3]}, atlas shape: {atlas_data.shape}.")
+
+            nx_d, ny_d, nz_d = data.shape[:3]
+            id_, jd, kd = np.meshgrid(
+                np.arange(nx_d),
+                np.arange(ny_d),
+                np.arange(nz_d),
+                indexing="ij")
+
+            # DATA ijk -> WORLD xyz
+            xd, yd, zd = affine_transform(id_, jd, kd, img.affine)
+
+            # WORLD xyz -> ATLAS labels
+            atlas_in_data = sample_image(atlas_img, xd, yd, zd, interpolation=0)
+            atlas_in_data = np.nan_to_num(atlas_in_data, nan=0).astype(int)
+        else:
+            # same grid / affine: use atlas labels directly
+            atlas_in_data = atlas_data
+
+        
         if data.ndim == 3:
             # Single 3D volume -> treat as frame 0
             frame_indices = [0]
@@ -350,13 +351,11 @@ def summarize_data(
         is_4d = (data.ndim == 4)
 
         for frame in frame_indices:
-            # Select the appropriate 3D volume
             if data.ndim == 3:
                 frame_data = data
             else:
                 frame_data = data[..., frame]
 
-            # Decide how to label image / image_name
             if is_4d:
                 image_id = int(frame)
                 image_name_frame = f"{img_name}_frame{frame:04d}"
@@ -365,7 +364,7 @@ def summarize_data(
                 image_name_frame = img_name
 
             for r in region_labels:
-                mask = (atlas_data == r)
+                mask = (atlas_in_data == r)
                 if not np.any(mask):
                     continue
 
