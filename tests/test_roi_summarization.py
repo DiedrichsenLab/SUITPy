@@ -18,7 +18,6 @@ def test_roi_summarize():
         atlas="Buckner_2011",
         maps="atl-Buckner7",
         space="SUIT",
-        stats=("mean", "std", "abs"),
         outfilename=None
     )
     print(df.head())
@@ -27,5 +26,5 @@ def test_roi_summarize():
 
 if __name__ == "__main__":
     # test other functions if needed
-    test_roi_summarize()
+    T=test_roi_summarize()
     pass

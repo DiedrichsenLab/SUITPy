@@ -168,8 +168,6 @@ def summarize_data(
     region_names=None,
     outfilename=None,
     verbose=1,):
-    
-    
     """Summarize the data from the images by ROIs defined in a label image.
 
     This works optimally with the files provided in the cerebellar atlas
@@ -182,9 +180,8 @@ def summarize_data(
         - If you provide `label_image`, the function will use that image
           directly and ignore the atlas / maps / space for determining
           ROIs.
-        - If images are not in the same voxel grid as the label image / atlas,
-          they are resampled into a common space using the affine transform
-          (here: the atlas is resampled into the data image space).
+        - The data images need to be in the same common atlas space (SUIT / MNI) 
+          as the label_image, but they do not be stored in the same voxel grid. 
 
     Args:
         images (list or str or nib image):
@@ -264,18 +261,9 @@ def summarize_data(
         map_file = os.path.join(atlas_path, f"{maps}_space-{space}_dseg.nii")
         if not os.path.isfile(map_file):
             raise FileNotFoundError(
-                "Atlas label image not found on disk.\n"
-                f"  Expected file:\n"
-                f" img_path\n\n"
-                "You need to download this atlas first from "
-                "https://github.com/DiedrichsenLab/cerebellar_atlases. "
-                "In Python, run:\n\n"
-                "    from SUITPy.atlas import fetch_atlas\n"
-                f"    fetch_atlas(atlas='{atlas}', "
-                f"atlas_dir=r'{atlas_dir}', "
-                f"maps='{maps}', space='{space}', "
-                "base_url=None)\n\n"
-                "After this has finished successfully, rerun roi_summarize().")
+                f"Atlas label image not found. Expected file: {map_file}\n"
+                "You can find standard atlases in: https://github.com/DiedrichsenLab/cerebellar_atlases.\n"
+                "or see https://suitpy.readthedocs.io/en/latest/atlases.html")
 
         atlas_img = nib.load(map_file)
 
@@ -391,7 +379,7 @@ def summarize_data(
     
     # File output
     if outfilename is not None:
-        # Save TXT (tab-delimited)
+        # Save TSV (tab-delimited)
         df.to_csv(outfilename, sep="\t", index=False)
 
         # Save Excel (.xlsx)
