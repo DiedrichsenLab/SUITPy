@@ -72,7 +72,7 @@ def normalize(source_file, mask_file, space='SUIT', template_file=None,
     prefix = f'{result_folder}/{basename}_xfm-{space}_'
     mytx = ants.registration(fixed=template_img,moving=masked_source_img,
                              type_of_transform=type_of_transform,
-                             outprefix=prefix,write_composite_transform=True,
+                             outprefix=prefix,write_composite_transform=False,
                              verbose=verbose)
 
     # Compose taffine + warp → displacement field
