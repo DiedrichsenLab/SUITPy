@@ -92,8 +92,7 @@ def normalize(source_file, mask_file, space='SUIT', template_file=None,
         normalized_file = f'{result_folder}/{basename}_space-{space}.nii.gz'
         if verbose:
             print(f"Saving the normalized image into {normalized_file}")
-        normalized_img = ants.apply_transforms(fixed=template_img,moving=masked_source_img,transformlist=mytx['fwdtransforms'],interpolator='linear',verbose=verbose)
-        ants.image_write(normalized_img, normalized_file)
+        ants.image_write(mytx['warpedmovout'], normalized_file)
 
     # Write the deformation field for reslice images from subject to template space
     if write_deformation_field:
