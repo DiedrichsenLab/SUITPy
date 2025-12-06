@@ -13,28 +13,33 @@ from nibabel.affines import apply_affine
 
 
 
-def normalize(source_file, mask_file, space='SUIT', template_file=None, write_deformation_field=True, write_normalized_image=True, result_folder=None, verbose=True):
+def normalize(source_file, mask_file, space='SUIT', template_file=None, 
+              type_of_transform='antsRegistrationSyN[s]', write_normalized_image=True, 
+              write_deformation_field=True, write_jacobian_determinant=True,
+              result_folder=None, verbose=False):
     """
     Normalizes a T1w image to the SUIT template using ANTsPy
 
     Args:
-        source_file (str): File name (wuth path) to the source T1w image
-        mask_file (str): File name (with path) to the cerebellar mask image
+        source_file (str): Path to the source T1w image
+        mask_file (str): Path to the cerebellar mask image
         space (str): Cerebellar-only template (`SUIT`, `MNI152NLin6AsymC` / 'MNI', `MNI152NLin2009cSymC` / 'MNISym')
         template_file (str): Optional path to a custom template file
-        write_deformation_file (bool): Whether to write the deformation file to disk
-        write_normalized_image (bool): Whether to write the normalized image to disk
-        verbose (bool): Whether to print out status information during processing
+        type_of_transform (str): ANTs registration type (e.g., 'antsRegistrationSyN[s]')
+        write_normalized_image (bool): Save normalized (template-space) T1 image
+        write_deformation_file (bool): Save deformation field y(x) for reslice other images
+        write_jacobian_determinant (bool): Compute & save log-Jacobian determinant
+        result_folder (str): Output folder. If None, uses same folder as source file
+        verbose (bool): Print detailed logs
 
     Returns:
-        mytx (dict): A dictionary returned by `ants.registration`, containing:
-            warpedmovout (ants.ANTsImage): The moving image warped into template space
-            warpedfixout (ants.ANTsImage): The fixed image warped into moving space (rarely used)
-            fwdtransforms (str): Paths to the forward transforms
-            invtransforms (str): Paths to the inverse transforms
-            deformation_file (str): Paths to the deformation file for reslice
-            Other registration metadata such as metric values, iterations, and composite transforms
-
+        dict: A dictionary containing:
+            fwdtransforms (str): Path to forward transforms
+            invtransforms (str): Path to inverse transforms
+            displacement_file (str): Path to composite displacement field
+            deformation_file (str): Path to deformation field (or None)
+            normalized_file (str): Path to normalized image in template space (or None)
+            jacobian_file (str): Path to log-Jacobian determinant map (or None)
     """
     # Get result folder and base name
     result_folder = os.path.dirname(os.path.abspath(source_file)) if result_folder is None else result_folder
@@ -42,9 +47,10 @@ def normalize(source_file, mask_file, space='SUIT', template_file=None, write_de
     if basename[1] == '.gz':
         basename = os.path.splitext(basename[0])
     basename = basename[0]
-    # load source image
     source_img = ants.image_read(source_file)
     mask_img = ants.image_read(mask_file)
+    # mask the source image and normalize 
+    masked_source_img = source_img * mask_img
 
     # Determine name of template file
     if template_file is None:
@@ -60,48 +66,90 @@ def normalize(source_file, mask_file, space='SUIT', template_file=None, write_de
         raise(NameError(f'Unknown template {template}: Set space to `SUIT`, `MNI` /`MNI152NLin6AsymC`, `MNISym`/`MNI152NLin2009cSymC` or provide custom template_file'))
     template_img = ants.image_read(template_file)
 
-    # mask the source image and normalize 
+    # ANTs Registration
+    if verbose:
+        print(f"Registering to template of {template_file}")
     prefix = f'{result_folder}/{basename}_xfm-{space}_'
-    masked_source_img = source_img * mask_img
+    mytx = ants.registration(fixed=template_img,moving=masked_source_img,
+                             type_of_transform=type_of_transform,
+                             outprefix=prefix,write_composite_transform=True,
+                             verbose=verbose)
+
+    # Compose taffine + warp → displacement field
+    displacement_file = f"{result_folder}/{basename}_to-SUIT_mode-image_disp.nii.gz"
+    ants.apply_transforms(
+        fixed=template_img,
+        moving=masked_source_img.clone('float'),
+        transformlist=[f'{prefix}1Warp.nii.gz', f'{prefix}0GenericAffine.mat'],
+        whichtoinvert=[False, False],
+        compose=f'{prefix}')
+    os.rename(f'{prefix}comptx.nii.gz', displacement_file)
     if verbose:
-        print(f"registering to template of {template_file}")
-    mytx = ants.registration(fixed=template_img,moving=masked_source_img,type_of_transform='SyN',outprefix=prefix,write_composite_transform=True)
-    if verbose:
-        print(f"Saving the forward transforms into {mytx['fwdtransforms']}")
+        print(f"Saving the displacement field into {displacement_file}")
 
     # Write the normalized image in template space
     if write_normalized_image:
-        normalized_img = ants.apply_transforms(fixed=template_img,moving=masked_source_img,transformlist=mytx['fwdtransforms'],interpolator='linear')
-        ants.image_write(normalized_img, f'{result_folder}/{basename}_space-{space}.nii.gz')
+        normalized_file = f'{result_folder}/{basename}_space-{space}.nii.gz'
         if verbose:
-            print(f"Saving the normalized image into {result_folder}")
+            print(f"Saving the normalized image into {normalized_file}")
+        normalized_img = ants.apply_transforms(fixed=template_img,moving=masked_source_img,transformlist=mytx['fwdtransforms'],interpolator='linear',verbose=verbose)
+        ants.image_write(normalized_img, normalized_file)
+
+    # Write the deformation field for reslice images from subject to template space
     if write_deformation_field:
         deformation_file = f"{result_folder}/{basename}_to-SUIT_mode-image_xfm.nii.gz"
-        built_xfm_from_ants(
-            template_file=template_file,
-            fwdtransforms=mytx["fwdtransforms"],
-            deformation_file=deformation_file
-        )
         if verbose:
             print(f"Saving the deformation field into {deformation_file}")
-        mytx["deformation_file"] = deformation_file
-    return mytx
+        deformation_from_displacement(
+            template_file=template_file,
+            displacement_file=displacement_file,
+            deformation_file=deformation_file,
+            verbose=verbose
+        )
+
+    # Write the Jacobian determinant image for vbm analysis
+    if write_jacobian_determinant:
+        jacobian_file = f"{result_folder}/{basename}_to-SUIT_mode-image_detJ.nii.gz"
+        # Jacobian settings
+        use_log = True      # log-Jacobian
+        use_geom = True     # geometric Jacobian
+        jac_img = ants.create_jacobian_determinant_image(
+            domain_image=template_img,
+            tx=displacement_file,
+            do_log=use_log,
+            geom=use_geom
+        )
+        jac_img.to_filename(jacobian_file)
+        if verbose:
+            print(f"Computing Jacobian: geom={use_geom}, log={use_log},\
+                    Saving the Jacobian determinant into {jacobian_file}")
+    
+    # Lightweight return dictionary (no ANTsImages)
+    return {
+        "fwdtransforms": mytx["fwdtransforms"],
+        "invtransforms": mytx["invtransforms"],
+        "displacement_file": displacement_file,
+        "deformation_file": deformation_file if write_deformation_field else None,
+        "normalized_file": normalized_file if write_normalized_image else None,
+        "jacobian_file": jacobian_file if write_jacobian_determinant else None,
+        }   
 
 
 
-def built_xfm_from_ants(template_file, fwdtransforms, deformation_file):
+def deformation_from_displacement(template_file, displacement_file, deformation_file, verbose=False):
     """
-    Generate a SUIT-compatible point-to-point deformation field y(x) that maps 
-    voxel coordinates in the template space into world coordinates of the 
-    subject space.
+    Convert an ANTs composite displacement field into a deformation field y(x) that maps 
+    voxel coordinates in the template space into world coordinates of the subject space.
+    Importantly, point mapping goes the opposite direction of image mapping, 
+    for both reasons of convention and engineering.
 
     Args:
-        template_file (str): Path to the template image from which voxel coordinates are defined.
-        fwdtransforms (str): The forward (template→subject) transform specification produced by ANTs.
-        deformation_file (str): Output filename for the resulting deformation field NIfTI image.
+        template_file (str): Path to the template image (defines grid, affine, spacing)
+        displacement_file (str): Path to ANTs displacement field.
+        deformation_file (str): Output filename for the resulting deformation field.
 
     Returns:
-        deformation_file (str): The path to the saved deformation field.
+        deformation_file (str): Path to the saved deformation field.
 
     """
     # Load template
@@ -128,7 +176,7 @@ def built_xfm_from_ants(template_file, fwdtransforms, deformation_file):
     pts_lps_subj = ants.apply_transforms_to_points(
         dim=3,
         points=df_pts,
-        transformlist=fwdtransforms if isinstance(fwdtransforms, list) else [fwdtransforms]
+        transformlist=displacement_file if isinstance(displacement_file, list) else [displacement_file]
     )
     pts_lps_subj = pts_lps_subj[["x","y","z"]].values
 
