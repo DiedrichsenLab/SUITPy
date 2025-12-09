@@ -1,3 +1,11 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Created on Tue Dec  9 09:08:44 2025
+
+@author: vashkani, jdiedrichsen
+"""
+
 """
 Importing Cerebellar atlases and templates from the cerebellar atlas
 repository
@@ -12,7 +20,7 @@ import pandas as pd
 import requests
 import SUITPy.utils as utils
 from nitools.volume import sample_image, affine_transform
-
+from nitools.color import read_lut
 
 def fetch_atlas(atlas, atlas_dir=None, maps = 'all', space='all', 
                 base_url=None, resume=True, verbose=1):
@@ -109,24 +117,6 @@ def fetch_atlas(atlas, atlas_dir=None, maps = 'all', space='all',
                 'description': fdescr})
 
 
-def _read_lut(fname):
-    """Reads a Lookuptable file
-
-    Args:
-        fname (str): Filename
-
-    Returns:
-        index (ndarray): Numerical keys
-        colors (ndarray): N x 3 ndarray of colors
-        labels (list): List of labels
-    """
-    L = pd.read_csv(fname,header=None,sep=' ',names=['ind','R','G','B','label'])
-    index = L.ind.to_numpy()
-    colors = np.c_[L.R.to_numpy(),L.G.to_numpy(),L.B.to_numpy()]
-    labels = list(L.label)
-    return index,colors,labels
-
-
 # Helper functions
 def _load_img(img_obj):
     """Load file path or nibabel image into nibabel image"""
@@ -167,7 +157,7 @@ def summarize_data(
     stats=("nanmean", "nanstd"),
     region_names=None,
     outfilename=None,
-    verbose=1,):
+    verbose=0,):
     """Summarize the data from the images by ROIs defined in a label image.
 
     This works optimally with the files provided in the cerebellar atlas
@@ -242,11 +232,20 @@ def summarize_data(
         images = [images]
 
     lut = None
+    atlas_col = None
+    map_col = None
+    space_col = None
 
     # CASE A — USER PROVIDED CUSTOM LABEL IMAGE (NO ATLAS REQUIRED)
     if label_image is not None:
-        atlas_img, _ = _load_img(label_image)
-    
+        atlas_img, label_name = _load_img(label_image)
+        # Use label image file name in the "atlas" column
+        atlas_col = label_name
+        # Only include map/space columns if both are explicitly provided
+        if (maps is not None) and (space is not None):
+            map_col = maps
+            space_col = space
+
     # CASE B — USE CEREBELLAR ATLAS 
     else:
         if atlas is None or maps is None:
@@ -270,9 +269,13 @@ def summarize_data(
         # Read atlas LUT 
         lut_file = os.path.join(atlas_path, f"{maps}.lut")
         if os.path.isfile(lut_file):
-            index, colors, labels = _read_lut(lut_file)
-            # FIX: map index -> label (do not try to unpack colors here)
+            index, colors, labels = read_lut(lut_file)
             lut = {int(i): lbl for i, lbl in zip(index, labels)}
+
+        # Use atlas metadata in columns
+        atlas_col = atlas
+        map_col = maps
+        space_col = space
 
     # Extract region IDs
     atlas_data = np.asarray(atlas_img.get_fdata()).astype(int)
@@ -328,7 +331,7 @@ def summarize_data(
 
         
         if data.ndim == 3:
-            # Single 3D volume -> treat as frame 0
+            # Single 3D volume -> consider as frame 0
             frame_indices = [0]
         elif data.ndim == 4:
             # 4D NIfTI: iterate over each frame sequentially
@@ -362,13 +365,18 @@ def summarize_data(
                 row = {
                     "image": image_id,
                     "image_name": image_name_frame,
-                    "atlas": atlas,
-                    "map": maps,
-                    "space": space,
-                    "frame": int(frame),  # 0 for 3D, 0..T-1 for 4D
+                    "frame": int(frame),  
                     "region": int(r),
                     "regionname": _region_name(int(r), lut, region_names),
                     "size": float(vol),}
+
+                # Conditionally add atlas/map/space columns
+                if atlas_col is not None:
+                    row["atlas"] = atlas_col
+                if map_col is not None:
+                    row["map"] = map_col
+                if space_col is not None:
+                    row["space"] = space_col
 
                 for s in stats:
                     row[s] = float(stat_fns[s](roi_vals))
@@ -379,22 +387,28 @@ def summarize_data(
     
     # File output
     if outfilename is not None:
-        # Save TSV (tab-delimited)
-        df.to_csv(outfilename, sep="\t", index=False)
+        out_lower = outfilename.lower()
 
-        # Save Excel (.xlsx)
-        if outfilename.lower().endswith(".txt"):
-            xlsx_filename = outfilename[:-4] + ".xlsx"
+        if out_lower.endswith(".txt"):
+            # Save TXT 
+            df.to_csv(outfilename, sep="\t", index=False)
+            if verbose:
+                print(f"Saved TXT --> {outfilename}")
+        elif out_lower.endswith(".tsv"):
+            # Save TSV 
+            df.to_csv(outfilename, sep="\t", index=False)
+            if verbose:
+                print(f"Saved TSV --> {outfilename}")
+        elif out_lower.endswith(".xlsx"):
+            # Save Excel 
+            df.to_excel(outfilename, index=False)
+            if verbose:
+                print(f"Saved XLSX --> {outfilename}")
         else:
-            xlsx_filename = outfilename + ".xlsx"
-        df.to_excel(xlsx_filename, index=False)
-
-        if verbose:
-            print(f"Saved TXT → {outfilename}")
-            print(f"Saved XLSX → {xlsx_filename}")
-            
-    
-    if outfilename is not None:
-        df.to_csv(outfilename, sep="\t", index=False)
+            # No recognized extension, default to .tsv
+            tsv_filename = outfilename + ".tsv"
+            df.to_csv(tsv_filename, sep="\t", index=False)
+            if verbose:
+                print(f"No valid extension specified; saved TSV --> {tsv_filename}")
 
     return df
