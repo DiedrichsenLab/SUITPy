@@ -768,8 +768,6 @@ def _load_model(params_file: str):
     load model with pretrained weights
 
     Args:
-        model: (Unet)
-            Unet model
         params_file: (string)
             path to the pretrained weights
 
@@ -792,8 +790,6 @@ def predict(params_file: str, t1: np.ndarray = None, t2: np.ndarray = None) -> n
     Run a prediction on a single subject using a trained UNet model
 
     Args:
-        model: (Unet)
-            Unet model
         params_file: (string)
             filename of the pretrained weights
         t1: (ndarray)
@@ -819,17 +815,15 @@ def predict(params_file: str, t1: np.ndarray = None, t2: np.ndarray = None) -> n
     mask = net(t1, t2)
     return mask[0][0]
 
-def from_nibabel(nib_image):
+def from_nibabel(nib_image: nib.Nifti1Image) -> ants.ANTsImage:
     """
     Converts a given Nifti image into an ANTsPy image
     (https://antspy.readthedocs.io/en/latest/index.html)
 
-    Parameters
-    ----------
+    Args:
         img: NiftiImage
 
-    Returns
-    -------
+    Returns:
         ants_image: ANTsImage
     """
     fd, tmpfile = mkstemp(suffix=".nii.gz")
@@ -840,7 +834,7 @@ def from_nibabel(nib_image):
     return new_img
 
 
-def img_read(path):
+def img_read(path: str) -> ants.ANTsImage:
     """
     basic function to read a nifti image
     Args:
@@ -860,13 +854,13 @@ def img_read(path):
     return new_img
 
 
-class TemplateCerebellarBoundingBox(object):
+class TemplateCerebellarBoundingBox:
     """
         Basic cerebellar bounding box class, which defines the cropped area.
         All other template implementations should be registered to this template.
     """
 
-    def __init__(self, name='MNI152NLin6Asym', bounding_box=None, cerebellar_center=None, cropped_size=None):
+    def __init__(self, name: str ='MNI152NLin6Asym', bounding_box: np.ndarray = None, cerebellar_center: np.ndarray = None, cropped_size: np.ndarray = None):
         """
         Create a bounding box
 
@@ -900,7 +894,7 @@ class TemplateCerebellarBoundingBox(object):
         self.brain = ants.mask_image(self.template, self.brainmask)
         self.affine = nib.load(os.path.join(base_dir, f'templates/tpl-{name}_T1w.nii.gz')).affine
 
-    def get_crop_indices(self):
+    def get_crop_indices(self) -> np.ndarray:
         """
         calculate the lower left and upper right indices of the cropped area (in voxels).
 
@@ -910,7 +904,7 @@ class TemplateCerebellarBoundingBox(object):
         """
         return nitools.coords_to_voxelidxs(self.bounding_box.T, self.nib_template).T
 
-    def get_cropped_affine(self):
+    def get_cropped_affine(self) -> np.ndarray:
         """
         get the cropped area affine
 
@@ -926,7 +920,7 @@ class TemplateCerebellarBoundingBox(object):
 
         return affine
 
-    def registration(self, img, type_of_transform='Affine'):
+    def registration(self, img: ants.ANTsImage, type_of_transform: str = 'Similarity') -> ants.ANTsTransform:
         """
         register the image to this template
 
@@ -946,7 +940,7 @@ class TemplateCerebellarBoundingBox(object):
 
         return trans
 
-    def registration_brain(self, img, type_of_transform='Affine'):
+    def registration_brain(self, img: ants.ANTsImage, type_of_transform: str = 'Similarity') -> ants.ANTsTransform:
         """
         register the image to this template using the brain. The input image should be brain only.
 
@@ -966,7 +960,7 @@ class TemplateCerebellarBoundingBox(object):
 
         return trans
 
-    def crop(self, img, trans=None):
+    def crop(self, img: ants.ANTsImage, trans: ants.ANTsTransform = None) -> Tuple[ants.ANTsImage, ants.ANTsImage]:
         """
         Crop the cerebellar area using the bounding box.
 
@@ -988,7 +982,7 @@ class TemplateCerebellarBoundingBox(object):
             img = ants.apply_ants_transform_to_image(trans, img, self.template)
         return ants.crop_indices(img, tuple(start_indices.astype(int)), tuple(end_indices.astype(int))), img
 
-    def template2subject(self, img, trans, ref):
+    def template2subject(self, img: ants.ANTsImage, trans: ants.ANTsTransform, ref: ants.ANTsImage) -> ants.ANTsImage:
         """
         transform the image from template space to the subject space
 
@@ -998,8 +992,11 @@ class TemplateCerebellarBoundingBox(object):
             trans: (ANTs transformation)
                 transformation matrix (from subject space to template space)
             ref: (ANTsImage)
+                reference image
 
         Returns:
+            img: (ANTsImage)
+                the transformed image in subject space
 
         """
         trans_inv = ants.invert_ants_transform(trans)
@@ -1008,9 +1005,9 @@ class TemplateCerebellarBoundingBox(object):
         return result
 
 
-def subject_preprocess(t1_file=None, t2_file=None, brain_mask_file=None, label_file=None,
-                       BoundingBox=TemplateCerebellarBoundingBox(),
-                       type_of_transform='Similarity'):
+def subject_preprocess(t1_file: str = None, t2_file: str = None, brain_mask_file: str = None, label_file: str = None,
+                       BoundingBox: TemplateCerebellarBoundingBox = TemplateCerebellarBoundingBox(),
+                       type_of_transform: str = 'Similarity') -> Tuple[ants.ANTsTransform, ants.ANTsImage, ants.ANTsImage, ants.ANTsImage, ants.ANTsImage, ants.ANTsImage]:
     """
     function to preprocess a single subject.
     1. Transform the image from subject space to the template space
@@ -1100,12 +1097,11 @@ def subject_preprocess(t1_file=None, t2_file=None, brain_mask_file=None, label_f
     return trans, t1_crop, t2_crop, label_crop, t1_whole, t2_whole
 
 
-def threshold(img, lower=0.5, upper=1.0):
+def threshold(img: ants.ANTsImage, lower: float = 0.5, upper: float = 1.0) -> ants.ANTsImage:
     """
     remove all other values from the image
 
     Args:
-    ----------
         img: (ANTsImage)
             the input image
         lower: (float)
@@ -1114,7 +1110,6 @@ def threshold(img, lower=0.5, upper=1.0):
             upper threshold
 
     Returns:
-    ----------
         image : (ANTsImage)
             the thresholded image
     """
@@ -1123,7 +1118,7 @@ def threshold(img, lower=0.5, upper=1.0):
     return img
 
 
-def remove_islands(img):
+def remove_islands(img: ants.ANTsImage) -> ants.ANTsImage:
     """ Removes parts of the mask that is not connected to the largest cluster
     
     Args:
@@ -1143,11 +1138,10 @@ def remove_islands(img):
     return mask
 
 
-def subject_postprocess(mask, trans, BoundingBox, ref):
+def subject_postprocess(mask: ants.ANTsImage, trans: ants.ANTsTransform, BoundingBox: TemplateCerebellarBoundingBox, ref: ants.ANTsImage) -> ants.ANTsImage:
     """
     transform the predicted cerebellum mask to the original space
     Args:
-    ----------
         mask: (ANTsImage)
             the predicted cerebellum mask from the template space
         trans: (ANTsTransform)
@@ -1172,10 +1166,10 @@ def subject_postprocess(mask, trans, BoundingBox, ref):
     return result
 
 
-def isolate(t1_file=None, t2_file=None, brain_mask_file=None, label_file=None, result_folder=None,
-            template='MNI152NLin6Asym',
-            type_of_transform='Similarity', params='pre_trained_numpy.pkl', save_cropped_files=False,
-            verbose=True):
+def isolate(t1_file: str = None, t2_file: str = None, brain_mask_file: str = None, label_file: str = None, result_folder: str = None,
+            template: str = 'MNI152NLin6Asym',
+            type_of_transform: str = 'Similarity', params: str = 'pre_trained_numpy.pkl', save_cropped_files: bool = False,
+            verbose: bool = True) -> ants.ANTsImage:
     """
     main function for cerebellum isolation
 
