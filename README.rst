@@ -26,7 +26,6 @@ The required dependencies to use the software are:
 * scipy >= 1.9.0
 * neuroimagingtools >= 1.1.1
 * antspyx >= 0.6.1
-* torch >= 2.0.0
 
 Install
 -------

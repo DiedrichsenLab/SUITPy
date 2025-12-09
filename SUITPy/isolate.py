@@ -28,7 +28,8 @@ class _Conv3dN:
             stride: Union[int, Tuple[int, int, int]] = (1, 1, 1),
             padding: Union[int, Tuple[int, int, int]] = (0, 0, 0),
             dilation: Union[int, Tuple[int, int, int]] = (1, 1, 1),
-            bias: bool = True
+            bias: bool = True,
+            padding_mode: str = 'zeros',
     ):
         self.in_channels = in_channels
         self.out_channels = out_channels
@@ -37,6 +38,7 @@ class _Conv3dN:
         self.padding = padding if isinstance(padding, tuple) else (padding,) * 3
         self.dilation = dilation if isinstance(dilation, tuple) else (dilation,) * 3
         self.bias = bias
+        self.padding_mode = padding_mode
 
         self.weight = np.random.randn(out_channels, in_channels, *self.kernel_size)
 
@@ -45,6 +47,24 @@ class _Conv3dN:
         else:
             self.bias_term = None
 
+    def _pad_input(self, x: np.ndarray) -> np.ndarray:
+        if all(p == 0 for p in self.padding):
+            return x
+
+        pd, ph, pw = self.padding
+        if self.padding_mode == 'zeros':
+            return np.pad(x,
+                          ((0, 0), (0, 0),
+                           (pd, pd), (ph, ph), (pw, pw)),
+                          mode='constant')
+        elif self.padding_mode == 'reflect':
+            return np.pad(x,
+                          ((0, 0), (0, 0),
+                           (pd, pd), (ph, ph), (pw, pw)),
+                          mode='reflect')
+        else:
+            raise NotImplementedError(f"Padding mode {self.padding_mode} not implemented")
+
     def _im2col(self, x: np.ndarray) -> Tuple[np.ndarray, Tuple[int, int, int]]:
         batch_size, in_channels, depth, height, width = x.shape
         kd, kh, kw = self.kernel_size
@@ -52,10 +72,7 @@ class _Conv3dN:
         pd, ph, pw = self.padding
         dd, dh, dw = self.dilation
 
-        if any(p != 0 for p in [pd, ph, pw]):
-            x_padded = np.pad(x, ((0, 0), (0, 0), (pd, pd), (ph, ph), (pw, pw)), mode='constant')
-        else:
-            x_padded = x
+        x_padded = self._pad_input(x)
 
         out_depth = (depth + 2 * pd - dd * (kd - 1) - 1) // sd + 1
         out_height = (height + 2 * ph - dh * (kh - 1) - 1) // sh + 1
@@ -127,7 +144,8 @@ class _ConvTranspose3dN:
             padding: Union[int, Tuple[int, int, int]] = (0, 0, 0),
             output_padding: Union[int, Tuple[int, int, int]] = (0, 0, 0),
             dilation: Union[int, Tuple[int, int, int]] = (1, 1, 1),
-            bias: bool = True
+            bias: bool = True,
+            padding_mode: str = "zeros",
     ):
         self.in_channels = in_channels
         self.out_channels = out_channels
@@ -137,6 +155,7 @@ class _ConvTranspose3dN:
         self.output_padding = output_padding if isinstance(output_padding, tuple) else (output_padding,) * 3
         self.dilation = dilation if isinstance(dilation, tuple) else (dilation,) * 3
         self.bias = bias
+        self.padding_mode = padding_mode
 
         self.weight = np.random.randn(in_channels, out_channels, *self.kernel_size)
         if bias:
@@ -181,8 +200,10 @@ class _ConvTranspose3dN:
                    (pad_d_before, pad_d_after),
                    (pad_h_before, pad_h_after),
                    (pad_w_before, pad_w_after))
-
-        return np.pad(x, padding, mode='constant')
+        if self.padding_mode == "zeros":
+            return np.pad(x, padding, mode='constant')
+        else:
+            raise NotImplementedError(f"Padding mode {self.padding_mode} not implemented")
 
     def _im2col(self, x: np.ndarray) -> Tuple[np.ndarray, Tuple[int, int, int]]:
         batch_size, in_channels, depth, height, width = x.shape
@@ -261,8 +282,8 @@ class _InstanceNorm3dN:
             num_features: int,
             eps: float = 1e-5,
             momentum: float = 0.1,
-            affine: bool = True,
-            track_running_stats: bool = True
+            affine: bool = False,
+            track_running_stats: bool = False
     ):
         self.num_features = num_features
         self.eps = eps
@@ -278,9 +299,10 @@ class _InstanceNorm3dN:
             self.bias = None
 
         if self.track_running_stats:
-            self.running_mean = np.zeros(num_features)
-            self.running_var = np.ones(num_features)
-            self.num_batches_tracked = 0
+            raise RuntimeError('track_running_stats currently not supported.')
+            # self.running_mean = np.zeros(num_features)
+            # self.running_var = np.ones(num_features)
+            # self.num_batches_tracked = 0
         else:
             self.running_mean = None
             self.running_var = None
@@ -406,11 +428,11 @@ class _ConvNetN:
                 the number of output channels
         """
         self.conv1 = _Conv3dN(in_channels=in_channels, out_channels=out_channels, kernel_size=3, padding=1)
-        self.norm1 = _InstanceNorm3dN(num_features=out_channels, affine=True, track_running_stats=True)
+        self.norm1 = _InstanceNorm3dN(num_features=out_channels, affine=True, track_running_stats=False)
         self.activate1= _LeakyReLUN()
 
         self.conv2 = _Conv3dN(in_channels=out_channels, out_channels=out_channels, kernel_size=3, padding=1)
-        self.norm2 = _InstanceNorm3dN(num_features=out_channels, affine=True, track_running_stats=True)
+        self.norm2 = _InstanceNorm3dN(num_features=out_channels, affine=True, track_running_stats=False)
         self.activate2 = _LeakyReLUN()
 
 
@@ -485,7 +507,7 @@ class _DownSampleN:
                 the number of input channels
         """
         self.conv1 = _Conv3dN(in_channels=channels, out_channels=channels, kernel_size=3, stride=2, padding=1)
-        self.norm1 = _InstanceNorm3dN(num_features=channels, affine=True, track_running_stats=True)
+        self.norm1 = _InstanceNorm3dN(num_features=channels, affine=True, track_running_stats=False)
         self.activate1 = _LeakyReLUN()
 
     def load_state(
@@ -543,11 +565,11 @@ class _UpSampleN:
                 the number of input channels
         """
         self.conv1 = _ConvTranspose3dN(in_channels=channels, out_channels=channels, kernel_size=2, stride=2, padding=0)
-        self.norm1 = _InstanceNorm3dN(num_features=channels, affine=True, track_running_stats=True)
+        self.norm1 = _InstanceNorm3dN(num_features=channels, affine=True, track_running_stats=False)
         self.activate1 = _LeakyReLUN()
 
         self.conv2 = _Conv3dN(in_channels=channels * 2, out_channels=channels, kernel_size=3, padding=1)
-        self.norm2 = _InstanceNorm3dN(num_features=channels, affine=True, track_running_stats=True)
+        self.norm2 = _InstanceNorm3dN(num_features=channels, affine=True, track_running_stats=False)
         self.activate2 = _LeakyReLUN()
 
     def load_state(
@@ -661,18 +683,18 @@ class UNetN:
             n1 = {
                 'weight': state_dict[f'{c}.layer.1.weight'],
                 'bias': state_dict[f'{c}.layer.1.bias'],
-                'running_mean': state_dict[f'{c}.layer.1.running_mean'],
-                'running_var': state_dict[f'{c}.layer.1.running_var'],
-                'num_batches_tracked': state_dict[f'{c}.layer.1.num_batches_tracked']
+                # 'running_mean': state_dict[f'{c}.layer.1.running_mean'],
+                # 'running_var': state_dict[f'{c}.layer.1.running_var'],
+                # 'num_batches_tracked': state_dict[f'{c}.layer.1.num_batches_tracked']
             }
             c_weight2 = state_dict[f'{c}.layer.3.weight']
             c_bias2 = state_dict[f'{c}.layer.3.bias']
             n2 = {
                 'weight': state_dict[f'{c}.layer.4.weight'],
                 'bias': state_dict[f'{c}.layer.4.bias'],
-                'running_mean': state_dict[f'{c}.layer.4.running_mean'],
-                'running_var': state_dict[f'{c}.layer.4.running_var'],
-                'num_batches_tracked': state_dict[f'{c}.layer.4.num_batches_tracked']
+                # 'running_mean': state_dict[f'{c}.layer.4.running_mean'],
+                # 'running_var': state_dict[f'{c}.layer.4.running_var'],
+                # 'num_batches_tracked': state_dict[f'{c}.layer.4.num_batches_tracked']
             }
             convs[c].load_state(c_weight1=c_weight1, c_bias1=c_bias1, n_state_dict1=n1, c_weight2=c_weight2, c_bias2=c_bias2, n_state_dict2=n2)
 
@@ -682,9 +704,9 @@ class UNetN:
             n = {
                 'weight': state_dict[f'{d}.layer.1.weight'],
                 'bias': state_dict[f'{d}.layer.1.bias'],
-                'running_mean': state_dict[f'{d}.layer.1.running_mean'],
-                'running_var': state_dict[f'{d}.layer.1.running_var'],
-                'num_batches_tracked': state_dict[f'{d}.layer.1.num_batches_tracked']
+                # 'running_mean': state_dict[f'{d}.layer.1.running_mean'],
+                # 'running_var': state_dict[f'{d}.layer.1.running_var'],
+                # 'num_batches_tracked': state_dict[f'{d}.layer.1.num_batches_tracked']
             }
             downs[d].load_state(c_weight=c_weight, c_bias=c_bias, n_state_dict=n)
 
@@ -694,18 +716,18 @@ class UNetN:
             n1 = {
                 'weight': state_dict[f'{u}.up.1.weight'],
                 'bias': state_dict[f'{u}.up.1.bias'],
-                'running_mean': state_dict[f'{u}.up.1.running_mean'],
-                'running_var': state_dict[f'{u}.up.1.running_var'],
-                'num_batches_tracked': state_dict[f'{u}.up.1.num_batches_tracked']
+                # 'running_mean': state_dict[f'{u}.up.1.running_mean'],
+                # 'running_var': state_dict[f'{u}.up.1.running_var'],
+                # 'num_batches_tracked': state_dict[f'{u}.up.1.num_batches_tracked']
             }
             c_weight2 = state_dict[f'{u}.layer.0.weight']
             c_bias2 = state_dict[f'{u}.layer.0.bias']
             n2 = {
                 'weight': state_dict[f'{u}.layer.1.weight'],
                 'bias': state_dict[f'{u}.layer.1.bias'],
-                'running_mean': state_dict[f'{u}.layer.1.running_mean'],
-                'running_var': state_dict[f'{u}.layer.1.running_var'],
-                'num_batches_tracked': state_dict[f'{u}.layer.1.num_batches_tracked']
+                # 'running_mean': state_dict[f'{u}.layer.1.running_mean'],
+                # 'running_var': state_dict[f'{u}.layer.1.running_var'],
+                # 'num_batches_tracked': state_dict[f'{u}.layer.1.num_batches_tracked']
             }
             ups[u].load_state(c_weight1=c_weight1, c_bias1=c_bias1, n_state_dict1=n1, c_weight2=c_weight2, c_bias2=c_bias2, n_state_dict2=n2)
 
@@ -741,7 +763,7 @@ class UNetN:
     def __call__(self, t1: np.ndarray, t2: np.ndarray) -> np.ndarray:
         return self.forward(t1, t2)
 
-def _load_model(model, params_file: str):
+def _load_model(params_file: str):
     """
     load model with pretrained weights
 
@@ -755,7 +777,7 @@ def _load_model(model, params_file: str):
         net: (Unet)
             the pretrained model
     """
-    net = model
+    net = UNetN()
     if os.path.exists(params_file):
         with open(params_file, "rb") as f:
             params = pickle.load(f)
@@ -765,7 +787,7 @@ def _load_model(model, params_file: str):
     return net
 
 
-def predict(model, params_file: str, t1: np.ndarray = None, t2: np.ndarray = None) -> np.ndarray:
+def predict(params_file: str, t1: np.ndarray = None, t2: np.ndarray = None) -> np.ndarray:
     """
     Run a prediction on a single subject using a trained UNet model
 
@@ -784,7 +806,7 @@ def predict(model, params_file: str, t1: np.ndarray = None, t2: np.ndarray = Non
             the 3D numpy array of predicted mask (template space)
 
     """
-    net = _load_model(model, params_file)
+    net = _load_model(params_file)
     if t1 is None:
         t1 = np.zeros((128, 128, 128))
     else:
@@ -988,7 +1010,7 @@ class TemplateCerebellarBoundingBox(object):
 
 def subject_preprocess(t1_file=None, t2_file=None, brain_mask_file=None, label_file=None,
                        BoundingBox=TemplateCerebellarBoundingBox(),
-                       type_of_transform='Affine'):
+                       type_of_transform='Similarity'):
     """
     function to preprocess a single subject.
     1. Transform the image from subject space to the template space
@@ -1152,7 +1174,7 @@ def subject_postprocess(mask, trans, BoundingBox, ref):
 
 def isolate(t1_file=None, t2_file=None, brain_mask_file=None, label_file=None, result_folder=None,
             template='MNI152NLin6Asym',
-            type_of_transform='Affine', params='pre_trained_numpy.pkl', save_cropped_files=False, save_transform=True,
+            type_of_transform='Similarity', params='pre_trained_numpy.pkl', save_cropped_files=False,
             verbose=True):
     """
     main function for cerebellum isolation
@@ -1193,8 +1215,7 @@ def isolate(t1_file=None, t2_file=None, brain_mask_file=None, label_file=None, r
         result_folder = os.path.dirname(os.path.abspath(t2_file)) if result_folder is None else result_folder
         basename = os.path.splitext(os.path.basename(t2_file))
     else:
-        print('No input images given')
-        exit(0)
+        raise RuntimeError('Must specify either t1_file or t2_file')
 
     # Strip .nii or .nii.gz extension 
     if basename[1] == '.gz':
@@ -1232,8 +1253,7 @@ def isolate(t1_file=None, t2_file=None, brain_mask_file=None, label_file=None, r
     # Do a forward pass through the Unet model
     if verbose:
         print('isolating cerebellum using UNet model')
-    model = UNetN()
-    mask = predict(model=model, params_file=params_file, t1=t1_crop_data, t2=t2_crop_data)
+    mask = predict(params_file=params_file, t1=t1_crop_data, t2=t2_crop_data)
     mask = nib.Nifti1Image(mask, BoundingBox.get_cropped_affine())
     mask = from_nibabel(mask)
 
@@ -1253,8 +1273,9 @@ def isolate(t1_file=None, t2_file=None, brain_mask_file=None, label_file=None, r
         if save_cropped_files:
             if t1_crop is not None:
                 ants.image_write(t1_crop, os.path.join(result_folder, f'{basename}_crop.nii.gz'))
+            else:
+                ants.image_write(t2_crop, os.path.join(result_folder, f'{basename}_crop.nii.gz'))
             ants.image_write(mask, os.path.join(result_folder, f'{basename}_cerebellum_crop_dseg.nii.gz'))
-        if save_transform:
             ants.write_transform(trans, os.path.join(result_folder, f'{basename}_trans.mat'))
     return result
 
@@ -1274,13 +1295,11 @@ if __name__ == '__main__':
                              'default)')
     parser.add_argument('--params', type=str, default='pre_trained.pkl', help='pretrained parameter file')
     parser.add_argument('--save_cropped_files', action='store_true', help='Save files cropped to UNet input window')
-    parser.add_argument('--save_transform', action='store_true', help='Save affine transform to MNI space')
 
     args = parser.parse_args()
 
     if args.T1 is None and args.T2 is None:
-        print('No input images found')
-        exit(0)
+        raise RuntimeError('Must specify either t1_file or t2_file')
 
     if args.result_folder is None:
         if args.T1 is None:
@@ -1295,5 +1314,4 @@ if __name__ == '__main__':
                      result_folder=args.result_folder,
                      template=args.template,
                      params=args.params,
-                     save_cropped_files=args.save_cropped_files,
-                     save_transform=args.save_transform)
+                     save_cropped_files=args.save_cropped_files,)
