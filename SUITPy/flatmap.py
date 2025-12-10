@@ -56,7 +56,7 @@ def vol_to_surf(
         volumes (list or nib obj):
             List of filenames/nib objs, or nib obj to be mapped
         space (string):
-            Normalization space: 'SUIT' (default), 'FSL', 'SPM'
+            Normalization space: 'SUIT' (default), 'FSL', 'SPM', 'MNISym', 'MNI'
         ignore_zeros (bool):
             Should zeros be ignored in mapping? default: False
         depths (array-like):
@@ -75,7 +75,12 @@ def vol_to_surf(
         mapped_data (numpy.array):
             A Data array for the mapped data
     """
-    # Get the surface files
+    # Map equivalent surfaces spaces names for backwards compatibility
+    if space == 'MNI':
+        space = 'FSL'
+    elif space == 'MNISym':
+        space = 'MNISymC'
+    # Get the surface filee
     if inner_surf_gifti is None:
         inner_surf_gifti = f'PIAL_{space}.surf.gii'
     if outer_surf_gifti is None:

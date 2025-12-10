@@ -184,49 +184,43 @@ def _chunk_read_(response, local_file, chunk_size=8192, report_hook=None,
     return
 
 
-def get_data_dirs(data_dir=None):
-    """Returns the directories in which SUITPy looks for data.
+def get_atlas_dirs(atlas_dir=None):
+    """Returns the directories in which SUITPy looks for atlas data.
 
     This is typically useful for the end-user to check where the data is
     downloaded and stored.
 
     Parameters
     ----------
-    data_dir: path to atlas directories
+    atlas_dir: path to atlas directories
 
     Returns
     -------
     paths : list of strings
-        Paths of the dataset directories.
+        Paths of the atlas directory, in sequence of priorit
 
     Notes
     -----
-    This function retrieves the datasets directories using the following
+    This function retrieves the atlas directories using the following
     priority :
 
-    1. defaults system paths
-    2. the keyword argument data_dir
-    3. the global environment variable SUITPy_SHARED_DATA
-    4. the user environment variable SUITPy_DATA
-    5. SUITPy_data in the user home folder
+    1. the keyword argument atlas_dir
+    2. the global environment variable SUITPy_ATLAS_DIR
+    3. `cerebellar_atlases` in the user home folder
 
     """
     # We build an array of successive paths by priority
     # The boolean indicates if it is a pre_dir: in that case, we won't add the
-    # dataset name to the path.
+    # atlas name to the path.
     paths = []
 
     # Check data_dir which force storage in a specific location
-    if data_dir is not None:
-        paths.extend(str(data_dir).split(os.pathsep))
+    if atlas_dir is not None:
+        paths.extend(str(atlas_dir).split(os.pathsep))
 
     # If data_dir has not been specified, try to see if envor
-    if data_dir is None:
-        global_data = os.getenv('SUITPy_SHARED_ATLASES')
-        if global_data is not None:
-            paths.extend(global_data.split(os.pathsep))
-
-        local_data = os.getenv('SUITPy_ATLASES')
+    else:
+        local_data = os.getenv('SUITPy_ATLAS_DIR')
         if local_data is not None:
             paths.extend(local_data.split(os.pathsep))
 
@@ -234,36 +228,34 @@ def get_data_dirs(data_dir=None):
     return paths
 
 
-def _get_dataset_dir(dataset_name, atlas_dir=None, default_paths=None,
-                     verbose=1):
-    """Creates if necessary and returns data directory of given dataset.
+def _get_atlas_dir(atlas_name, atlas_dir=None, default_paths=None,
+                     verbose=1,create_dir=True):
+    """Finds and returns data directory of specific atlas.
+    If not found, creates the directory in the first writeable directory.
 
     Parameters
     ----------
-    dataset_name : string
-        The unique name of the dataset.
-    atlas_dir (str): Base directory of Cerebellar atlases, files will be in atlas_dir/dataset_name/..
+    atlas_name : string
+        The unique name of the atlas.
+    atlas_dir (str): Base directory of Cerebellar atlases, files will be in atlas_dir/atlas_name/..
     default_paths (list of string) optional
-        Default system paths in which the dataset may already have been
+        Default system paths in which the atlas may already have been
         installed by a third party software. They will be checked first.
     verbose : int, optional
 
     Returns
     -------
-    data_dir (string)
-        Path of the given dataset directory.
+    atlas_dir (string)
+        Path of the given atlas directory.
 
     Notes
     -----
-    This function retrieves the datasets directory (or data directory) using
+    This function retrieves the atlas  directory (or data directory) using
     the following priority :
 
-    1. defaults system paths
-    2. the keyword argument data_dir
-    3. the global environment variable SUITPy_SHARED_DATA
-    4. the user environment variable SUITPy_DATA
-    5. SUITPy_data in the user home folder
-
+    1. the keyword argument atlas_dir
+    2. the global environment variable SUITPy_ATLAS_DIR
+    3. `cerebellar_atlases` in the user home folder
     """
     paths = []
     # Search possible data-specific system paths
@@ -274,42 +266,43 @@ def _get_dataset_dir(dataset_name, atlas_dir=None, default_paths=None,
                 for d in str(default_path).split(os.pathsep)]
             )
 
-    paths.extend([(d, False) for d in get_data_dirs(data_dir=atlas_dir)])
+    paths.extend([(d, False) for d in get_atlas_dirs(atlas_dir=atlas_dir)])
 
     if verbose > 2:
-        print('Dataset search paths: %s' % paths)
+        print('atlas search paths: %s' % paths)
 
-    # Check if the dataset exists somewhere
+    # Check if the atlas exists somewhere
     for path, is_pre_dir in paths:
         if not is_pre_dir:
-            path = os.path.join(path, dataset_name)
+            path = os.path.join(path, atlas_name)
         if os.path.islink(path):
             # Resolve path
             path = readlinkabs(path)
         if os.path.exists(path) and os.path.isdir(path):
             if verbose > 1:
-                print('\nDataset found in %s\n' % path)
+                print('\nAtlas found in %s\n' % path)
             return path
 
     # If not, create a folder in the first writeable directory
-    errors = []
-    for (path, is_pre_dir) in paths:
-        if not is_pre_dir:
-            path = os.path.join(path, dataset_name)
-        if not os.path.exists(path):
-            try:
-                os.makedirs(path)
-                if verbose > 0:
-                    print('\Atlas directory created in %s\n' % path)
-                return path
-            except Exception as exc:
-                short_error_message = getattr(exc, 'strerror', str(exc))
-                errors.append('\n -{0} ({1})'.format(
-                    path, short_error_message))
-
-    raise OSError('SUITPy tried to store the dataset in the following '
+    if create_dir:
+        errors = []
+        for (path, is_pre_dir) in paths:
+            if not is_pre_dir:
+                path = os.path.join(path, atlas_name)
+            if not os.path.exists(path):
+                try:
+                    os.makedirs(path)
+                    if verbose > 0:
+                        print('\nAtlas directory created in %s\n' % path)
+                    return path
+                except Exception as exc:
+                    short_error_message = getattr(exc, 'strerror', str(exc))
+                    errors.append('\n -{0} ({1})'.format(
+                        path, short_error_message))
+        raise OSError('SUITPy tried to store the atlas in the following '
                   'directories, but:' + ''.join(errors))
-
+    else:
+        return None
 
 def _uncompress_file(file_, delete_archive=True, verbose=1):
     """Uncompress files contained in a data_set.
@@ -609,13 +602,13 @@ def _fetch_file(url, data_dir, resume=True, overwrite=False,
             sys.stderr.write(' ...done. ({0:.0f} seconds, {1:.0f} min)\n'
                              .format(dt, dt // 60))
     except (requests.RequestException):
-        sys.stderr.write("Error while fetching file %s; dataset "
+        sys.stderr.write("Error while fetching file %s; atlas "
                          "fetching aborted." % (file_name))
         raise
     if md5sum is not None:
         if (_md5_sum_file(full_name) != md5sum):
             raise ValueError("File %s checksum verification has failed."
-                             " Dataset fetching aborted." % local_file)
+                             " atlas fetching aborted." % local_file)
     return full_name
 
 
