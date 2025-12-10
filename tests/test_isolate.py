@@ -7,7 +7,7 @@ test for isolation module
 import SUITPy as suit
 
 def test_isolate():
-    T1_file = 'docs/source/notebooks/anatomical_sess-01.nii'
+    T1_file = 'docs/source/tutorials/sub-ex_T1w.nii.gz'
     suit.isolate(T1_file,save_cropped_files=True)
     pass
 

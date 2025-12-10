@@ -91,3 +91,5 @@ target/
 .mypy_cache/
 *.m~
 *.pyc
+docs/source/tutorials/sub-ex_T1w_cerebellum_dseg.nii.gz
+docs/source/tutorials/sub-ex_T1w_trans.mat

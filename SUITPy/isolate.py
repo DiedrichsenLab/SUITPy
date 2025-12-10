@@ -622,7 +622,7 @@ class _UpSampleN:
         result1 = self.conv1(x)
         result2 = self.norm1(result1)
         result3 = self.activate1(result2)
-        result3 = np.concat([result3, feature_map], axis=1)
+        result3 = np.concatenate([result3, feature_map], axis=1)
         result4 = self.conv2(result3)
         result5 = self.norm2(result4)
         result6 = self.activate2(result5)
