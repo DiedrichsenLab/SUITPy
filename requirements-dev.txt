@@ -11,3 +11,5 @@ requests
 scipy>=1.9.0
 plotly
 neuroimagingtools>=1.1.1
+antspyx>=0.6.1
+torch>=2.5.0

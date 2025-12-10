@@ -13,4 +13,4 @@ This file can then be used in SUITPy to reslice anatomical and functional images
 
 .. toctree::
 
-    notebooks/reslice_example
+    tutorials/4.reslice_example.ipynb
