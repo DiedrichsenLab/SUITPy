@@ -93,3 +93,4 @@ target/
 *.pyc
 docs/source/tutorials/sub-ex_T1w_cerebellum_dseg.nii.gz
 docs/source/tutorials/sub-ex_T1w_trans.mat
+docs/source/tutorials/sub-ex_T2w_cerebellum_dseg.nii.gz

@@ -14,8 +14,6 @@ import nitools
 from typing import Tuple, Union
 import pickle
 
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-
 class _Conv3dN:
     """
     numpy implementation of 3D convolution layer
@@ -1174,7 +1172,7 @@ def isolate(t1_file: str = None, t2_file: str = None,
             type_of_transform: str = 'Similarity', 
             params: str = 'pre_trained_numpy.pkl', 
             save_cropped_files: bool = False,
-            verbose: bool = True) -> ants.ANTsImage:
+            verbose: bool = True):
     """
     main function for cerebellum isolation
 
@@ -1276,7 +1274,7 @@ def isolate(t1_file: str = None, t2_file: str = None,
                 ants.image_write(t2_crop, os.path.join(result_folder, f'{basename}_crop.nii.gz'))
             ants.image_write(mask, os.path.join(result_folder, f'{basename}_cerebellum_crop_dseg.nii.gz'))
             ants.write_transform(trans, os.path.join(result_folder, f'{basename}_trans.mat'))
-    return result
+    return
 
 
 if __name__ == '__main__':
@@ -1306,7 +1304,7 @@ if __name__ == '__main__':
         else:
             args.result_folder = os.path.dirname(os.path.abspath(args.T1))
 
-    result = isolate(t1_file=args.T1,
+    isolate(t1_file=args.T1,
                      t2_file=args.T2,
                      brain_mask_file=args.brain_mask,
                      label_file=args.label,
