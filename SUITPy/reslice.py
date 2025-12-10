@@ -7,7 +7,6 @@ Basic functionality for resample image into atlas
 
 """
 import nibabel as nib
-from numpy import *
 import numpy as np
 from numpy.linalg import inv
 import nitools.volume as ntv
@@ -19,12 +18,11 @@ def reslice_image(
                 interp = 1,
                 voxelsize = None,
                 imagedim = None,
-                affine = None
-):
+                affine = None):
     """[summary]
-        source_image: (NIFTI Image, str, or iterable of NIFTI)
+        source_image: (Nifti1Image, str, or iterable of NIFTI)
             Images to reslice
-        deformation: (NIFTI, str):
+        deformation: (Nifti1Image, str):
             Nonlinear deformation file (y_xxx.nii)
         mask (NIFTI, str):
             Optional masking image (defaults to None)

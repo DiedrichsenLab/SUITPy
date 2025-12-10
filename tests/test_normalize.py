@@ -7,8 +7,8 @@ test for isolation module
 import SUITPy as suit
 
 def test_normalize():
-    T1_file = 'tutorials/sub-ex_T1w.nii.gz'
-    mask_file = 'tutorials/sub-ex_T1w_cerebellum_dseg.nii.gz'
+    T1_file = 'docs/source/tutorials/sub-ex_T1w.nii.gz'
+    mask_file = 'docs/source/tutorials/sub-ex_T1w_cerebellum_dseg.nii.gz'
     suit.normalize(T1_file,mask_file,space='SUIT')
     pass
 
