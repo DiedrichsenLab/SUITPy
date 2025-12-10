@@ -1166,9 +1166,14 @@ def subject_postprocess(mask: ants.ANTsImage, trans: ants.ANTsTransform, Boundin
     return result
 
 
-def isolate(t1_file: str = None, t2_file: str = None, brain_mask_file: str = None, label_file: str = None, result_folder: str = None,
+def isolate(t1_file: str = None, t2_file: str = None, 
+            brain_mask_file: str = None, 
+            label_file: str = None, 
+            result_folder: str = None,
             template: str = 'MNI152NLin6Asym',
-            type_of_transform: str = 'Similarity', params: str = 'pre_trained_numpy.pkl', save_cropped_files: bool = False,
+            type_of_transform: str = 'Similarity', 
+            params: str = 'pre_trained_numpy.pkl', 
+            save_cropped_files: bool = False,
             verbose: bool = True) -> ants.ANTsImage:
     """
     main function for cerebellum isolation
