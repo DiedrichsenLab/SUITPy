@@ -15,8 +15,8 @@ import nitools as nt
 
 def normalize(source_file, mask_file, space='SUIT', template_file=None,
               type_of_transform='antsRegistrationSyN[s]',
-              write_normalized_image=True,
-              write_ant_transform=False,
+              write_normalized=True,
+              write_ants_transform=False,
               write_deformation=True,
               write_inv_deformation=False,
               write_jacobian_determinant=False,
@@ -31,8 +31,9 @@ def normalize(source_file, mask_file, space='SUIT', template_file=None,
         space (str): Cerebellar-only template (`SUIT`, `MNI152NLin6AsymC` / 'MNI', `MNI152NLin2009cSymC` / 'MNISym')
         template_file (str): Optional path to a custom template file
         type_of_transform (str): ANTs registration type (e.g., 'antsRegistrationSyN[s]')
-        write_normalized_image (bool): Save normalized (template-space) T1 image
-        write_deformation_file (bool): Save deformation field y(x) for reslice other images
+        write_normalized (bool): Save normalized (template-space) T1 image
+        write_deformation (bool): Save deformation field y(x) for reslice other images
+        write_inv_deformation (bool): Save deformation field y(x) for reslice other images
         write_jacobian_determinant (bool): Computes & save log-Jacobian determinant
         result_folder (str): Output folder. If None, uses same folder as source file
         verbose (int): 0: silent, 1:Progress log, 2:detailed log
@@ -82,43 +83,37 @@ def normalize(source_file, mask_file, space='SUIT', template_file=None,
                              write_composite_transform=False,
                              verbose=(verbose>1))
 
-    # Compose taffine + warp → displacement field
-    displacement_file = f"{result_folder}/{basename}_to-SUIT_mode-image_disp.nii.gz"
-    ants.apply_transforms(
-        fixed=template_img,
-        moving=masked_source_img.clone('float'),
-        transformlist=mytx['fwdtransforms'],
-        whichtoinvert=[False, False],
-        compose=f'{prefix}')
-    os.rename(f'{prefix}comptx.nii.gz', displacement_file)
-    if verbose:
-        print(f"Saving the displacement field into {displacement_file}")
-
     # Write the normalized image in template space
-    if write_normalized_image:
+    if write_normalized:
         normalized_file = f'{result_folder}/{basename}_space-{space}.nii.gz'
         if verbose:
             print(f"Saving the normalized image into {normalized_file}")
         ants.image_write(mytx['warpedmovout'], normalized_file)
 
-    # Write the deformation field for reslice images from subject to template space
+    # Write the deformation field for reslicing images from subject to template space
     if write_deformation:
         deformation_file = f"{result_folder}/{basename}_to-SUIT_mode-image_xfm.nii.gz"
         if verbose:
-            print(f"Saving the deformation field into {deformation_file}")
-        deformation_from_displacement(
-            template_file=template_file,
-            displacement_file=displacement_file, # mytx['fwdtransforms'],
-            deformation_file=deformation_file,
-            verbose=verbose
-        )
-        deformation_file = f"{result_folder}/{basename}_to-SUIT_mode-image_xfm1.nii.gz"
+            print(f"Saving deformation field into {deformation_file}")
         deformation_from_displacement(
             template_file=template_file,
             displacement_file=mytx['fwdtransforms'],
             deformation_file=deformation_file,
             verbose=verbose
         )
+
+    # Write inverse deformation if requested 
+    if write_inv_deformation:
+        inv_deformation_file = f"{result_folder}/{basename}_from-SUIT_mode-image_xfm.nii.gz"
+        if verbose:
+            print(f"Saving inverse deformation field into {inv_deformation_file}")
+        deformation_from_displacement(
+            template_file=source_img,
+            displacement_file=mytx['invtransforms'],
+            deformation_file=inv_deformation_file,
+            verbose=verbose
+        )
+
 
     # Write the Jacobian determinant image for vbm analysis
     if write_jacobian_determinant:
