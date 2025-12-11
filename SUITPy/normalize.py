@@ -114,9 +114,20 @@ def normalize(source_file, mask_file, space='SUIT', template_file=None,
             verbose=verbose
         )
 
-
     # Write the Jacobian determinant image for vbm analysis
     if write_jacobian_determinant:
+        # Produce displacement map
+        # Compose taffine + warp → displacement field
+        displacement_file = f"{result_folder}/{basename}_to-SUIT_mode-image_disp.nii.gz"
+        ants.apply_transforms(
+            fixed=template_img,
+            moving=masked_source_img,
+            transformlist=[f'{prefix}1Warp.nii.gz', f'{prefix}0GenericAffine.mat'],
+            whichtoinvert=[False, False],
+            compose=f'{prefix}')
+        os.rename(f'{prefix}comptx.nii.gz', displacement_file)
+
+
         jacobian_file = f"{result_folder}/{basename}_to-SUIT_mode-image_detJ.nii.gz"
         # Jacobian settings
         use_log = True      # log-Jacobian
@@ -128,30 +139,29 @@ def normalize(source_file, mask_file, space='SUIT', template_file=None,
             geom=use_geom
         )
         jac_img.to_filename(jacobian_file)
-        jacobian_file1 = f"{result_folder}/{basename}_to-SUIT_mode-image_detJ1.nii.gz"
-        # Jacobian settings
-        use_log = True      # log-Jacobian
-        use_geom = True     # geometric Jacobian
-        jac_img = ants.create_jacobian_determinant_image(
-            domain_image=template_img,
-            tx=mytx['fwdtransforms'],
-            do_log=use_log,
-            geom=use_geom
-        )
-        jac_img.to_filename(jacobian_file1)
         if verbose:
             print(f"Computing Jacobian: geom={use_geom}, log={use_log},\
                     Saving the Jacobian determinant into {jacobian_file}")
+        os.remove(displacement_file)
 
-    # Lightweight return dictionary (no ANTsImages)
-    return {
-        "fwdtransforms": mytx["fwdtransforms"],
-        "invtransforms": mytx["invtransforms"],
-        "displacement_file": displacement_file,
-        "deformation_file": deformation_file if write_deformation else None,
-        "normalized_file": normalized_file if write_normalized_image else None,
-        "jacobian_file": jacobian_file if write_jacobian_determinant else None,
-        }
+    # Lightweight return dictionary
+    return_dict={}
+    if not write_ants_transform: 
+        os.remove(mytx["fwdtransforms"][0])
+        os.remove(mytx["fwdtransforms"][1])
+        os.remove(mytx["invtransforms"][0])
+    else: 
+        return_dict("fwd_transforms")= mytx["fwdtransforms"]
+        return_dict("inv_transforms")= mytx["invtransforms"]
+    
+    if write_deformation: 
+        return_dict("fwd_deformation") = deformation_file 
+    if write_inv_deformation:
+        return_dict("inv_deformation") = inv_deformation_file 
+    if write_jacobian_determinant: 
+        return_dict("jacobian_file") = inv_deformation_file 
+
+    return return_dict
 
 
 
