@@ -94,3 +94,17 @@ target/
 docs/source/tutorials/sub-ex_T1w_cerebellum_dseg.nii.gz
 docs/source/tutorials/sub-ex_T1w_trans.mat
 docs/source/tutorials/sub-ex_T2w_cerebellum_dseg.nii.gz
+docs/source/tutorials/sub-ex_T1w_space-SUIT.nii.gz
+docs/source/tutorials/sub-ex_T1w_to-SUIT_mode-image_detJ.nii.gz
+docs/source/tutorials/sub-ex_T1w_to-SUIT_mode-image_disp.nii.gz
+docs/source/tutorials/sub-ex_T1w_to-SUIT_mode-image_xfm.nii.gz
+docs/source/tutorials/sub-ex_T1w_to-SUIT_mode-image_xfm1.nii.gz
+docs/source/tutorials/sub-ex_T1w_xfm-SUIT_0GenericAffine.mat
+docs/source/tutorials/sub-ex_T1w_xfm-SUIT_1InverseWarp.nii.gz
+docs/source/tutorials/sub-ex_T1w_xfm-SUIT_1Warp.nii.gz
+docs/source/tutorials/test/sub-ex_T1w_space-SUIT.nii.gz
+docs/source/tutorials/test/sub-ex_T1w_to-SUIT_mode-image_disp.nii.gz
+docs/source/tutorials/test/sub-ex_T1w_to-SUIT_mode-image_xfm.nii.gz
+docs/source/tutorials/test/sub-ex_T1w_xfm-SUIT_0GenericAffine.mat
+docs/source/tutorials/test/sub-ex_T1w_xfm-SUIT_1InverseWarp.nii.gz
+docs/source/tutorials/test/sub-ex_T1w_xfm-SUIT_1Warp.nii.gz

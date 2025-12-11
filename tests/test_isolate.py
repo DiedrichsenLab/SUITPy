@@ -1,6 +1,6 @@
 # test flatmap
 """
-test for isolation module 
+test for isolation module
 @author: jdiedrichsen
 """
 
@@ -8,7 +8,7 @@ import SUITPy as suit
 
 def test_isolate():
     T1_file = 'docs/source/tutorials/sub-ex_T1w.nii.gz'
-    suit.isolate(T1_file,save_cropped_files=True)
+    suit.isolate(T1_file,save_cropped_files=False)
     pass
 
 if __name__ == '__main__':

@@ -13,13 +13,15 @@ from nibabel.affines import apply_affine
 import nitools as nt
 
 
-def normalize(source_file, mask_file, space='SUIT', template_file=None, 
-              type_of_transform='antsRegistrationSyN[s]', 
-              write_normalized_image=True, 
-              write_deformation_field=True, 
+def normalize(source_file, mask_file, space='SUIT', template_file=None,
+              type_of_transform='antsRegistrationSyN[s]',
+              write_normalized_image=True,
+              write_ant_transform=False,
+              write_deformation=True,
+              write_inv_deformation=False,
               write_jacobian_determinant=False,
-              result_folder=None, 
-              verbose=False):
+              result_folder=None,
+              verbose=1):
     """
     Normalizes a T1w image to the SUIT template using ANTsPy
 
@@ -33,16 +35,17 @@ def normalize(source_file, mask_file, space='SUIT', template_file=None,
         write_deformation_file (bool): Save deformation field y(x) for reslice other images
         write_jacobian_determinant (bool): Computes & save log-Jacobian determinant
         result_folder (str): Output folder. If None, uses same folder as source file
-        verbose (bool): Print detailed logs
+        verbose (int): 0: silent, 1:Progress log, 2:detailed log
 
     Returns:
-        dict: A dictionary containing:
-            fwdtransforms (str): Path to forward transforms
-            invtransforms (str): Path to inverse transforms
+        dict: A dictionary containing output images (if selected to be written)
+            fwdtransforms (str): Path to forward transforms (if write_ant_transform)
+            invtransforms (str): Path to inverse transforms (if write_ant_transform)
             displacement_file (str): Path to composite displacement field
-            deformation_file (str): Path to deformation field (or None)
-            normalized_file (str): Path to normalized image in template space (or None)
-            jacobian_file (str): Path to log-Jacobian determinant map (or None)
+            deformation_file (str): Path to deformation field
+            inv_deformation_file (str): Path to inverse deformation field
+            normalized_file (str): Path to normalized image in template space
+            jacobian_file (str): Path to log-Jacobian determinant map
     """
     # Get result folder and base name
     result_folder = os.path.dirname(os.path.abspath(source_file)) if result_folder is None else result_folder
@@ -52,7 +55,7 @@ def normalize(source_file, mask_file, space='SUIT', template_file=None,
     basename = basename[0]
     source_img = ants.image_read(source_file)
     mask_img = ants.image_read(mask_file)
-    # mask the source image and normalize 
+    # mask the source image and normalize
     masked_source_img = source_img * mask_img
 
     # Determine name of template file
@@ -71,19 +74,20 @@ def normalize(source_file, mask_file, space='SUIT', template_file=None,
 
     # ANTs Registration
     if verbose:
-        print(f"Registering to template of {template_file}")
+        print(f"Normalizing {basename} to {template_file}")
     prefix = f'{result_folder}/{basename}_xfm-{space}_'
     mytx = ants.registration(fixed=template_img,moving=masked_source_img,
                              type_of_transform=type_of_transform,
-                             outprefix=prefix,write_composite_transform=False,
-                             verbose=verbose)
+                             outprefix=prefix,
+                             write_composite_transform=False,
+                             verbose=(verbose>1))
 
     # Compose taffine + warp → displacement field
     displacement_file = f"{result_folder}/{basename}_to-SUIT_mode-image_disp.nii.gz"
     ants.apply_transforms(
         fixed=template_img,
         moving=masked_source_img.clone('float'),
-        transformlist=[f'{prefix}1Warp.nii.gz', f'{prefix}0GenericAffine.mat'],
+        transformlist=mytx['fwdtransforms'],
         whichtoinvert=[False, False],
         compose=f'{prefix}')
     os.rename(f'{prefix}comptx.nii.gz', displacement_file)
@@ -98,13 +102,20 @@ def normalize(source_file, mask_file, space='SUIT', template_file=None,
         ants.image_write(mytx['warpedmovout'], normalized_file)
 
     # Write the deformation field for reslice images from subject to template space
-    if write_deformation_field:
+    if write_deformation:
         deformation_file = f"{result_folder}/{basename}_to-SUIT_mode-image_xfm.nii.gz"
         if verbose:
             print(f"Saving the deformation field into {deformation_file}")
         deformation_from_displacement(
             template_file=template_file,
-            displacement_file=displacement_file,
+            displacement_file=displacement_file, # mytx['fwdtransforms'],
+            deformation_file=deformation_file,
+            verbose=verbose
+        )
+        deformation_file = f"{result_folder}/{basename}_to-SUIT_mode-image_xfm1.nii.gz"
+        deformation_from_displacement(
+            template_file=template_file,
+            displacement_file=mytx['fwdtransforms'],
             deformation_file=deformation_file,
             verbose=verbose
         )
@@ -122,28 +133,39 @@ def normalize(source_file, mask_file, space='SUIT', template_file=None,
             geom=use_geom
         )
         jac_img.to_filename(jacobian_file)
+        jacobian_file1 = f"{result_folder}/{basename}_to-SUIT_mode-image_detJ1.nii.gz"
+        # Jacobian settings
+        use_log = True      # log-Jacobian
+        use_geom = True     # geometric Jacobian
+        jac_img = ants.create_jacobian_determinant_image(
+            domain_image=template_img,
+            tx=mytx['fwdtransforms'],
+            do_log=use_log,
+            geom=use_geom
+        )
+        jac_img.to_filename(jacobian_file1)
         if verbose:
             print(f"Computing Jacobian: geom={use_geom}, log={use_log},\
                     Saving the Jacobian determinant into {jacobian_file}")
-    
+
     # Lightweight return dictionary (no ANTsImages)
     return {
         "fwdtransforms": mytx["fwdtransforms"],
         "invtransforms": mytx["invtransforms"],
         "displacement_file": displacement_file,
-        "deformation_file": deformation_file if write_deformation_field else None,
+        "deformation_file": deformation_file if write_deformation else None,
         "normalized_file": normalized_file if write_normalized_image else None,
         "jacobian_file": jacobian_file if write_jacobian_determinant else None,
-        }   
+        }
 
 
 
 def deformation_from_displacement(template_file, displacement_file, deformation_file, verbose=False):
     """
-    Convert an ANTs composite displacement field into a deformation field y(x) that maps 
+    Convert an ANTs composite displacement field into a deformation field y(x) that maps
     voxel coordinates in the template space into world coordinates of moveable image.
     This deformation map can be used to convert points from template space into the moveable space
-    or to resample the moveable image into the template space. 
+    or to resample the moveable image into the template space.
 
     Args:
         template_file (str): Path to the template image (defines grid, affine, spacing)
@@ -178,7 +200,7 @@ def deformation_from_displacement(template_file, displacement_file, deformation_
     )
     pts_subj_ants = df_subj_ants[["x","y","z"]].values
 
-    # Move the points back to LPI coordinates  
+    # Move the points back to LPI coordinates
     pts_subj = pts_subj_ants.copy()
     pts_subj[:,0] *= -1
     pts_subj[:,1] *= -1
@@ -194,4 +216,4 @@ def deformation_from_displacement(template_file, displacement_file, deformation_
 
 # Use main to make function callable from command line (see isolate.py)
 if __name__ == '__main__':
-    pass 
+    pass
