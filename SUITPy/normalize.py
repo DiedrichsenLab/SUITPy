@@ -108,7 +108,7 @@ def normalize(source_file, mask_file, space='SUIT', template_file=None,
         if verbose:
             print(f"Saving inverse deformation field into {inv_deformation_file}")
         deformation_from_displacement(
-            template_file=source_img,
+            template_file=source_file,
             displacement_file=mytx['invtransforms'],
             deformation_file=inv_deformation_file,
             verbose=verbose
@@ -149,17 +149,17 @@ def normalize(source_file, mask_file, space='SUIT', template_file=None,
     if not write_ants_transform: 
         os.remove(mytx["fwdtransforms"][0])
         os.remove(mytx["fwdtransforms"][1])
-        os.remove(mytx["invtransforms"][0])
+        os.remove(mytx["invtransforms"][1])
     else: 
-        return_dict("fwd_transforms")= mytx["fwdtransforms"]
-        return_dict("inv_transforms")= mytx["invtransforms"]
+        return_dict["fwd_transforms"]= mytx["fwdtransforms"]
+        return_dict["inv_transforms"]= mytx["invtransforms"]
     
     if write_deformation: 
-        return_dict("fwd_deformation") = deformation_file 
+        return_dict["fwd_deformation"] = deformation_file 
     if write_inv_deformation:
-        return_dict("inv_deformation") = inv_deformation_file 
+        return_dict["inv_deformation"] = inv_deformation_file 
     if write_jacobian_determinant: 
-        return_dict("jacobian_file") = inv_deformation_file 
+        return_dict["jacobian_determinant"] = jacobian_file 
 
     return return_dict
 
