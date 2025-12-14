@@ -9,7 +9,7 @@ import SUITPy as suit
 def test_normalize():
     T1_file = 'docs/source/tutorials/sub-ex_T1w.nii.gz'
     mask_file = 'docs/source/tutorials/sub-ex_T1w_cerebellum_dseg.nii.gz'
-    suit.normalize(T1_file,mask_file,space='SUIT',verbose=1,write_jacobian_determinant=True,write_ants_transform=False,write_inv_deformation=True)
+    suit.normalize(T1_file,mask_file,space='SUIT',verbose=1,write_jacobian_determinant=True,write_ants_transform=False,write_inv_deformation=False)
     pass
 
 if __name__ == '__main__':

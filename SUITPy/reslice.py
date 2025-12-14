@@ -18,7 +18,8 @@ def reslice_image(
                 interp = 1,
                 voxelsize = None,
                 imagedim = None,
-                affine = None):
+                affine = None,
+                replace_nan = True):
     """[summary]
         source_image: (Nifti1Image, str, or iterable of NIFTI)
             Images to reslice
@@ -30,11 +31,12 @@ def reslice_image(
             0: nearest neighbor, 1:trilinear
         voxelsize (tuple):
             Desired voxel size - defaults to deformation image
-            [THROW A WARNING IF BOTH VOXEL SIZE AND AFFINE MAT ARE SPECIFIC]
         imagedim (tuple):
             desired image dimensions: Defaults to deformation image
-        affine (ndaray)"
+        affine (ndaray):
             affine transformation matrix of target image
+        replace_nan (bool):
+            if true, replaces Nan values with 0
     Returns:
         image (NIFTI image or list of NIFTI Images )
     """
@@ -67,13 +69,13 @@ def reslice_image(
         for img in source_image:
             if type(img) == str:
                 img = nib.load(img)
-            output_img = reslice_img(img, deformation, mask, interp, imagedim,affine)
+            output_img = reslice_img(img, deformation, mask, interp, imagedim,affine,replace_nan)
             output_list.append(output_img)
         return output_list
     else:
         if type(source_image) == str:
             source_image = nib.load(source_image)
-        output_img = reslice_img(source_image, deformation, mask, interp, imagedim, affine)
+        output_img = reslice_img(source_image, deformation, mask, interp, imagedim, affine,replace_nan)
         return output_img
 
 def reslice_img(img,
@@ -81,8 +83,8 @@ def reslice_img(img,
                 mask,
                 interp,
                 imagedim,
-                affine
-):
+                affine,
+                replace_nan):
     """
     Resample image
 
@@ -99,6 +101,8 @@ def reslice_img(img,
             desired image size
         affine (ndarray):
             Affine transformation matrix of desired target image
+        replace_nan (bool):
+            if true, replaces Nan values with 0
     Returns:
         image (NIFTI image or list of NIFTI Images )
     """
@@ -116,6 +120,9 @@ def reslice_img(img,
         maskData = ntv.sample_image(mask, xm, ym, zm, interp)
         data = np.multiply(data,maskData)
 
+    # if replace_nan, replace nan with zero
+    if replace_nan:
+        np.nan_to_num(data,copy=False)
     # Create new image
     output_img = nib.Nifti1Image(data, affine=affine)
     output_img.set_qform(output_img.get_qform())

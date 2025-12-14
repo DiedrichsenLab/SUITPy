@@ -8,9 +8,9 @@ The newest developments will be implemented in the Python version.
 .. toctree::
    :maxdepth: 1
    :caption: Contents:
-   
+
    install.rst
-   quickstart.rst
+   tutorials/1.quickstart_fMRI.ipynb
    isolate.rst
    tutorials/3.normalize_example.ipynb
    reslice.rst
@@ -22,7 +22,7 @@ Important links
 ---------------
 
 - SUIT website: http://diedrichsenlab.org/imaging/suit.htm
-- Tutorial notebooks and data examples: https://github.com/diedrichsenlab/SUITPy/docs/source/tutorials 
+- Tutorial notebooks and data examples: https://github.com/diedrichsenlab/SUITPy/docs/source/tutorials
 - Repository of the Python version: https://github.com/diedrichsenlab/SUITPy
 - Repository of the Matlab version: https://github.com/jdiedrichsen/SUIT
 

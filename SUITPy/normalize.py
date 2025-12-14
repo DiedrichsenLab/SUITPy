@@ -102,8 +102,11 @@ def normalize(source_file, mask_file, space='SUIT', template_file=None,
             verbose=verbose
         )
 
-    # Write inverse deformation if requested 
+    # Write inverse deformation if requested
     if write_inv_deformation:
+        raise(NotImplementedError('inverse deformation not implemented yet'))
+        """
+        Below code is not correct - the affine martix needs to be invertedd
         inv_deformation_file = f"{result_folder}/{basename}_from-SUIT_mode-image_xfm.nii.gz"
         if verbose:
             print(f"Saving inverse deformation field into {inv_deformation_file}")
@@ -113,6 +116,7 @@ def normalize(source_file, mask_file, space='SUIT', template_file=None,
             deformation_file=inv_deformation_file,
             verbose=verbose
         )
+        """
 
     # Write the Jacobian determinant image for vbm analysis
     if write_jacobian_determinant:
@@ -146,20 +150,20 @@ def normalize(source_file, mask_file, space='SUIT', template_file=None,
 
     # Lightweight return dictionary
     return_dict={}
-    if not write_ants_transform: 
+    if not write_ants_transform:
         os.remove(mytx["fwdtransforms"][0])
         os.remove(mytx["fwdtransforms"][1])
         os.remove(mytx["invtransforms"][1])
-    else: 
+    else:
         return_dict["fwd_transforms"]= mytx["fwdtransforms"]
         return_dict["inv_transforms"]= mytx["invtransforms"]
-    
-    if write_deformation: 
-        return_dict["fwd_deformation"] = deformation_file 
+
+    if write_deformation:
+        return_dict["fwd_deformation"] = deformation_file
     if write_inv_deformation:
-        return_dict["inv_deformation"] = inv_deformation_file 
-    if write_jacobian_determinant: 
-        return_dict["jacobian_determinant"] = jacobian_file 
+        return_dict["inv_deformation"] = inv_deformation_file
+    if write_jacobian_determinant:
+        return_dict["jacobian_determinant"] = jacobian_file
 
     return return_dict
 
