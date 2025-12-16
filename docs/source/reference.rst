@@ -7,11 +7,18 @@ Isolate module reference
 .. automodule:: isolate
    :members: isolate
 
+
+Normalize module reference
+--------------------------
+
+.. automodule:: normalize
+   :members: normalize, deformation_from_displacement
+
 Reslice module reference
 ------------------------
 
 .. automodule:: reslice
-   :members:
+   :members: reslice_image
 
 
 Flatmap module reference
@@ -24,4 +31,4 @@ Atlas module reference
 ----------------------
 
 .. automodule:: atlas
-   :members: fetch_atlas
+   :members: fetch_atlas, summarize_data

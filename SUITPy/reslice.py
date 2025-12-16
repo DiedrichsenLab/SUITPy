@@ -1,10 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-SUIT toolbox reslice module
-
-Basic functionality for resample image into atlas
-
+Module to resample image into atlas space 
+@authors: Jorn Diedrichsen
 """
 import nibabel as nib
 import numpy as np
@@ -20,7 +18,9 @@ def reslice_image(
                 imagedim = None,
                 affine = None,
                 replace_nan = True):
-    """[summary]
+    """Reslices images into atlas space using a deformation map and mask 
+
+    Args:
         source_image: (Nifti1Image, str, or iterable of NIFTI)
             Images to reslice
         deformation: (Nifti1Image, str):
@@ -37,6 +37,7 @@ def reslice_image(
             affine transformation matrix of target image
         replace_nan (bool):
             if true, replaces Nan values with 0
+            
     Returns:
         image (NIFTI image or list of NIFTI Images )
     """

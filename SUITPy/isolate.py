@@ -1,6 +1,6 @@
 """
 Cerebellar Isolation using a Unet model
-authors: Yao Li, Carlos Hernandez-Castillo, Joern Diedrichsen
+@authors: Yao Li, Carlos Hernandez-Castillo, Joern Diedrichsen
 """
 
 import sys
@@ -1199,9 +1199,6 @@ def isolate(t1_file: str = None, t2_file: str = None,
             set to True to save files cropped to window (only works if result_folder is specified)
         verbose: bool
             whether to print out status information during processing
-    Returns:
-        mask: (ANTsImage)
-            predicted cerebellum mask
 
     """
 

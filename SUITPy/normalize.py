@@ -1,5 +1,6 @@
 """
 Cerebellar normalization and isolation using ANTsPy
+@authors: Yaping Wang, Jorn Diedrichsen
 """
 
 import sys
@@ -42,11 +43,10 @@ def normalize(source_file, mask_file, space='SUIT', template_file=None,
         dict: A dictionary containing output images (if selected to be written)
             fwdtransforms (str): Path to forward transforms (if write_ant_transform)
             invtransforms (str): Path to inverse transforms (if write_ant_transform)
-            displacement_file (str): Path to composite displacement field
-            deformation_file (str): Path to deformation field
-            inv_deformation_file (str): Path to inverse deformation field
-            normalized_file (str): Path to normalized image in template space
-            jacobian_file (str): Path to log-Jacobian determinant map
+            fwd_deformation (str): Path to composite displacement field
+            inv_deformation (str): Path to inverse deformation field
+            normalized_image (str): Path to normalized image in template space
+            jacobian_determinant (str): Path to log-Jacobian determinant map
     """
     # Get result folder and base name
     result_folder = os.path.dirname(os.path.abspath(source_file)) if result_folder is None else result_folder
@@ -74,7 +74,7 @@ def normalize(source_file, mask_file, space='SUIT', template_file=None,
     template_img = ants.image_read(template_file)
 
     # ANTs Registration
-    if verbose:
+    if verbose>0:
         print(f"Normalizing {basename} to {template_file}")
     prefix = f'{result_folder}/{basename}_xfm-{space}_'
     mytx = ants.registration(fixed=template_img,moving=masked_source_img,
@@ -160,8 +160,11 @@ def normalize(source_file, mask_file, space='SUIT', template_file=None,
 
     if write_deformation:
         return_dict["fwd_deformation"] = deformation_file
+    if write_normalized: 
+        return_dict["normalized_image"] = normalized_file
+
     if write_inv_deformation:
-        return_dict["inv_deformation"] = inv_deformation_file
+        return_dict["inv_deformation"] = None
     if write_jacobian_determinant:
         return_dict["jacobian_determinant"] = jacobian_file
 

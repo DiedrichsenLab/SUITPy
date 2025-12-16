@@ -13,7 +13,7 @@ The newest developments will be implemented in the Python version.
    tutorials/1.quickstart_fMRI.ipynb
    isolate.rst
    tutorials/3.normalize_example.ipynb
-   reslice.rst
+   tutorials/4.reslice_example.ipynb
    flatmap.rst
    atlases.rst
    reference.rst

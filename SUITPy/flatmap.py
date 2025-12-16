@@ -1,12 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-SUIT toolbox flatmap module
-
-Basic functionality for mapping and plotting functional
-Data for the cerebellum
-
-@authors jdiedrichsen, maedbhking, eliu72, dzhi1993, switt
+Module for mapping and plotting data to the cerebellar flatmap. 
+@authors Jorn Diedrichsen, Maedbh King, Elaine Liu, Da Zhi
 """
 
 import numpy as np
@@ -40,7 +36,6 @@ def vol_to_surf(
     inner_surf_gifti=None
     ):
     """Maps volume data onto a surface, defined by inner and outer surface.
-
     Function enables mapping of volume-based data onto the vertices of a
     surface. For each vertex, the function samples the volume along the line
     connecting the two surfaces. The points along the line
@@ -167,9 +162,8 @@ def vol_to_surf(
     return mapped_data
 
 def save_colorbar(gifti,outpath):
-    """plots colorbar for gifti object (*.label.gii)
-    and saves it to outpath
-
+    """plots colorbar for gifti object (*.label.gii) and saves it to outpath
+    
     Args:
         gifti (gifti image):
             Nibabel Gifti image

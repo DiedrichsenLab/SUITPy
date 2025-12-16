@@ -1,8 +1,5 @@
 """
 Downloading NeuroImaging datasets: utility functions
-
-@author: maedbhking
-
 source: Nilearn
 https://github.com/nilearn/nilearn/blob/main/nilearn/datasets/utils.py
 """

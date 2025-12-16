@@ -1,15 +1,9 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Created on Tue Dec  9 09:08:44 2025
-
-@author: vashkani, jdiedrichsen
-"""
-
-"""
-Importing Cerebellar atlases and templates from the cerebellar atlas
-repository
-https://github.com/DiedrichsenLab/cerebellar_atlases
+Module to importing cerebellar atlases and templates from the [cerebellar atlas
+repository](https://github.com/DiedrichsenLab/cerebellar_atlases)
+@authors: Jorn Diedrichsen, Vahid Ashkani
 """
 
 import os
@@ -154,10 +148,11 @@ def summarize_data(
     maps=None,
     space="SUIT",
     atlas_dir=None,
-    stats=("nanmean", "nanstd"),
+    stats=["nanmean"],
     region_names=None,
     outfilename=None,
-    verbose=0,):
+    verbose=0,
+    lut_file=None):
     """Summarize the data from the images by ROIs defined in a label image.
 
     This works optimally with the files provided in the cerebellar atlas
@@ -176,15 +171,18 @@ def summarize_data(
     Args:
         images (list or str or nib image):
             One or multiple image(s) (3D or 4D NIfTI) to summarize.
+        label_image (str or nib image or None):
+            Custom label image independent of cerebellar atlases. If provided,
+            this is used as the ROI definition. 
         atlas (str or None):
             Name of the atlas (Diedrichsen_2009, King_2019, etc.).
-            For custom label images this can be None or a free-form name.
+            Ignored if label image is provided.
         maps (str or None):
             Name of the map within the atlas (atl-Buckner7, atl-Anatomical).
-            Ignored if `label_image` is provided.
+            Ignored if label image is provided.
         space (str):
             Space for the volumetric atlas file: 'SUIT', 'MNI', 'MNISym', etc.
-            Used only when `label_image` is None.
+            Ignored if label image is provided.
         atlas_dir (str or None):
             Base directory of cerebellar atlases. If None, the default atlas
             directory used by SUITPy is used.
@@ -201,17 +199,11 @@ def summarize_data(
             Unused here, kept for API compatibility.
         verbose (int):
             Verbosity level.
-        label_image (str or nib image or None):
-            Custom label image independent of cerebellar atlases. If provided,
-            this is used as the ROI definition and no atlas download or lookup
-            is performed.
         lut_file (str or None):
             Optional LUT file for mapping label indices to names. If None and
             using cerebellar atlases, it defaults to `<maps>.lut` in the atlas
             directory. For custom label images, if lut_file is None, generic
             names ('region <id>') are used.
-        interp_order (int):
-            Reserved for future use (currently ignored).
 
     Returns:
         df (pandas.DataFrame):
