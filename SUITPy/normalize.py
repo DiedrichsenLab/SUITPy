@@ -33,6 +33,7 @@ def normalize(source_file, mask_file, space='SUIT', template_file=None,
         template_file (str): Optional path to a custom template file
         type_of_transform (str): ANTs registration type (e.g., 'antsRegistrationSyN[s]')
         write_normalized (bool): Save normalized (template-space) T1 image
+        write_ants_transform (bool): Save ANTs forward and inverse transforms
         write_deformation (bool): Save deformation field y(x) for reslice other images
         write_inv_deformation (bool): Save deformation field y(x) for reslice other images
         write_jacobian_determinant (bool): Computes & save log-Jacobian determinant
