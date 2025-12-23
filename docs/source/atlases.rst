@@ -13,7 +13,7 @@ For this command you can specify a atlas directory, specify the specific maps yo
 
 .. code::
 
-   suit.fetch_atlas('Nettekoven_2024', maps='NettekovenSym32',space='SUIT')
+   suit.fetch_atlas('Nettekoven_2024', maps='atl-NettekovenSym32',space='SUIT')
 
 Template spaces
 ---------------
@@ -35,7 +35,7 @@ For every template space, we provide the following files:
 
 Atlases
 -------
-For every maps, we provide some the following files:
+For every map, we provide some the following files:
 
 * ``..._space-MNI.nii``: volume file aligned to MNI152NLin6AsymC
 * ``..._space-MNISym.nii``: volume file aligned to MNI152NLin2009cSymC

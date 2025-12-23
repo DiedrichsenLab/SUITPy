@@ -6,3 +6,5 @@ matplotlib>=3.5.0
 scipy>=1.9.0
 neuroimagingtools>=1.1.1
 antspyx>=0.6.1
+plotly
+nilearn
