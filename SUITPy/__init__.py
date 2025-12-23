@@ -14,14 +14,13 @@ from .flatmap import (vol_to_surf,
 from .reslice import (reslice_image,
                       reslice_img)
 
-from .isolate import (isolate)
+from .isolation import (isolate)
 
-from .normalize import (normalize)
-
+from .normalization import (normalize, bounding_box, deformation_from_displacement)
 
 # Monkey-patch gzip to have faster reads on large gzip files
 if hasattr(gzip.GzipFile, 'max_read_chunk'):
     gzip.GzipFile.max_read_chunk = 100 * 1024 * 1024  # 100Mb
 
-__all__ = [fetch_atlas, vol_to_surf, plot,isolate,normalize,
-        reslice_image, reslice_img, save_colorbar]
+__all__ = [fetch_atlas, summarize_data,vol_to_surf, plot,isolate,normalize,
+        reslice_image, reslice_img, save_colorbar, bounding_box,deformation_from_displacement]

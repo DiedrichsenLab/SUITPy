@@ -1260,9 +1260,10 @@ def isolate(t1_file: str = None, t2_file: str = None,
         result = subject_postprocess(mask=mask, trans=trans, BoundingBox=BoundingBox, ref=img_read(t2_file))
     if result_folder is not None:
         os.makedirs(result_folder, exist_ok=True)
+        ofname = f'{basename}_cerebellum_dseg.nii.gz'
         if verbose:
-            print(f"saving results into {result_folder}")
-        ants.image_write(result, os.path.join(result_folder, f'{basename}_cerebellum_dseg.nii.gz'))
+            print(f"saving results to {ofname}")
+        ants.image_write(result, os.path.join(result_folder, ofname))
 
         if save_cropped_files:
             if t1_crop is not None:

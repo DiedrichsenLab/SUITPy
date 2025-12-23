@@ -112,3 +112,9 @@ docs/source/tutorials/sub-ex_T1w_from-SUIT_mode-image_xfm.nii.gz
 docs/source/tutorials/sub-ex_T1w_resliced.nii.gz
 docs/source/tutorials/tpl-SUIT_space-ex_resliced.nii.gz
 docs/source/tutorials/sub-ex_task-fingerseq_space-SUIT.nii.gz
+docs/source/tutorials/sub-ex_T1w_from-MNISym_mode-image_xfm.nii.gz
+docs/source/tutorials/sub-ex_T1w_space-MNISym.nii.gz
+docs/source/tutorials/sub-ex_T1w_to-MNISym_mode-image_detJ.nii.gz
+docs/source/tutorials/sub-ex_T1w_to-MNISym_mode-image_xfm.nii.gz
+docs/source/tutorials/tpl-MNISym_space-ex_resliced.nii.gz
+docs/source/tutorials/tpl-MNI152NLin2009cSymC_from-SUIT_mode-image_xfm.nii

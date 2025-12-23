@@ -76,7 +76,7 @@ def normalize(source_file, mask_file, space='SUIT', template_file=None,
 
     # ANTs Registration
     if verbose>0:
-        print(f"Normalizing {basename} to {template_file}")
+        print(f"Normalizing {basename} to {os.path.basename(template_file)}")
     prefix = f'{result_folder}/{basename}_xfm-{space}_'
     mytx = ants.registration(fixed=template_img,moving=masked_source_img,
                              type_of_transform=type_of_transform,
@@ -88,14 +88,14 @@ def normalize(source_file, mask_file, space='SUIT', template_file=None,
     if write_normalized:
         normalized_file = f'{result_folder}/{basename}_space-{space}.nii.gz'
         if verbose:
-            print(f"Saving the normalized image into {normalized_file}")
+            print(f"Saving the normalized image into {os.path.basename(normalized_file)}")
         ants.image_write(mytx['warpedmovout'], normalized_file)
 
     # Write the deformation field for reslicing images from subject to template space
     if write_deformation:
-        deformation_file = f"{result_folder}/{basename}_to-SUIT_mode-image_xfm.nii.gz"
+        deformation_file = f"{result_folder}/{basename}_to-{space}_mode-image_xfm.nii.gz"
         if verbose:
-            print(f"Saving deformation field into {deformation_file}")
+            print(f"Saving deformation field into {os.path.basename(deformation_file)}")
         deformation_from_displacement(
             template_file=template_file,
             displacement_file=mytx['fwdtransforms'],
@@ -105,9 +105,9 @@ def normalize(source_file, mask_file, space='SUIT', template_file=None,
 
     # Write inverse deformation if requested
     if write_inv_deformation:
-        inv_deformation_file = f"{result_folder}/{basename}_from-SUIT_mode-image_xfm.nii.gz"
+        inv_deformation_file = f"{result_folder}/{basename}_from-{space}_mode-image_xfm.nii.gz"
         if verbose:
-            print(f"Saving inverse deformation field into {inv_deformation_file}")
+            print(f"Saving inverse deformation field into {os.path.basename(inv_deformation_file)}")
         whichtoinvert = [tf.endswith('.mat') for tf in mytx['invtransforms']]
         deformation_from_displacement(
             template_file=source_file,
@@ -117,16 +117,16 @@ def normalize(source_file, mask_file, space='SUIT', template_file=None,
             verbose=verbose
         )
         # Zero out the inverse deformation field outside the cerebellar bounding box to reduce memory load
-        bounding_boxing(xfm_file=inv_deformation_file,
-                        mask_file=mask_file,
-                        out_file=inv_deformation_file,
-                        verbose=verbose)
+        inv_img = bounding_box(img_file=inv_deformation_file,
+                        mask_file=mask_file)
+        nib.save(inv_img,inv_deformation_file)
+
 
     # Write the Jacobian determinant image for vbm analysis
     if write_jacobian_determinant:
         # Produce displacement map
         # Compose taffine + warp → displacement field
-        displacement_file = f"{result_folder}/{basename}_to-SUIT_mode-image_disp.nii.gz"
+        displacement_file = f"{result_folder}/{basename}_to-{space}_mode-image_disp.nii.gz"
         ants.apply_transforms(
             fixed=template_img,
             moving=masked_source_img,
@@ -135,7 +135,7 @@ def normalize(source_file, mask_file, space='SUIT', template_file=None,
             compose=f'{prefix}')
         os.rename(f'{prefix}comptx.nii.gz', displacement_file)
 
-        jacobian_file = f"{result_folder}/{basename}_to-SUIT_mode-image_detJ.nii.gz"
+        jacobian_file = f"{result_folder}/{basename}_to-{space}_mode-image_detJ.nii.gz"
         # Jacobian settings
         use_log = True      # log-Jacobian
         use_geom = True     # geometric Jacobian
@@ -147,8 +147,7 @@ def normalize(source_file, mask_file, space='SUIT', template_file=None,
         )
         jac_img.to_filename(jacobian_file)
         if verbose:
-            print(f"Computing Jacobian: geom={use_geom}, log={use_log},\
-                    Saving the Jacobian determinant into {jacobian_file}")
+            print(f"Saving the log Jacobian determinant to {os.path.basename(jacobian_file)}")
         os.remove(displacement_file)
 
     # Lightweight return dictionary
@@ -167,7 +166,7 @@ def normalize(source_file, mask_file, space='SUIT', template_file=None,
         return_dict["normalized_image"] = normalized_file
 
     if write_inv_deformation:
-        return_dict["inv_deformation"] = None
+        return_dict["inv_deformation"] = inv_deformation_file
     if write_jacobian_determinant:
         return_dict["jacobian_determinant"] = jacobian_file
 
@@ -232,38 +231,42 @@ def deformation_from_displacement(template_file, displacement_file, deformation_
 
 
 
-def bounding_boxing(xfm_file, mask_file, out_file=None, verbose=False):
+def bounding_box(img_file, mask_file):
     """
-    Zero-out a deformation field outside the bounding box defined
-    by the cerebellum mask.
+    Crops an image file (3-5d) to a bounding box defined a 3d mask.
+    The first 3 dimensions of the image and mask must match.
 
     Args:
-    xfm_file (str): Path to deformation field NIfTI file (4D or 5D).
-    mask_file (str): Path to 3D mask NIfTI file. Non-zero defines ROI.
-    out_file (str): If provided, save the output deformation to this path.
+        img_file (str or Nifti1Image): 
+            Path to deformation field NIfTI file (4D or 5D).
+        mask_file (str or Nifti1Image): 
+            Path to 3D mask NIfTI file. Non-zero defines ROI.
 
+    Returns: 
+        cropped_file (Nifti1Image): 
+            The cropped image 
     """
 
     # load images
-    xfm_img = nib.load(xfm_file)
-    mask_img = nib.load(mask_file)
+    if isinstance(img_file, str):
+        img = nib.load(img_file)
+    else:
+        img = img_file
 
-    xfm = xfm_img.get_fdata()
-    mask = mask_img.get_fdata()
+    if isinstance(mask_file, str):
+        mask_img = nib.load(mask_file)
+    else:
+        mask_img = mask_file
 
-   
-    if xfm.shape[:3] != mask.shape:
+    # Check dimension 
+    if mask_img.ndim != 3:
+        raise ValueError("mask must be 3D")
+    if img.shape[:3] != mask_img.shape:
         raise ValueError(
             f"Shape mismatch: xfm {xfm.shape[:3]} vs mask {mask.shape}"
         )
 
-    if mask.ndim != 3:
-        raise ValueError("mask must be 3D")
-
-    if xfm.ndim not in (4, 5):
-        raise ValueError(
-            f"xfm must be 4D or 5D, got shape {xfm.shape}"
-        )
+    mask = mask_img.get_fdata()
 
     # compute bounding box
     coords = np.where(mask > 0)
@@ -274,37 +277,9 @@ def bounding_boxing(xfm_file, mask_file, out_file=None, verbose=False):
     ymin, ymax = coords[1].min(), coords[1].max()
     zmin, zmax = coords[2].min(), coords[2].max()
 
-    bbox = (xmin, xmax, ymin, ymax, zmin, zmax)
+    cropped_img = img.slicer[xmin:xmax+1,ymin:ymax+1,zmin:zmax+1,...]
 
-    if verbose:
-        print("Bounding box:")
-        print(f"  x: {xmin}–{xmax}")
-        print(f"  y: {ymin}–{ymax}")
-        print(f"  z: {zmin}–{zmax}")
-
-    # build bbox mask
-    bbox_mask = np.zeros(mask.shape, dtype=bool)
-    bbox_mask[xmin:xmax+1, ymin:ymax+1, zmin:zmax+1] = True
-
-
-    xfm_masked = xfm.copy()
-    if xfm.ndim == 5:
-        xfm_masked[~bbox_mask, :, :] = 0
-    else:
-        xfm_masked[~bbox_mask, :] = 0
-
-    xfm_out_img = nib.Nifti1Image(
-        xfm_masked,
-        affine=xfm_img.affine,
-        header=xfm_img.header
-    )
-
-    if out_file is not None:
-        nib.save(xfm_out_img, out_file)
-        if verbose:
-            print(f"Then bbox-masked deformation to: {out_file}")
-
-    return
+    return cropped_img
 
 # Use main to make function callable from command line (see isolate.py)
 if __name__ == '__main__':
