@@ -4,15 +4,15 @@ Module and Function reference
 Isolate module reference
 ------------------------
 
-.. automodule:: isolate
+.. automodule:: isolation
    :members: isolate
 
 
 Normalize module reference
 --------------------------
 
-.. automodule:: normalize
-   :members: normalize, deformation_from_displacement
+.. automodule:: normalization
+   :members: normalize, deformation_from_displacement, bounding_box
 
 Reslice module reference
 ------------------------
