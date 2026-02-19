@@ -894,6 +894,71 @@ def normalized_mutual_information(image1: np.ndarray, image2: np.ndarray, bins:i
 
     return mi
 
+
+def registration(img: ants.ANTsImage, brain_mask: ants.ANTsImage = None, template_name: str = 'MNI152NLin6Asym', type_of_transform: str = 'Similarity', max_iterations: int = 5, mi_lower: float = 1.22, mi_upper:float = 1.23) -> Tuple[ants.ANTsTransform, int]:
+    """
+    register the image to this template
+
+    Args:
+        img: (ANTsImage)
+            image to be registered
+        brain_mask: (ANTsImage)
+            brain mask of the image
+        template: (string)
+            The name of template used. It uses MNI152NLin6Asym by default. (Note that the template must be stored in SUITPy/templates directory and come with brain mask)
+        type_of_transform: (string)
+            transform type (Affine by default, check ANTsPY[https://antspy.readthedocs.io/en/latest/registration.html] for details)
+        max_iterations: (int)
+            maximum number of iterations
+        mi_lower: (float)
+            lower boundary of normalized mutual information
+        mi_upper: (float)
+            upper boundary of normalized mutual information
+
+    Returns:
+        trans: (ANTsTransform)
+            the transformation from the subject space to the template space
+        status: (int)
+            the status of the registration (0 for success, 1 for uncertainty, 2 for failure)
+
+    """
+    base_dir = os.path.dirname(__file__)
+    template = ants.image_read(os.path.join(base_dir, f'templates/tpl-{template_name}_T1w.nii.gz'))
+    template_brain_mask = ants.image_read(os.path.join(base_dir, f'templates/tpl-{template_name}-brain_mask.nii.gz'))
+    template_brain = ants.mask_image(template, template_brain_mask)
+    cnt = 0
+    status = 2
+    trans_final = None
+    best_mi = 0
+
+    while cnt < max_iterations:
+
+        if brain_mask is not None:
+            brain = ants.mask_image(img, brain_mask)
+            result = ants.registration(fixed=template_brain, moving=brain, type_of_transform=type_of_transform)
+            trans = ants.read_transform(result['fwdtransforms'][0])
+        else:
+            result = ants.registration(fixed=template, moving=img, type_of_transform=type_of_transform)
+            trans = ants.read_transform(result['fwdtransforms'][0])
+
+        img_transformed = ants.apply_ants_transform_to_image(trans, img, template)
+        brain_transformed = ants.mask_image(img_transformed, template_brain_mask)
+        mi = normalized_mutual_information(brain_transformed.numpy(), template_brain.numpy())
+        if mi > best_mi:
+            best_mi = mi
+            trans_final = trans
+
+        if mi > mi_upper:
+            status = 0
+            break
+        if mi > mi_lower:
+            status = 1
+
+        cnt += 1
+
+    return trans_final, status
+
+
 class RegistrationError(Exception):
     def __init__(self, message):
         super().__init__(message)
@@ -905,12 +970,12 @@ class TemplateCerebellarBoundingBox:
         All other template implementations should be registered to this template.
     """
 
-    def __init__(self, name: str ='MNI152NLin6Asym', bounding_box: np.ndarray = None, cerebellar_center: np.ndarray = None, cropped_size: np.ndarray = None):
+    def __init__(self, template_name: str ='MNI152NLin6Asym', bounding_box: np.ndarray = None, cerebellar_center: np.ndarray = None, cropped_size: np.ndarray = None):
         """
         Create a bounding box
 
         Args:
-            name: (string)
+            template_name: (string)
                 The name of template used. It uses MNI152NLin6Asym by default.
             bounding_box: (ndarray)
                 cerebellar bounding box in MNI space (in mm) (reserved for future development)
@@ -919,6 +984,7 @@ class TemplateCerebellarBoundingBox:
             cropped_size: (ndarray)
                 (reserved for future development)
         """
+        self.template_name = template_name
         self.cropped_size = (128, 128, 128)
         if bounding_box is not None:
             self.bounding_box = bounding_box
@@ -933,11 +999,11 @@ class TemplateCerebellarBoundingBox:
         self.upperright = self.bounding_box[1]
 
         base_dir = os.path.dirname(__file__)
-        self.template = ants.image_read(os.path.join(base_dir, f'templates/tpl-{name}_T1w.nii.gz'))
-        self.nib_template = nib.load(os.path.join(base_dir, f'templates/tpl-{name}_T1w.nii.gz'))
-        self.brainmask = ants.image_read(os.path.join(base_dir, f'templates/tpl-{name}-brain_mask.nii.gz'))
+        self.template = ants.image_read(os.path.join(base_dir, f'templates/tpl-{self.template_name}_T1w.nii.gz'))
+        self.nib_template = nib.load(os.path.join(base_dir, f'templates/tpl-{self.template_name}_T1w.nii.gz'))
+        self.brainmask = ants.image_read(os.path.join(base_dir, f'templates/tpl-{self.template_name}-brain_mask.nii.gz'))
         self.brain = ants.mask_image(self.template, self.brainmask)
-        self.affine = nib.load(os.path.join(base_dir, f'templates/tpl-{name}_T1w.nii.gz')).affine
+        self.affine = nib.load(os.path.join(base_dir, f'templates/tpl-{self.template_name}_T1w.nii.gz')).affine
 
     def get_crop_indices(self) -> np.ndarray:
         """
@@ -965,7 +1031,7 @@ class TemplateCerebellarBoundingBox:
 
         return affine
 
-    def registration(self, img: ants.ANTsImage, brain_mask: ants.ANTsImage = None, type_of_transform: str = 'Similarity', max_iterations: int = 5, mi_lower: float = 1.23, mi_upper:float = 1.24) -> Tuple[ants.ANTsTransform, int]:
+    def registration(self, img: ants.ANTsImage, brain_mask: ants.ANTsImage = None, type_of_transform: str = 'Similarity', max_iterations: int = 5, mi_lower: float = 1.22, mi_upper:float = 1.23) -> Tuple[ants.ANTsTransform, int]:
         """
         register the image to this template
 
@@ -990,36 +1056,10 @@ class TemplateCerebellarBoundingBox:
                 the status of the registration (0 for success, 1 for uncertainty, 2 for failure)
 
         """
-        cnt = 0
-        status = 2
-        trans_final = None
-        best_mi = 0
-        while(cnt < max_iterations):
 
-            if brain_mask is not None:
-                brain = ants.mask_image(img, brain_mask)
-                result = ants.registration(fixed=self.brain, moving=brain, type_of_transform=type_of_transform)
-                trans = ants.read_transform(result['fwdtransforms'][0])
-            else:
-                result = ants.registration(fixed=self.template, moving=img, type_of_transform=type_of_transform)
-                trans = ants.read_transform(result['fwdtransforms'][0])
+        trans, status = registration(img=img, brain_mask=brain_mask,template_name=self.template_name, type_of_transform=type_of_transform, max_iterations=max_iterations, mi_lower=mi_lower, mi_upper=mi_upper)
 
-            img_transformed = ants.apply_ants_transform_to_image(trans, img, self.template)
-            brain_transformed = ants.mask_image(img_transformed, self.brainmask)
-            mi = normalized_mutual_information(brain_transformed.numpy(), self.brain.numpy())
-            if mi > best_mi:
-                best_mi = mi
-                trans_final = trans
-
-            if mi > mi_upper:
-                status = 0
-                break
-            if mi > mi_lower:
-                status = 1
-
-            cnt += 1
-
-        return trans_final, status
+        return trans, status
 
     def crop(self, img: ants.ANTsImage, trans: ants.ANTsTransform = None) -> Tuple[ants.ANTsImage, ants.ANTsImage]:
         """
@@ -1289,7 +1329,7 @@ def isolate(t1_file: str = None, t2_file: str = None,
     # find paramter file and template bounding box 
     base_dir = os.path.dirname(os.path.abspath(__file__))
     params_file = os.path.join(base_dir, 'parameters', params)
-    BoundingBox = TemplateCerebellarBoundingBox(name=template)
+    BoundingBox = TemplateCerebellarBoundingBox(template_name=template)
 
     try:
         # Crop the images to the Unet input window
@@ -1345,7 +1385,8 @@ def isolate(t1_file: str = None, t2_file: str = None,
                 ants.image_write(mask, os.path.join(result_folder, f'{basename}_cerebellum_crop_dseg.nii.gz'))
                 ants.write_transform(trans, os.path.join(result_folder, f'{basename}_trans.mat'))
     except RegistrationError as e:
-        print(f'Caught registration error for {t1_file if t1_file is not None else t2_file} : {e}')
+        warnings.warn(f'Caught registration error for {t1_file if t1_file is not None else t2_file} : {e}')
+        print(f'Isolation fails on {t1_file if t1_file is not None else t2_file}. No results were saved')
         mask = None
     return mask
 
