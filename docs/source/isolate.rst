@@ -32,7 +32,6 @@ The optional input parameters are
     --brain_mask: Binary mask image from skull stripping step to improve registration (optional)
     --template: Template for registration
     --save_cropped_files: Save the images cropped and resampled to the UNet window
-    --save_transform: Save the affine transformation matrix
 
 
 Architecture

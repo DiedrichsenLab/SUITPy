@@ -814,24 +814,6 @@ def predict(params_file: str, t1: np.ndarray = None, t2: np.ndarray = None) -> n
     mask = net(t1, t2)
     return mask[0][0]
 
-def from_nibabel(nib_image: nib.Nifti1Image) -> ants.ANTsImage:
-    """
-    Converts a given Nifti image into an ANTsPy image
-    (https://antspy.readthedocs.io/en/latest/index.html)
-
-    Args:
-        img: NiftiImage
-
-    Returns:
-        ants_image: ANTsImage
-    """
-    fd, tmpfile = mkstemp(suffix=".nii.gz")
-    nib_image.to_filename(tmpfile)
-    new_img = ants.image_read(tmpfile)
-    os.close(fd)
-    os.remove(tmpfile)
-    return new_img
-
 
 def img_read(path: str) -> ants.ANTsImage:
     """
@@ -850,7 +832,7 @@ def img_read(path: str) -> ants.ANTsImage:
     # set q form identical to s form to avoid misalignment from ANTs
     if nib_img.get_sform() is not None:
         nib_img.set_qform(nib_img.get_sform())
-    new_img = from_nibabel(nib_img)
+    new_img = ants.from_nibabel_nifti(nib_img)
     return new_img
 
 def normalized_mutual_information(image1: np.ndarray, image2: np.ndarray, bins:int = 100) -> float:
@@ -897,7 +879,7 @@ def normalized_mutual_information(image1: np.ndarray, image2: np.ndarray, bins:i
 
 def registration(img: ants.ANTsImage, brain_mask: ants.ANTsImage = None, template_name: str = 'MNI152NLin6Asym', type_of_transform: str = 'Similarity', max_iterations: int = 5, mi_lower: float = 1.22, mi_upper:float = 1.23) -> Tuple[ants.ANTsTransform, int]:
     """
-    register the image to this template
+    register the image to this template. The function runs ants registration multiple time and find the best registration results evaluated using normalized mutual information.
 
     Args:
         img: (ANTsImage)
@@ -911,9 +893,9 @@ def registration(img: ants.ANTsImage, brain_mask: ants.ANTsImage = None, templat
         max_iterations: (int)
             maximum number of iterations
         mi_lower: (float)
-            lower boundary of normalized mutual information
+            lower bound of normalized mutual information (range (1, 2)); setting this value too high would result in an error, while setting it too low might cause poor alignment.
         mi_upper: (float)
-            upper boundary of normalized mutual information
+            upper bound of normalized mutual information (range (1, 2)); setting this value too high would result in a warning, while setting it too low would prevent the function from searching for better results.
 
     Returns:
         trans: (ANTsTransform)
@@ -1306,7 +1288,7 @@ def isolate(t1_file: str = None, t2_file: str = None,
         params: (string)
             path to params file (reserved)
         save_cropped_files: bool
-            set to True to save files cropped to window (only works if result_folder is specified)
+            set to True to save files cropped to window
         verbose: bool
             whether to print out status information during processing
 
@@ -1361,7 +1343,7 @@ def isolate(t1_file: str = None, t2_file: str = None,
             print('isolating cerebellum using UNet model')
         mask = predict(params_file=params_file, t1=t1_crop_data, t2=t2_crop_data)
         mask = nib.Nifti1Image(mask, BoundingBox.get_cropped_affine())
-        mask = from_nibabel(mask)
+        mask = ants.from_nibabel_nifti(mask)
 
         # Postprocess and transform the mask back to subject space
         if verbose:
@@ -1370,6 +1352,7 @@ def isolate(t1_file: str = None, t2_file: str = None,
             result = subject_postprocess(mask=mask, trans=trans, BoundingBox=BoundingBox, ref=img_read(t1_file))
         else:
             result = subject_postprocess(mask=mask, trans=trans, BoundingBox=BoundingBox, ref=img_read(t2_file))
+        # right now result_folder cannot be None here. Is it necessary that we always save cerebellum_dseg file since this function returns it?
         if result_folder is not None:
             os.makedirs(result_folder, exist_ok=True)
             ofname = f'{basename}_cerebellum_dseg.nii.gz'

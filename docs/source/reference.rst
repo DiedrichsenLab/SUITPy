@@ -5,7 +5,7 @@ Isolate module reference
 ------------------------
 
 .. automodule:: isolation
-   :members: isolate
+   :members: isolate, registration
 
 
 Normalize module reference

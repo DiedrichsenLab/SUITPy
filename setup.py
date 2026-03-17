@@ -22,7 +22,7 @@ REQUIRED_MODULE_METADATA = ['numpy>=1.22.0',
                             'plotly>=5.3.1',
                             'pandas>=2.0.0',
                             'joblib>=1.2.0',
-                            'antspyx>=0.6.1',]
+                            'antspyx>=0.6.3',]
 
 def is_installing():
     # Allow command-lines such as "python setup.py build install"
@@ -35,7 +35,7 @@ os.chdir(os.path.dirname(os.path.abspath(__file__)))
 DESCRIPTION = 'Analysis toolbox for cerebellar fMRI data in Python'
 with open('README.rst') as fp:
     LONG_DESCRIPTION = fp.read()
-DOWNLOAD_URL = 'https://github.com/DiedrichsenLab/SUITPy/archive/refs/tags/v.2.0.0.tar.gz'
+DOWNLOAD_URL = 'https://github.com/DiedrichsenLab/SUITPy/archive/refs/tags/v.2.0.1.tar.gz'
 VERSION = '2.0.1'
 
 if __name__ == "__main__":

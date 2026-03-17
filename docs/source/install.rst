@@ -15,7 +15,7 @@ The required dependencies to use the software are:
 * plotly >= 5.10.0
 * scipy >= 1.9.0
 * neuroimagingtools >= 1.1.1
-* antspyx >= 0.6.1
+* antspyx >= 0.6.3
 
 Install over pip
 ----------------

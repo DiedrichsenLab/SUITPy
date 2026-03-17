@@ -14,7 +14,7 @@ from .flatmap import (vol_to_surf,
 from .reslice import (reslice_image,
                       reslice_img)
 
-from .isolation import (isolate)
+from .isolation import (isolate, registration)
 
 from .normalization import (normalize, bounding_box, deformation_from_displacement)
 
