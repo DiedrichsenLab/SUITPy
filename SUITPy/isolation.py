@@ -901,7 +901,7 @@ def registration(img: ants.ANTsImage, brain_mask: ants.ANTsImage = None, templat
         trans: (ANTsTransform)
             the transformation from the subject space to the template space
         status: (int)
-            the status of the registration (0 for success, 1 for uncertainty, 2 for failure)
+            the status of the registration (0: for success mi>upper, 1: found one of mi>mi_lower, 2: failure)
 
     """
     base_dir = os.path.dirname(__file__)
@@ -1207,7 +1207,7 @@ def threshold(img: ants.ANTsImage, lower: float = 0.5, upper: float = 1.0) -> an
 
 def remove_islands(img: ants.ANTsImage) -> ants.ANTsImage:
     """ Removes parts of the mask that is not connected to the largest cluster
-    
+
     Args:
         img (ANTsImage): the input image
     Returns:
@@ -1253,14 +1253,14 @@ def subject_postprocess(mask: ants.ANTsImage, trans: ants.ANTsTransform, Boundin
     return result
 
 
-def isolate(t1_file: str = None, t2_file: str = None, 
-            brain_mask_file: str = None, 
-            label_file: str = None, 
+def isolate(t1_file: str = None, t2_file: str = None,
+            brain_mask_file: str = None,
+            label_file: str = None,
             result_folder: str = None,
             template: str = 'MNI152NLin6Asym',
             type_of_transform: str = 'Similarity',
             max_iterations: int = 5,
-            params: str = 'pre_trained_numpy.pkl', 
+            params: str = 'pre_trained_numpy.pkl',
             save_cropped_files: bool = False,
             verbose: bool = True) -> ants.ANTsImage:
     """
@@ -1303,12 +1303,12 @@ def isolate(t1_file: str = None, t2_file: str = None,
     else:
         raise RuntimeError('Must specify either t1_file or t2_file')
 
-    # Strip .nii or .nii.gz extension 
+    # Strip .nii or .nii.gz extension
     if basename[1] == '.gz':
         basename = os.path.splitext(basename[0])
     basename = basename[0]
 
-    # find paramter file and template bounding box 
+    # find paramter file and template bounding box
     base_dir = os.path.dirname(os.path.abspath(__file__))
     params_file = os.path.join(base_dir, 'parameters', params)
     BoundingBox = TemplateCerebellarBoundingBox(template_name=template)

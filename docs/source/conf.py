@@ -22,7 +22,7 @@ copyright = '2020, Diedrichsenlab'
 author = 'Diedrichsenlab'
 
 # The full version, including alpha/beta/rc tags
-release = 'v.2.0.0'
+release = 'v.2.1.0'
 
 
 # -- General configuration ---------------------------------------------------
@@ -54,4 +54,4 @@ html_theme = 'sphinx_rtd_theme'
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
 # html_static_path = [os.fspath('_static')]
-html_logo = os.fspath("images/SUITPy_logo.png") 
+html_logo = os.fspath("images/SUITPy_logo.png")
