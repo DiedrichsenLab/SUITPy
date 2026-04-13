@@ -18,7 +18,7 @@ def reslice_image(
                 imagedim = None,
                 affine = None,
                 replace_nan = True,
-                mask_thr = None):
+                mask_thr = 1.0):
     """Reslices images into atlas space using a deformation map and mask 
 
     Args:
@@ -40,6 +40,7 @@ def reslice_image(
             if true, replaces Nan values with 0
         mask_thr (float):
             If given, binarizes the mask at this threshold
+            Defaults to 1.0
             
     Returns:
         image (NIFTI image or list of NIFTI Images )
