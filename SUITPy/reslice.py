@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Module to resample image into atlas space 
+Module to resample image into atlas space
 @authors: Jorn Diedrichsen
 """
 import nibabel as nib
@@ -19,7 +19,7 @@ def reslice_image(
                 affine = None,
                 replace_nan = True,
                 mask_thr = 1.0):
-    """Reslices images into atlas space using a deformation map and mask 
+    """Reslices images into atlas space using a deformation map and mask
 
     Args:
         source_image: (Nifti1Image, str, or iterable of NIFTI)
@@ -41,7 +41,7 @@ def reslice_image(
         mask_thr (float):
             If given, binarizes the mask at this threshold
             Defaults to 1.0
-            
+
     Returns:
         image (NIFTI image or list of NIFTI Images )
     """
@@ -90,7 +90,7 @@ def reslice_img(img,
                 imagedim,
                 affine,
                 replace_nan,
-                mask_thr):
+                mask_thr=None):
     """
     Resample image
 
