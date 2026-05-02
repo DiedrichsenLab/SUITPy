@@ -21,6 +21,8 @@ def normalize(source_file, mask_file, space='SUIT', template_file=None,
               write_deformation=True,
               write_inv_deformation=False,
               write_jacobian_determinant=False,
+              jd_use_log=False,
+              jd_use_geom=True,
               result_folder=None,
               verbose=1):
     """
@@ -37,6 +39,8 @@ def normalize(source_file, mask_file, space='SUIT', template_file=None,
         write_deformation (bool): Save deformation field y(x) for reslice other images
         write_inv_deformation (bool): Save deformation field y(x) for reslice other images
         write_jacobian_determinant (bool): Computes & save log-Jacobian determinant
+        jd_use_log (bool): Whether to compute log-Jacobian (True) or regular Jacobian (False)
+        jd_use_geom (bool): Whether to compute geometric Jacobian (True) or spatial Jacobian (False)
         result_folder (str): Output folder. If None, uses same folder as source file
         verbose (int): 0: silent, 1:Progress log, 2:detailed log
 
@@ -137,17 +141,15 @@ def normalize(source_file, mask_file, space='SUIT', template_file=None,
 
         jacobian_file = f"{result_folder}/{basename}_to-{space}_mode-image_detJ.nii.gz"
         # Jacobian settings
-        use_log = True      # log-Jacobian
-        use_geom = True     # geometric Jacobian
         jac_img = ants.create_jacobian_determinant_image(
             domain_image=template_img,
             tx=displacement_file,
-            do_log=use_log,
-            geom=use_geom
+            do_log=jd_use_log,
+            geom=jd_use_geom
         )
         jac_img.to_filename(jacobian_file)
         if verbose:
-            print(f"Saving the log Jacobian determinant to {os.path.basename(jacobian_file)}")
+            print(f"Saving the {'Log ' if jd_use_log else ''}{'geometric ' if jd_use_geom else ''}Jacobian determinant to {os.path.basename(jacobian_file)}")
         os.remove(displacement_file)
 
     # Lightweight return dictionary
