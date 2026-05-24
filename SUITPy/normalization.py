@@ -20,7 +20,7 @@ def normalize(source_file, mask_file, space='SUIT', template_file=None,
               write_ants_transform=False,
               write_deformation=True,
               write_inv_deformation=False,
-              write_jacobian_determinant=True,
+              write_jacobian_determinant=False,
               write_log_jacobian_determinant=False,
               result_folder=None,
               verbose=1):
@@ -35,8 +35,8 @@ def normalize(source_file, mask_file, space='SUIT', template_file=None,
         type_of_transform (str): ANTs registration type (e.g., 'antsRegistrationSyN[s]')
         write_normalized (bool): Save normalized (template-space) T1 image
         write_ants_transform (bool): Save ANTs forward and inverse transforms
-        write_deformation (bool): Save deformation field y(x) for reslice other images
-        write_inv_deformation (bool): Save deformation field y(x) for reslice other images
+        write_deformation (bool): Save deformation field y(x) for reslicing other images
+        write_inv_deformation (bool): Save inverse deformation field for reslicing atlas into individual space
         write_jacobian_determinant (bool): Computes & save geometric Jacobian determinant
         write_log_jacobian_determinant (bool): Computes & save logarithmic geometric Jacobian determinant
         result_folder (str): Output folder. If None, uses same folder as source file
@@ -73,12 +73,12 @@ def normalize(source_file, mask_file, space='SUIT', template_file=None,
         else:
             template = space
         template_file = os.path.join(template_dir,f'tpl-{template}_T1w.nii.gz')
-    if os.path.exists(template_file)==False:
+    if not os.path.exists(template_file):
         raise(NameError(f'Unknown template {template}: Set space to `SUIT`, `MNI` /`MNI152NLin6AsymC`, `MNISym`/`MNI152NLin2009cSymC` or provide custom template_file'))
     template_img = ants.image_read(template_file)
 
     # ANTs Registration
-    if verbose>0:
+    if verbose:
         print(f"Normalizing {basename} to {os.path.basename(template_file)}")
     prefix = f'{result_folder}/{basename}_xfm-{space}_'
     mytx = ants.registration(fixed=template_img,moving=masked_source_img,
@@ -125,7 +125,7 @@ def normalize(source_file, mask_file, space='SUIT', template_file=None,
         nib.save(inv_img,inv_deformation_file)
 
 
-    # Write the Jacobian determinant image 
+    # Write the Jacobian determinant image if requested
     if write_jacobian_determinant or write_log_jacobian_determinant:
         jacobian_file = None
         log_jacobian_file = None
@@ -147,7 +147,8 @@ def normalize(source_file, mask_file, space='SUIT', template_file=None,
             )
             jac_img.to_filename(out_file)
             if verbose:
-                print(f"Saving the {'logarithmic ' if do_log else ''}geometric Jacobian determinant to {os.path.basename(out_file)}")
+                jac_type = "log-Jacobian determinant" if do_log else "Jacobian determinant"
+                print(f"Saving the {jac_type} to {os.path.basename(out_file)}")
             os.remove(displacement_file)
             if do_log:
                 log_jacobian_file = out_file
