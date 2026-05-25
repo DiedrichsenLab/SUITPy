@@ -15,7 +15,7 @@ Using the flatmap involves two step: Mapping the data from volume space to the f
 .. toctree::
    :maxdepth: 2
 
-   tutorials/5.flatmap_example
+   tutorials/6.flatmap_example
 
 
 For more details, see:
