@@ -122,13 +122,6 @@ def _load_img(img_obj):
         raise TypeError("Images must be a file path or nibabel NIfTI image.")
 
 
-def _nanmean(x):
-    return np.nanmean(x) if x.size > 0 else np.nan
-
-
-def _nanstd(x):
-    return np.nanstd(x) if x.size > 0 else np.nan
-
 
 def _region_name(label, lut, region_names):
     """Resolve region name from LUT or region_names or fallback."""
@@ -188,7 +181,7 @@ def summarize_data(
             directory used by SUITPy is used.
         stats (sequence of str):
             Which statistics to compute inside each ROI. Supported keys:
-            'mean', 'nanmean', 'std', 'nanstd'.
+            'mean', 'nanmean', 'std', 'nanstd', 'nansum'
         region_names (sequence of str or None):
             Optional list of region names. If provided and length >= number of
             non-zero labels, it overrides names from the LUT.
@@ -277,10 +270,12 @@ def summarize_data(
     region_labels = region_labels[region_labels != 0]
 
     # Stats functions
-    stat_fns = {"mean": _nanmean,
-        "nanmean": _nanmean,
-        "std": _nanstd,
-        "nanstd": _nanstd,}
+    stat_fns = {"mean": np.nanmean,
+        "nanmean": np.nanmean,
+        "std": np.nanstd,
+        "nanstd": np.nanstd,
+        "nansum": np.nansum,
+        "sum": np.nansum}
 
     stats = list(stats)
     for s in stats:
@@ -371,8 +366,10 @@ def summarize_data(
                     row["space"] = space_col
 
                 for s in stats:
-                    row[s] = float(stat_fns[s](roi_vals))
-
+                    if len(roi_vals)==0:
+                        row[s]=np.nan
+                    else:
+                        row[s] = float(stat_fns[s](roi_vals))
                 rows.append(row)
 
     df = pd.DataFrame(rows)

@@ -49,6 +49,10 @@ The atlases are organized by the first author / year of the main paper
 The maps can also be viewed online using our
 `cerebellar atlas viewer <https://www.diedrichsenlab.org/imaging/AtlasViewer>`_.
 
+Summarizing data within ROIs
+----------------------------
+
+
 Diedrichsen_2009: Probabilistic atlas for cerebellar lobules and nuclei
 -----------------------------------------------------------------------
 
