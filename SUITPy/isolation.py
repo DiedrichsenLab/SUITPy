@@ -1341,37 +1341,45 @@ def isolate(t1_file: str = None, t2_file: str = None,
         # Do a forward pass through the Unet model
         if verbose:
             print('isolating cerebellum using UNet model')
-        mask = predict(params_file=params_file, t1=t1_crop_data, t2=t2_crop_data)
-        mask = nib.Nifti1Image(mask, BoundingBox.get_cropped_affine())
-        mask = ants.from_nibabel_nifti(mask)
+        mask_template = predict(params_file=params_file, t1=t1_crop_data, t2=t2_crop_data)
+        mask_template = nib.Nifti1Image(mask_template, BoundingBox.get_cropped_affine())
+        mask_template = ants.from_nibabel_nifti(mask_template)
 
         # Postprocess and transform the mask back to subject space
         if verbose:
             print('postprocessing')
         if t1_file is not None:
-            result = subject_postprocess(mask=mask, trans=trans, BoundingBox=BoundingBox, ref=img_read(t1_file))
+            mask_subject = subject_postprocess(mask=mask_template, trans=trans, BoundingBox=BoundingBox, ref=img_read(t1_file))
         else:
-            result = subject_postprocess(mask=mask, trans=trans, BoundingBox=BoundingBox, ref=img_read(t2_file))
-        # right now result_folder cannot be None here. Is it necessary that we always save cerebellum_dseg file since this function returns it?
+            mask_subject = subject_postprocess(mask=mask_template, trans=trans, BoundingBox=BoundingBox, ref=img_read(t2_file))
+
+        # use the original header info for the dseg mask
+        if t1_file is not None:
+            ref = nib.load(t1_file)
+        else:
+            ref = nib.load(t2_file)
+        mask_subject = nib.Nifti1Image(mask_subject.numpy().astype(int), affine=ref.affine, header=ref.header)
+
         if result_folder is not None:
             os.makedirs(result_folder, exist_ok=True)
             ofname = f'{basename}_cerebellum_dseg.nii.gz'
             if verbose:
                 print(f"saving results to {ofname}")
-            ants.image_write(result, os.path.join(result_folder, ofname))
+            # ants.image_write(result, os.path.join(result_folder, ofname))
+            nib.save(mask_subject, os.path.join(result_folder, ofname))
 
             if save_cropped_files:
                 if t1_crop is not None:
                     ants.image_write(t1_crop, os.path.join(result_folder, f'{basename}_crop.nii.gz'))
                 else:
                     ants.image_write(t2_crop, os.path.join(result_folder, f'{basename}_crop.nii.gz'))
-                ants.image_write(mask, os.path.join(result_folder, f'{basename}_cerebellum_crop_dseg.nii.gz'))
+                ants.image_write(mask_template, os.path.join(result_folder, f'{basename}_cerebellum_crop_dseg.nii.gz'))
                 ants.write_transform(trans, os.path.join(result_folder, f'{basename}_trans.mat'))
     except RegistrationError as e:
         warnings.warn(f'Caught registration error for {t1_file if t1_file is not None else t2_file} : {e}')
         print(f'Isolation fails on {t1_file if t1_file is not None else t2_file}. No results were saved')
-        mask = None
-    return mask
+        mask_subject = None
+    return ants.from_nibabel_nifti(mask_subject) if mask_subject is not None else None
 
 
 if __name__ == '__main__':
