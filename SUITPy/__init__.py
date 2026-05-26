@@ -22,5 +22,5 @@ from .normalization import (normalize, bounding_box, deformation_from_displaceme
 if hasattr(gzip.GzipFile, 'max_read_chunk'):
     gzip.GzipFile.max_read_chunk = 100 * 1024 * 1024  # 100Mb
 
-__all__ = [fetch_atlas, summarize_data,vol_to_surf, plot,isolate,normalize,
+__all__ = [fetch_atlas, summarize_data,vol_to_surf, plot,isolate,normalize, registration,
         reslice_image, reslice_img, save_colorbar, bounding_box,deformation_from_displacement]

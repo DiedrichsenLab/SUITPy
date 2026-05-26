@@ -42,7 +42,7 @@ https://suitpy.readthedocs.io/en/latest/install.html
 
 Licence and Acknowledgements
 ----------------------------
-The Python version of the SUIT toolbox has been developed by the Diedrichsenlab including J. Diedrichsen, M. King, D. Zhi, C. Hernandez-Castillo, S. Witt and others. It is distributed under MIT License, meaning that it can be freely used and re-used, as long as proper attribution in form of acknowledgments and links (for online use) or citations (in publications) are given. The relevant references are:
+The Python version of the SUIT toolbox has been developed by the Diedrichsenlab including J. Diedrichsen, C. Hernandez-Castillo, M. King, Y. Wang, Y. Li, D. Zhi and others. It is distributed under MIT License, meaning that it can be freely used and re-used, as long as proper attribution in form of acknowledgments and links (for online use) or citations (in publications) are given. The relevant references are:
 
 SUIT normalisation and template:
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Module to resample image into atlas space 
+Module to resample image into atlas space
 @authors: Jorn Diedrichsen
 """
 import nibabel as nib
@@ -17,8 +17,9 @@ def reslice_image(
                 voxelsize = None,
                 imagedim = None,
                 affine = None,
-                replace_nan = True):
-    """Reslices images into atlas space using a deformation map and mask 
+                replace_nan = True,
+                mask_thr = 1.0):
+    """Reslices images into atlas space using a deformation map and mask
 
     Args:
         source_image: (Nifti1Image, str, or iterable of NIFTI)
@@ -37,7 +38,10 @@ def reslice_image(
             affine transformation matrix of target image
         replace_nan (bool):
             if true, replaces Nan values with 0
-            
+        mask_thr (float):
+            If given, binarizes the mask at this threshold
+            Defaults to 1.0
+
     Returns:
         image (NIFTI image or list of NIFTI Images )
     """
@@ -70,13 +74,13 @@ def reslice_image(
         for img in source_image:
             if type(img) == str:
                 img = nib.load(img)
-            output_img = reslice_img(img, deformation, mask, interp, imagedim,affine,replace_nan)
+            output_img = reslice_img(img, deformation, mask, interp, imagedim, affine, replace_nan, mask_thr)
             output_list.append(output_img)
         return output_list
     else:
         if type(source_image) == str:
             source_image = nib.load(source_image)
-        output_img = reslice_img(source_image, deformation, mask, interp, imagedim, affine,replace_nan)
+        output_img = reslice_img(source_image, deformation, mask, interp, imagedim, affine, replace_nan, mask_thr)
         return output_img
 
 def reslice_img(img,
@@ -85,7 +89,8 @@ def reslice_img(img,
                 interp,
                 imagedim,
                 affine,
-                replace_nan):
+                replace_nan,
+                mask_thr=None):
     """
     Resample image
 
@@ -104,6 +109,8 @@ def reslice_img(img,
             Affine transformation matrix of desired target image
         replace_nan (bool):
             if true, replaces Nan values with 0
+        mask_thr (float):
+            If given, binarizes the mask at this threshold
     Returns:
         image (NIFTI image or list of NIFTI Images )
     """
@@ -119,6 +126,8 @@ def reslice_img(img,
     data = ntv.sample_image(img, xm, ym, zm, interp)
     if mask != None:
         maskData = ntv.sample_image(mask, xm, ym, zm, interp)
+        if mask_thr is not None:
+            maskData = (maskData >= mask_thr).astype(np.float32)
         data = np.multiply(data,maskData)
 
     # if replace_nan, replace nan with zero
