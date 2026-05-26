@@ -27,11 +27,17 @@ The optional input parameters are
 .. code::
 
     --T1: T1w- image
-    --T2: Additional (or standalone T2w image)
-    --result_folder: Folder to save the results (default: input images base foder)
+    --T2: Additional (or standalone) T2w image
     --brain_mask: Binary mask image from skull stripping step to improve registration (optional)
+    --label: path to label image (reserved, currently has no effect)
+    --result_folder: Folder to save the results (default: input images base foder)
     --template: Template for registration
-    --save_cropped_files: Save the images cropped and resampled to the UNet window
+    --type_of_transform: reserved for future use (see ANTspy)
+    --max_iterations: maximum number of registration iterations (optional, default 5)
+    --params: pretrained parameter file
+    --save_cropped_files: whether to save files cropped to UNet input window
+    --use_q_form: whether to use q-form
+    --verbose: whether to print out status information during processing
 
 
 Architecture
