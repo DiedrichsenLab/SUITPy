@@ -817,7 +817,7 @@ class InputError(Exception):
     def __init__(self, message):
         super().__init__(message)
 
-def img_read(file: str, use_q_form: bool = False) -> ants.ANTsImage:
+def img_read(file: str, use_q_form: bool = False, verbose: bool = False) -> ants.ANTsImage:
     """
     basic function to read a nifti image
     Args:
@@ -825,6 +825,8 @@ def img_read(file: str, use_q_form: bool = False) -> ants.ANTsImage:
             image path
         use_q_form: (bool)
             set to True to use q-form
+        verbose: (bool)
+            whether to print warning info
 
     Returns:
         img (ANTs image)
@@ -845,15 +847,18 @@ def img_read(file: str, use_q_form: bool = False) -> ants.ANTsImage:
             nib_img.set_qform(s_form)
     elif s_form is None and q_form is not None:
         if not use_q_form:
-            warnings.warn(f'S-form is None in {file}. Using Q-form.')
+            if verbose:
+                print(f'Warning: S-form is None in {file}. Using Q-form.')
         nib_img.set_sform(q_form)
     else:
         if (s_form != q_form).any():
             if not use_q_form:
-                warnings.warn(f'S- and Q-form indicate different image orientations in {file}. Using S-form. Set use_q_form=TRUE to use the q-form.')
+                if verbose:
+                    print(f'Warning: S- and Q-form indicate different image orientations in {file}. Using S-form. Set use_q_form=TRUE to use the q-form.')
                 nib_img.set_qform(s_form)
             else:
-                warnings.warn(f'S- and Q-form indicate different image orientations in {file}. Using Q-form.')
+                if verbose:
+                    print(f'Warning: S- and Q-form indicate different image orientations in {file}. Using Q-form.')
                 nib_img.set_sform(q_form)
 
     new_img = ants.from_nibabel_nifti(nib_img)
@@ -1155,11 +1160,11 @@ def subject_preprocess(t1_file: str = None, t2_file: str = None, brain_mask_file
     """
 
     if t1_file is not None:
-        t1 = img_read(file=t1_file, use_q_form=use_q_form)
+        t1 = img_read(file=t1_file, use_q_form=use_q_form, verbose=True)
     else:
         t1 = None
     if t2_file is not None:
-        t2 = img_read(file=t2_file, use_q_form=use_q_form)
+        t2 = img_read(file=t2_file, use_q_form=use_q_form, verbose=True)
     else:
         t2 = None
 
