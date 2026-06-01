@@ -819,7 +819,10 @@ class InputError(Exception):
 
 def img_read(file: str, use_q_form: bool = False, verbose: bool = False) -> ants.ANTsImage:
     """
-    basic function to read a nifti image
+    basic function to read a nifti image as an ANTs image. 
+    checks for consistency of s-form and q-form and 
+    uses s-form by default, or q-form if use_q_form is set to True.
+    
     Args:
         file: (string)
             image path
