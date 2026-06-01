@@ -9,7 +9,6 @@ import os
 import nibabel as nib
 import ants
 import numpy as np
-from tempfile import mkstemp
 import nitools
 from typing import Tuple, Union
 import pickle
@@ -814,13 +813,23 @@ def predict(params_file: str, t1: np.ndarray = None, t2: np.ndarray = None) -> n
     mask = net(t1, t2)
     return mask[0][0]
 
+class InputError(Exception):
+    def __init__(self, message):
+        super().__init__(message)
 
-def img_read(path: str) -> ants.ANTsImage:
+def img_read(file: str, use_q_form: bool = False, verbose: bool = False) -> ants.ANTsImage:
     """
-    basic function to read a nifti image
+    basic function to read a nifti image as an ANTs image. 
+    checks for consistency of s-form and q-form and 
+    uses s-form by default, or q-form if use_q_form is set to True.
+    
     Args:
-        path: (string)
+        file: (string)
             image path
+        use_q_form: (bool)
+            set to True to use q-form
+        verbose: (bool)
+            whether to print warning info
 
     Returns:
         img (ANTs image)
@@ -828,10 +837,33 @@ def img_read(path: str) -> ants.ANTsImage:
 
     """
 
-    nib_img = nib.load(path)
-    # set q form identical to s form to avoid misalignment from ANTs
-    if nib_img.get_sform() is not None:
-        nib_img.set_qform(nib_img.get_sform())
+    nib_img = nib.load(file)
+    s_form, _ = nib_img.get_sform(coded=True)
+    q_form, _ = nib_img.get_qform(coded=True)
+
+    if s_form is None and q_form is None:
+        raise InputError(f'Both S-form and Q-form are None in {file}')
+    elif s_form is not None and q_form is None:
+        if use_q_form:
+            raise InputError(f'Q-form is None in {file}, Please set use_q_form=False')
+        else:
+            nib_img.set_qform(s_form)
+    elif s_form is None and q_form is not None:
+        if not use_q_form:
+            if verbose:
+                print(f'Warning: S-form is None in {file}. Using Q-form.')
+        nib_img.set_sform(q_form)
+    else:
+        if (s_form != q_form).any():
+            if not use_q_form:
+                if verbose:
+                    print(f'Warning: S- and Q-form indicate different image orientations in {file}. Using S-form. Set use_q_form=TRUE to use the q-form.')
+                nib_img.set_qform(s_form)
+            else:
+                if verbose:
+                    print(f'Warning: S- and Q-form indicate different image orientations in {file}. Using Q-form.')
+                nib_img.set_sform(q_form)
+
     new_img = ants.from_nibabel_nifti(nib_img)
     return new_img
 
@@ -1090,7 +1122,7 @@ class TemplateCerebellarBoundingBox:
 
 def subject_preprocess(t1_file: str = None, t2_file: str = None, brain_mask_file: str = None, label_file: str = None,
                        BoundingBox: TemplateCerebellarBoundingBox = TemplateCerebellarBoundingBox(),
-                       type_of_transform: str = 'Similarity', max_iterations: int = 5) -> Tuple[ants.ANTsTransform, ants.ANTsImage, ants.ANTsImage, ants.ANTsImage, ants.ANTsImage, ants.ANTsImage]:
+                       type_of_transform: str = 'Similarity', max_iterations: int = 5, use_q_form: bool = False) -> Tuple[ants.ANTsTransform, ants.ANTsImage, ants.ANTsImage, ants.ANTsImage, ants.ANTsImage, ants.ANTsImage]:
     """
     function to preprocess a single subject.
     1. Transform the image from subject space to the template space
@@ -1111,6 +1143,8 @@ def subject_preprocess(t1_file: str = None, t2_file: str = None, brain_mask_file
             reserved for future use (see ANTspy)
         max_iterations: (int)
             maximum number of registration iterations
+        use_q_form: (bool)
+            set to True to use q-form
 
     Returns:
         trans: (ANTsTransform)
@@ -1129,22 +1163,22 @@ def subject_preprocess(t1_file: str = None, t2_file: str = None, brain_mask_file
     """
 
     if t1_file is not None:
-        t1 = img_read(t1_file)
+        t1 = img_read(file=t1_file, use_q_form=use_q_form, verbose=True)
     else:
         t1 = None
     if t2_file is not None:
-        t2 = img_read(t2_file)
+        t2 = img_read(file=t2_file, use_q_form=use_q_form, verbose=True)
     else:
         t2 = None
 
     if brain_mask_file is not None:
-        brain_mask = img_read(brain_mask_file)
+        brain_mask = img_read(file=brain_mask_file, use_q_form=use_q_form)
     else:
         brain_mask = None
 
     # Read additional images
     if label_file is not None:
-        label = img_read(label_file)
+        label = img_read(file=label_file, use_q_form=use_q_form)
     else:
         label = None
 
@@ -1262,6 +1296,7 @@ def isolate(t1_file: str = None, t2_file: str = None,
             max_iterations: int = 5,
             params: str = 'pre_trained_numpy.pkl',
             save_cropped_files: bool = False,
+            use_q_form: bool = False,
             verbose: bool = True) -> ants.ANTsImage:
     """
     main function for cerebellum isolation
@@ -1277,8 +1312,6 @@ def isolate(t1_file: str = None, t2_file: str = None,
             filename and path to label image, optional (reserved, currently has no effect)
         result_folder: (string)
             path to output folder (optional, otherwise it is saved to input image folder)
-        mask_name: (string)
-            name of the output mask (optinal, defaults to '<t1_file>_dseg.nii.gz')
         template: (string)
             template to use (reserved)
         type_of_transform: (string)
@@ -1287,9 +1320,11 @@ def isolate(t1_file: str = None, t2_file: str = None,
             maximum number of registration iterations (optional, default 5)
         params: (string)
             path to params file (reserved)
-        save_cropped_files: bool
+        save_cropped_files: (bool)
             set to True to save files cropped to window
-        verbose: bool
+        use_q_form: (bool)
+            set to True to use q-form
+        verbose: (bool)
             whether to print out status information during processing
 
     """
@@ -1323,7 +1358,8 @@ def isolate(t1_file: str = None, t2_file: str = None,
                                                                        label_file=label_file,
                                                                        BoundingBox=BoundingBox,
                                                                        type_of_transform=type_of_transform,
-                                                                       max_iterations=max_iterations)
+                                                                       max_iterations=max_iterations,
+                                                                       use_q_form=use_q_form)
         if isinstance(t1_crop, ants.core.ants_image.ANTsImage):
             t1_crop_data = t1_crop.numpy()
         else:
@@ -1341,37 +1377,49 @@ def isolate(t1_file: str = None, t2_file: str = None,
         # Do a forward pass through the Unet model
         if verbose:
             print('isolating cerebellum using UNet model')
-        mask = predict(params_file=params_file, t1=t1_crop_data, t2=t2_crop_data)
-        mask = nib.Nifti1Image(mask, BoundingBox.get_cropped_affine())
-        mask = ants.from_nibabel_nifti(mask)
+        mask_template = predict(params_file=params_file, t1=t1_crop_data, t2=t2_crop_data)
+        mask_template = nib.Nifti1Image(mask_template, BoundingBox.get_cropped_affine())
+        mask_template = ants.from_nibabel_nifti(mask_template)
 
         # Postprocess and transform the mask back to subject space
         if verbose:
             print('postprocessing')
         if t1_file is not None:
-            result = subject_postprocess(mask=mask, trans=trans, BoundingBox=BoundingBox, ref=img_read(t1_file))
+            mask_subject = subject_postprocess(mask=mask_template, trans=trans, BoundingBox=BoundingBox, ref=img_read(file=t1_file, use_q_form=use_q_form))
         else:
-            result = subject_postprocess(mask=mask, trans=trans, BoundingBox=BoundingBox, ref=img_read(t2_file))
-        # right now result_folder cannot be None here. Is it necessary that we always save cerebellum_dseg file since this function returns it?
-        if result_folder is not None:
-            os.makedirs(result_folder, exist_ok=True)
-            ofname = f'{basename}_cerebellum_dseg.nii.gz'
-            if verbose:
-                print(f"saving results to {ofname}")
-            ants.image_write(result, os.path.join(result_folder, ofname))
+            mask_subject = subject_postprocess(mask=mask_template, trans=trans, BoundingBox=BoundingBox, ref=img_read(file=t2_file, use_q_form=use_q_form))
 
-            if save_cropped_files:
-                if t1_crop is not None:
-                    ants.image_write(t1_crop, os.path.join(result_folder, f'{basename}_crop.nii.gz'))
-                else:
-                    ants.image_write(t2_crop, os.path.join(result_folder, f'{basename}_crop.nii.gz'))
-                ants.image_write(mask, os.path.join(result_folder, f'{basename}_cerebellum_crop_dseg.nii.gz'))
-                ants.write_transform(trans, os.path.join(result_folder, f'{basename}_trans.mat'))
+        # use the original header info for the dseg mask
+        if t1_file is not None:
+            ref = nib.load(t1_file)
+        else:
+            ref = nib.load(t2_file)
+        mask_subject = nib.Nifti1Image(mask_subject.numpy().astype(int), affine=ref.affine, header=ref.header)
+
+        os.makedirs(result_folder, exist_ok=True)
+        ofname = f'{basename}_cerebellum_dseg.nii.gz'
+        if verbose:
+            print(f"saving results to {ofname}")
+        nib.save(mask_subject, os.path.join(result_folder, ofname))
+
+        if save_cropped_files:
+            if verbose:
+                print(f"saving intermediate results to {result_folder}")
+            if t1_crop is not None:
+                ants.image_write(t1_crop, os.path.join(result_folder, f'{basename}_crop.nii.gz'))
+            else:
+                ants.image_write(t2_crop, os.path.join(result_folder, f'{basename}_crop.nii.gz'))
+            ants.image_write(mask_template, os.path.join(result_folder, f'{basename}_cerebellum_crop_dseg.nii.gz'))
+            ants.write_transform(trans, os.path.join(result_folder, f'{basename}_trans.mat'))
     except RegistrationError as e:
-        warnings.warn(f'Caught registration error for {t1_file if t1_file is not None else t2_file} : {e}')
+        print(f'Caught registration error for {t1_file if t1_file is not None else t2_file} : {e}')
         print(f'Isolation fails on {t1_file if t1_file is not None else t2_file}. No results were saved')
-        mask = None
-    return mask
+        mask_subject = None
+    except InputError as e:
+        print(f'Caught input file error for {t1_file if t1_file is not None else t2_file} : {e}')
+        print(f'Isolation fails on {t1_file if t1_file is not None else t2_file}. No results were saved')
+        mask_subject = None
+    return img_read(file=os.path.join(result_folder, ofname), use_q_form=use_q_form) if mask_subject is not None else None
 
 
 if __name__ == '__main__':
@@ -1380,17 +1428,22 @@ if __name__ == '__main__':
     parser.add_argument('--T1', type=str, help='path to T1w image')
     parser.add_argument('--T2', type=str, help='path to T2w image')
     parser.add_argument('--brain_mask', type=str, help='path to brain mask image')
-    parser.add_argument('--label', type=str, help='path to label image')
+    parser.add_argument('--label', type=str, help='path to label image (reserved, currently has no effect)')
     parser.add_argument('--result_folder', type=str, help='path to save the isolation image (results will be saved to '
                                                           'T1w image folder (or T2w image folder if no T1w image is '
                                                           'specified))')
     parser.add_argument('--template', type=str, default='MNI152NLin6Asym',
                         help='template for registration (MNI152NLin6Asym by '
                              'default)')
+    parser.add_argument('--type_of_transform', type=str, default='Similarity', help='reserved for future use (see ANTspy)')
+    parser.add_argument('--max_iterations', type=int, default=5, help='maximum number of registration iterations (optional, default 5)')
     parser.add_argument('--params', type=str, default='pre_trained.pkl', help='pretrained parameter file')
-    parser.add_argument('--save_cropped_files', action='store_true', help='Save files cropped to UNet input window')
+    parser.add_argument('--save_cropped_files', action='store_true', help='whether to save files cropped to UNet input window')
+    parser.add_argument('--use_q_form', action='store_true', help='whether to use q-form')
+    parser.add_argument('--verbose', action='store_true', help='whether to print out status information during processing')
 
     args = parser.parse_args()
+    print(args)
 
     if args.T1 is None and args.T2 is None:
         raise RuntimeError('Must specify either t1_file or t2_file')
@@ -1401,11 +1454,16 @@ if __name__ == '__main__':
         else:
             args.result_folder = os.path.dirname(os.path.abspath(args.T1))
 
+
     isolate(t1_file=args.T1,
-                     t2_file=args.T2,
-                     brain_mask_file=args.brain_mask,
-                     label_file=args.label,
-                     result_folder=args.result_folder,
-                     template=args.template,
-                     params=args.params,
-                     save_cropped_files=args.save_cropped_files,)
+            t2_file=args.T2,
+            brain_mask_file=args.brain_mask,
+            label_file=args.label,
+            result_folder=args.result_folder,
+            template=args.template,
+            type_of_transform=args.type_of_transform,
+            max_iterations=args.max_iterations,
+            params=args.params,
+            save_cropped_files=args.save_cropped_files,
+            use_q_form=args.use_q_form,
+            verbose=args.verbose)

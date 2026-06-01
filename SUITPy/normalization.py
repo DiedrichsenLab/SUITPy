@@ -12,6 +12,7 @@ import numpy as np
 import pandas as pd
 from nibabel.affines import apply_affine
 import nitools as nt
+from SUITPy.isolation import img_read
 
 
 def normalize(source_file, mask_file, space='SUIT', template_file=None,
@@ -23,6 +24,7 @@ def normalize(source_file, mask_file, space='SUIT', template_file=None,
               write_jacobian_determinant=False,
               write_log_jacobian_determinant=False,
               result_folder=None,
+              use_q_form=False,
               verbose=1):
     """
     Normalizes a T1w image to the SUIT template using ANTsPy
@@ -40,6 +42,7 @@ def normalize(source_file, mask_file, space='SUIT', template_file=None,
         write_jacobian_determinant (bool): Computes & save geometric Jacobian determinant
         write_log_jacobian_determinant (bool): Computes & save logarithmic geometric Jacobian determinant
         result_folder (str): Output folder. If None, uses same folder as source file
+        use_q_form (bool): set to True to use q-form
         verbose (int): 0: silent, 1:Progress log, 2:detailed log
 
     Returns:
@@ -58,8 +61,8 @@ def normalize(source_file, mask_file, space='SUIT', template_file=None,
     if basename[1] == '.gz':
         basename = os.path.splitext(basename[0])
     basename = basename[0]
-    source_img = ants.image_read(source_file)
-    mask_img = ants.image_read(mask_file)
+    source_img = img_read(file=source_file, use_q_form=use_q_form)
+    mask_img = img_read(file=mask_file, use_q_form=use_q_form)
     # mask the source image and normalize
     masked_source_img = source_img * mask_img
 
