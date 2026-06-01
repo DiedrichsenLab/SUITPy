@@ -209,7 +209,7 @@ def summarize_data(
                 - frame: frame index (0 for 3D images)
                 - region: integer label value
                 - regionname: region label name
-                - size: ROI volume in mm^3
+                - volume: ROI volume in mm^3 
                 - plus one column per requested statistic.
     """
 
@@ -288,7 +288,7 @@ def summarize_data(
     for idx, img_path in enumerate(images, start=1):
         img, img_name = _load_img(img_path)
         data = img.get_fdata()
-
+        data_voxel_vol = np.abs(np.linalg.det(img.affine[:3, :3]))
         # If image is not in the same voxel grid, resample data into atlas space
         if data.ndim < 3:
             raise ValueError("Input image must be at least 3D.")
@@ -306,10 +306,10 @@ def summarize_data(
                 np.arange(nz_d),
                 indexing="ij")
 
-            # DATA ijk -> WORLD xyz
+            # Get WORLD xyz coordinates for the data voxels 
             xd, yd, zd = affine_transform(id_, jd, kd, img.affine)
 
-            # WORLD xyz -> ATLAS labels
+            # Sample atlas labels at the data voxel coordinates
             atlas_in_data = sample_image(atlas_img, xd, yd, zd, interpolation=0)
             atlas_in_data = np.nan_to_num(atlas_in_data, nan=0).astype(int)
         else:
@@ -346,8 +346,10 @@ def summarize_data(
                 if not np.any(mask):
                     continue
 
+                # Record ROI volume in data space - so 
+                # depending on data file resolution, the volume may differ a bit 
                 roi_vals = frame_data[mask]
-                vol = mask.sum() * voxel_vol
+                vol = mask.sum() * data_voxel_vol
 
                 row = {
                     "image": image_id,
@@ -355,7 +357,7 @@ def summarize_data(
                     "frame": int(frame),  
                     "region": int(r),
                     "regionname": _region_name(int(r), lut, region_names),
-                    "size": float(vol),}
+                    "volume": float(vol),}
 
                 # Conditionally add atlas/map/space columns
                 if atlas_col is not None:
