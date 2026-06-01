@@ -100,7 +100,7 @@ def normalize(source_file, mask_file, space='SUIT', template_file=None,
         if verbose:
             print(f"Saving deformation field into {os.path.basename(deformation_file)}")
         deformation_from_displacement(
-            template_file=template_file,
+            template_file=template_img,
             displacement_file=mytx['fwdtransforms'],
             deformation_file=deformation_file,
             verbose=verbose
@@ -113,7 +113,7 @@ def normalize(source_file, mask_file, space='SUIT', template_file=None,
             print(f"Saving inverse deformation field into {os.path.basename(inv_deformation_file)}")
         whichtoinvert = [tf.endswith('.mat') for tf in mytx['invtransforms']]
         deformation_from_displacement(
-            template_file=source_file,
+            template_file=source_img,
             displacement_file=mytx['invtransforms'],
             deformation_file=inv_deformation_file,
             whichtoinvert=whichtoinvert,
@@ -185,13 +185,13 @@ def deformation_from_displacement(template_file, displacement_file, deformation_
     or to resample the moveable image into the template space.
 
     Args:
-        template_file (str): Path to the template image (defines grid, affine, spacing)
+        template_file (ANTs image): the template image (defines grid, affine, spacing)
         displacement_file (str): Path to ANTs displacement field.
         deformation_file (str): Output filename for the resulting deformation field.
         whichtoinvert (list of bool): List indicating which transforms to invert
     """
     # Load template
-    tpl_img = nib.load(template_file)
+    tpl_img = ants.to_nibabel_nifti(template_file)
     A_tpl   = tpl_img.affine
     nx, ny, nz = tpl_img.shape
 
