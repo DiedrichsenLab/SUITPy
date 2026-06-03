@@ -35,8 +35,8 @@ os.chdir(os.path.dirname(os.path.abspath(__file__)))
 DESCRIPTION = 'Analysis toolbox for cerebellar fMRI data in Python'
 with open('README.rst') as fp:
     LONG_DESCRIPTION = fp.read()
-DOWNLOAD_URL = 'https://github.com/DiedrichsenLab/SUITPy/archive/refs/tags/v.2.1.0.tar.gz'
-VERSION = '2.1.0'
+DOWNLOAD_URL = 'https://github.com/DiedrichsenLab/SUITPy/archive/refs/tags/v.2.1.1.tar.gz'
+VERSION = '2.1.1'
 
 if __name__ == "__main__":
 
