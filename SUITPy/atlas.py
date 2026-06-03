@@ -122,13 +122,6 @@ def _load_img(img_obj):
         raise TypeError("Images must be a file path or nibabel NIfTI image.")
 
 
-def _nanmean(x):
-    return np.nanmean(x) if x.size > 0 else np.nan
-
-
-def _nanstd(x):
-    return np.nanstd(x) if x.size > 0 else np.nan
-
 
 def _region_name(label, lut, region_names):
     """Resolve region name from LUT or region_names or fallback."""
@@ -188,7 +181,7 @@ def summarize_data(
             directory used by SUITPy is used.
         stats (sequence of str):
             Which statistics to compute inside each ROI. Supported keys:
-            'mean', 'nanmean', 'std', 'nanstd'.
+            'mean', 'nanmean', 'std', 'nanstd', 'nansum'
         region_names (sequence of str or None):
             Optional list of region names. If provided and length >= number of
             non-zero labels, it overrides names from the LUT.
@@ -216,7 +209,7 @@ def summarize_data(
                 - frame: frame index (0 for 3D images)
                 - region: integer label value
                 - regionname: region label name
-                - size: ROI volume in mm^3
+                - volume: ROI volume in mm^3 
                 - plus one column per requested statistic.
     """
 
@@ -277,10 +270,12 @@ def summarize_data(
     region_labels = region_labels[region_labels != 0]
 
     # Stats functions
-    stat_fns = {"mean": _nanmean,
-        "nanmean": _nanmean,
-        "std": _nanstd,
-        "nanstd": _nanstd,}
+    stat_fns = {"mean": np.nanmean,
+        "nanmean": np.nanmean,
+        "std": np.nanstd,
+        "nanstd": np.nanstd,
+        "nansum": np.nansum,
+        "sum": np.nansum}
 
     stats = list(stats)
     for s in stats:
@@ -293,7 +288,7 @@ def summarize_data(
     for idx, img_path in enumerate(images, start=1):
         img, img_name = _load_img(img_path)
         data = img.get_fdata()
-
+        data_voxel_vol = np.abs(np.linalg.det(img.affine[:3, :3]))
         # If image is not in the same voxel grid, resample data into atlas space
         if data.ndim < 3:
             raise ValueError("Input image must be at least 3D.")
@@ -311,10 +306,10 @@ def summarize_data(
                 np.arange(nz_d),
                 indexing="ij")
 
-            # DATA ijk -> WORLD xyz
+            # Get WORLD xyz coordinates for the data voxels 
             xd, yd, zd = affine_transform(id_, jd, kd, img.affine)
 
-            # WORLD xyz -> ATLAS labels
+            # Sample atlas labels at the data voxel coordinates
             atlas_in_data = sample_image(atlas_img, xd, yd, zd, interpolation=0)
             atlas_in_data = np.nan_to_num(atlas_in_data, nan=0).astype(int)
         else:
@@ -351,8 +346,10 @@ def summarize_data(
                 if not np.any(mask):
                     continue
 
+                # Record ROI volume in data space - so 
+                # depending on data file resolution, the volume may differ a bit 
                 roi_vals = frame_data[mask]
-                vol = mask.sum() * voxel_vol
+                vol = mask.sum() * data_voxel_vol
 
                 row = {
                     "image": image_id,
@@ -360,7 +357,7 @@ def summarize_data(
                     "frame": int(frame),  
                     "region": int(r),
                     "regionname": _region_name(int(r), lut, region_names),
-                    "size": float(vol),}
+                    "volume": float(vol),}
 
                 # Conditionally add atlas/map/space columns
                 if atlas_col is not None:
@@ -371,8 +368,10 @@ def summarize_data(
                     row["space"] = space_col
 
                 for s in stats:
-                    row[s] = float(stat_fns[s](roi_vals))
-
+                    if len(roi_vals)==0:
+                        row[s]=np.nan
+                    else:
+                        row[s] = float(stat_fns[s](roi_vals))
                 rows.append(row)
 
     df = pd.DataFrame(rows)

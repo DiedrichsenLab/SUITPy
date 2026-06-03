@@ -22,6 +22,7 @@ def normalize(source_file, mask_file, space='SUIT', template_file=None,
               write_deformation=True,
               write_inv_deformation=False,
               write_jacobian_determinant=False,
+              write_log_jacobian_determinant=False,
               result_folder=None,
               use_q_form=False,
               verbose=1):
@@ -36,9 +37,10 @@ def normalize(source_file, mask_file, space='SUIT', template_file=None,
         type_of_transform (str): ANTs registration type (e.g., 'antsRegistrationSyN[s]')
         write_normalized (bool): Save normalized (template-space) T1 image
         write_ants_transform (bool): Save ANTs forward and inverse transforms
-        write_deformation (bool): Save deformation field y(x) for reslice other images
-        write_inv_deformation (bool): Save deformation field y(x) for reslice other images
-        write_jacobian_determinant (bool): Computes & save log-Jacobian determinant
+        write_deformation (bool): Save deformation field y(x) for reslicing other images
+        write_inv_deformation (bool): Save inverse deformation field for reslicing atlas into individual space
+        write_jacobian_determinant (bool): Computes & save geometric Jacobian determinant
+        write_log_jacobian_determinant (bool): Computes & save logarithmic geometric Jacobian determinant
         result_folder (str): Output folder. If None, uses same folder as source file
         use_q_form (bool): set to True to use q-form
         verbose (int): 0: silent, 1:Progress log, 2:detailed log
@@ -50,7 +52,8 @@ def normalize(source_file, mask_file, space='SUIT', template_file=None,
             fwd_deformation (str): Path to composite displacement field
             inv_deformation (str): Path to inverse deformation field
             normalized_image (str): Path to normalized image in template space
-            jacobian_determinant (str): Path to log-Jacobian determinant map
+            jacobian_determinant (str): Path to Jacobian determinant map
+            log_jacobian_determinant (str): Path to log-Jacobian determinant map
     """
     # Get result folder and base name
     result_folder = os.path.dirname(os.path.abspath(source_file)) if result_folder is None else result_folder
@@ -73,12 +76,12 @@ def normalize(source_file, mask_file, space='SUIT', template_file=None,
         else:
             template = space
         template_file = os.path.join(template_dir,f'tpl-{template}_T1w.nii.gz')
-    if os.path.exists(template_file)==False:
+    if not os.path.exists(template_file):
         raise(NameError(f'Unknown template {template}: Set space to `SUIT`, `MNI` /`MNI152NLin6AsymC`, `MNISym`/`MNI152NLin2009cSymC` or provide custom template_file'))
     template_img = ants.image_read(template_file)
 
     # ANTs Registration
-    if verbose>0:
+    if verbose:
         print(f"Normalizing {basename} to {os.path.basename(template_file)}")
     prefix = f'{result_folder}/{basename}_xfm-{space}_'
     mytx = ants.registration(fixed=template_img,moving=masked_source_img,
@@ -125,40 +128,42 @@ def normalize(source_file, mask_file, space='SUIT', template_file=None,
         nib.save(inv_img,inv_deformation_file)
 
 
-    # Write the Jacobian determinant image for vbm analysis
-    if write_jacobian_determinant:
-        # Produce displacement map
-        # Compose taffine + warp → displacement field
-        displacement_file = f"{result_folder}/{basename}_to-{space}_mode-image_disp.nii.gz"
-        ants.apply_transforms(
-            fixed=template_img,
-            moving=masked_source_img,
-            transformlist=[f'{prefix}1Warp.nii.gz', f'{prefix}0GenericAffine.mat'],
-            whichtoinvert=[False, False],
-            compose=f'{prefix}')
-        os.rename(f'{prefix}comptx.nii.gz', displacement_file)
-
-        jacobian_file = f"{result_folder}/{basename}_to-{space}_mode-image_detJ.nii.gz"
-        # Jacobian settings
-        use_log = True      # log-Jacobian
-        use_geom = True     # geometric Jacobian
-        jac_img = ants.create_jacobian_determinant_image(
-            domain_image=template_img,
-            tx=displacement_file,
-            do_log=use_log,
-            geom=use_geom
-        )
-        jac_img.to_filename(jacobian_file)
-        if verbose:
-            print(f"Saving the log Jacobian determinant to {os.path.basename(jacobian_file)}")
-        os.remove(displacement_file)
+    # Write the Jacobian determinant image if requested
+    if write_jacobian_determinant or write_log_jacobian_determinant:
+        jacobian_file = None
+        log_jacobian_file = None
+        for do_log in ([False] if write_jacobian_determinant else []) + \
+                ([True] if write_log_jacobian_determinant else []):
+            suffix = "log_detJ" if do_log else "detJ"
+            # Compose taffine + warp → displacement field
+            displacement_file = f"{result_folder}/{basename}_to-{space}_mode-image_disp.nii.gz"
+            ants.apply_transforms(
+                fixed=template_img,
+                moving=masked_source_img,
+                transformlist=[f'{prefix}1Warp.nii.gz', f'{prefix}0GenericAffine.mat'],
+                whichtoinvert=[False, False],
+                compose=f'{prefix}')
+            os.rename(f'{prefix}comptx.nii.gz', displacement_file)
+            out_file = f"{result_folder}/{basename}_to-{space}_mode-image_{suffix}.nii.gz"
+            jac_img = ants.create_jacobian_determinant_image(
+                domain_image=template_img, tx=displacement_file, do_log=do_log, geom=True
+            )
+            jac_img.to_filename(out_file)
+            if verbose:
+                jac_type = "log-Jacobian determinant" if do_log else "Jacobian determinant"
+                print(f"Saving the {jac_type} to {os.path.basename(out_file)}")
+            os.remove(displacement_file)
+            if do_log:
+                log_jacobian_file = out_file
+            else:
+                jacobian_file = out_file
 
     # Lightweight return dictionary
     return_dict={}
     if not write_ants_transform:
-        os.remove(mytx["fwdtransforms"][0])
-        os.remove(mytx["fwdtransforms"][1])
-        os.remove(mytx["invtransforms"][1])
+        for f in mytx["fwdtransforms"] + mytx["invtransforms"]:
+            if os.path.exists(f):
+                os.remove(f)
     else:
         return_dict["fwd_transforms"]= mytx["fwdtransforms"]
         return_dict["inv_transforms"]= mytx["invtransforms"]
@@ -167,11 +172,12 @@ def normalize(source_file, mask_file, space='SUIT', template_file=None,
         return_dict["fwd_deformation"] = deformation_file
     if write_normalized: 
         return_dict["normalized_image"] = normalized_file
-
     if write_inv_deformation:
         return_dict["inv_deformation"] = inv_deformation_file
     if write_jacobian_determinant:
         return_dict["jacobian_determinant"] = jacobian_file
+    if write_log_jacobian_determinant:
+        return_dict["log_jacobian_determinant"] = log_jacobian_file
 
     return return_dict
 
@@ -266,7 +272,7 @@ def bounding_box(img_file, mask_file):
         raise ValueError("mask must be 3D")
     if img.shape[:3] != mask_img.shape:
         raise ValueError(
-            f"Shape mismatch: xfm {xfm.shape[:3]} vs mask {mask.shape}"
+            f"Shape mismatch: img {img.shape[:3]} vs mask {mask_img.shape}"
         )
 
     mask = mask_img.get_fdata()

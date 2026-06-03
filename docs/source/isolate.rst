@@ -11,7 +11,7 @@ You can directly import the isolate function from the SUITpy package and use in 
 .. toctree::
    :maxdepth: 2
 
-   tutorials/2.isolate_example.ipynb
+   tutorials/3.isolate_example.ipynb
 
 Use isolate from terminal or bash script
 ----------------------------------------

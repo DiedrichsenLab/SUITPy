@@ -13,7 +13,13 @@ For this command you can specify a atlas directory, specify the specific maps yo
 
 .. code::
 
-   suit.fetch_atlas('Nettekoven_2024', maps='atl-NettekovenSym32',space='SUIT')
+   suit.fetch_atlas('Nettekoven_2024', maps='atl-NettekovenSym32',space='SUIT',atlas_dir=<your_dir>)
+
+The atlases are downloaded into a target folder that is determined in order of priority by:  
+
+    1. the keyword argument `atlas_dir`` to `fetch_dir`
+    2. the global environment variable `SUITPy_ATLAS_DIR`
+    3. `cerebellar_atlases` in the user home folder
 
 Template spaces
 ---------------
@@ -48,6 +54,26 @@ The atlases are organized by the first author / year of the main paper
 
 The maps can also be viewed online using our
 `cerebellar atlas viewer <https://www.diedrichsenlab.org/imaging/AtlasViewer>`_.
+
+Summarizing data within ROIs
+----------------------------
+Atlases are especially useful for an ROI-based analysis.
+To quickly summarize any set of images in SUIT-space, you can use
+the function `suit.summarize_data` with a specific atlas. 
+For example to calculate the mean activity in a specific ROI: 
+
+.. code::
+
+  image_file = 'sub-ex_task-fingerseq_space-SUIT.nii.gz'
+  df = suit.summarize_data(
+      images=[image_file],
+      atlas="Nettekoven_2024",
+      maps="atl-NettekovenSym32",
+      space="SUIT",
+      stats=(["nanmean"]),
+      outfilename=None)
+  print(df.head())
+
 
 Diedrichsen_2009: Probabilistic atlas for cerebellar lobules and nuclei
 -----------------------------------------------------------------------

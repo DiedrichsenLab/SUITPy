@@ -11,9 +11,10 @@ The newest developments will be implemented in the Python version.
 
    install.rst
    tutorials/1.quickstart_fMRI.ipynb
+   tutorials/2.quickstart_anatomical.ipynb
    isolate.rst
-   tutorials/3.normalize_example.ipynb
-   tutorials/4.reslice_example.ipynb
+   tutorials/4.normalize_example.ipynb
+   tutorials/5.reslice_example.ipynb
    flatmap.rst
    atlases.rst
    reference.rst
