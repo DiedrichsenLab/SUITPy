@@ -27,6 +27,10 @@ Important links
 - Repository of the Python version: https://github.com/diedrichsenlab/SUITPy
 - Repository of the Matlab version: https://github.com/jdiedrichsen/SUIT
 
+Citation
+--------
+If you use SUITPy in your research, please cite:
+Wang, Y., Li, Y., Arafat, B., Ashkanichenarlogh, V., Nettekoven, C., Pinho, A. L., Hernandez-Castillo, C. R., Marquand, A. F., & Diedrichsen, J. (2026). SUITPy: A Python-based toolbox for the analysis of cerebellar functional and anatomical imaging data across the human lifespan. Imaging Neuroscience, 4, IMAG.a.1323. doi: 10.1162/IMAG.a.1323
 
 Acknowledgements
 ----------------

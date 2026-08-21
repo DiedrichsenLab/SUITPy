@@ -10,7 +10,53 @@ authors:
 - family-names: "Zhi"
   given-names: "Da"
   orcid: "https://orcid.org/0000-0001-6023-6523"
+- family-names: "Wang"
+  given-names: "Yaping"
+  orcid: "https://orcid.org/0000-0003-0526-0744"
+- family-names: "Li"
+  given-names: "Yao"
+- family-names: "Arafat"
+  given-names: "Bassel"
+- family-names: "Ashkanichenarlogh"
+  given-names: "Vahid"
+- family-names: "Nettekoven"
+  given-names: "Caroline"
+- family-names: "Pinho"
+  given-names: "Ana Luísa"
+- family-names: "Hernandez-Castillo"
+  given-names: "Carlos R."
+- family-names: "Marquand"
+  given-names: "Andre F."
 title: "SUIT: A Python-based toolbox for cerebellar imaging analysis"
-version: 2.0.0
-date-released: 2025-10-26
+version: 2.2.1
+date-released: 2026-08-21
 url: "https://github.com/DiedrichsenLab/SUITPy"
+
+preferred-citation:
+  type: article
+  authors:
+  - family-names: "Wang"
+    given-names: "Yaping"
+    orcid: "https://orcid.org/0000-0003-0526-0744"
+  - family-names: "Li"
+    given-names: "Yao"
+  - family-names: "Arafat"
+    given-names: "Bassel"
+  - family-names: "Ashkanichenarlogh"
+    given-names: "Vahid"
+  - family-names: "Nettekoven"
+    given-names: "Caroline"
+  - family-names: "Pinho"
+    given-names: "Ana Luísa"
+  - family-names: "Hernandez-Castillo"
+    given-names: "Carlos R."
+  - family-names: "Marquand"
+    given-names: "Andre F."
+  - family-names: "Diedrichsen"
+    given-names: "Jörn"
+    orcid: "https://orcid.org/0000-0003-0264-8532"
+  title: "SUITPy: A Python-based toolbox for the analysis of cerebellar functional and anatomical imaging data across the human lifespan"
+  journal: "Imaging Neuroscience"
+  volume: 4
+  year: 2026
+  doi: "10.1162/IMAG.a.1323"

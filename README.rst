@@ -44,6 +44,10 @@ Licence and Acknowledgements
 ----------------------------
 The Python version of the SUIT toolbox has been developed by the Diedrichsenlab including J. Diedrichsen, C. Hernandez-Castillo, M. King, Y. Wang, Y. Li, D. Zhi and others. It is distributed under MIT License, meaning that it can be freely used and re-used, as long as proper attribution in form of acknowledgments and links (for online use) or citations (in publications) are given. The relevant references are:
 
+SUITPy toolbox:
+
+- Wang, Y., Li, Y., Arafat, B., Ashkanichenarlogh, V., Nettekoven, C., Pinho, A. L., Hernandez-Castillo, C. R., Marquand, A. F., & Diedrichsen, J. (2026). SUITPy: A Python-based toolbox for the analysis of cerebellar functional and anatomical imaging data across the human lifespan. Imaging Neuroscience, 4, IMAG.a.1323. doi: 10.1162/IMAG.a.1323
+
 SUIT normalisation and template:
 
 - Diedrichsen, J. (2006). A spatially unbiased atlas template of the human cerebellum. Neuroimage. 33(1), 127-138. doi: 10.1016/j.neuroimage.2006.05.056
