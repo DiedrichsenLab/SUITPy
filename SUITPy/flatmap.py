@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Module for mapping and plotting data to the cerebellar flatmap. 
+Module for mapping and plotting data to the cerebellar flatmap.
 @authors Jorn Diedrichsen, Maedbh King, Elaine Liu, Da Zhi
 """
 
@@ -11,15 +11,13 @@ import sys
 import nibabel as nb
 import nitools as nt
 import matplotlib.pyplot as plt
-import matplotlib as mpl
 import plotly.graph_objects as go
 import scipy.stats as ss
-from matplotlib.patches import Polygon
-from matplotlib.collections import PatchCollection
-from matplotlib.colors import ListedColormap
-from matplotlib.cm import ScalarMappable, get_cmap
-from matplotlib.colorbar import make_axes
-from matplotlib.colors import Normalize, LinearSegmentedColormap
+import matplotlib.patches as pltp
+import matplotlib.collections as pltcol
+import matplotlib.colors as pltc
+import matplotlib.cm as pltcm
+import matplotlib.colorbar as pltcb
 import warnings
 
 _base_dir = os.path.dirname(os.path.abspath(__file__))
@@ -163,7 +161,7 @@ def vol_to_surf(
 
 def save_colorbar(gifti,outpath):
     """plots colorbar for gifti object (*.label.gii) and saves it to outpath
-    
+
     Args:
         gifti (gifti image):
             Nibabel Gifti image
@@ -177,8 +175,8 @@ def save_colorbar(gifti,outpath):
 
     bounds = np.arange(cmap.N + 1)
 
-    norm = mpl.colors.BoundaryNorm(bounds, cmap.N)
-    cb3 = mpl.colorbar.ColorbarBase(ax, cmap=cmap.reversed(cmap),
+    norm = pltc.BoundaryNorm(bounds, cmap.N)
+    cb3 = pltcb.ColorbarBase(ax, cmap=cmap.reversed(cmap),
                                     norm=norm,
                                     ticks=bounds,
                                     format='%s',
@@ -513,7 +511,7 @@ def _map_color(
     if type(cmap) is str:
         cmap = plt.get_cmap(cmap)
     elif type(cmap) is np.ndarray:
-        cmap = ListedColormap(cmap)
+        cmap = pltc.ListedColormap(cmap)
     elif cmap is None:
         cmap = plt.get_cmap('jet')
 
@@ -570,9 +568,9 @@ def _render_matplotlib(vertices,faces,face_color,borders,
     patches = []
 
     for i,f in enumerate(faces[face_in]):
-        polygon = Polygon(vertices[f,0:2])
+        polygon = pltp.Polygon(vertices[f,0:2])
         patches.append(polygon)
-    p = PatchCollection(patches)
+    p = pltcol.PatchCollection(patches)
     p.set_facecolor(face_color[face_in])
     p.set_edgecolor(face_color[face_in])
     p.set_linewidth(0.5)
@@ -745,12 +743,12 @@ def _colorbar_label(
             Colorbar object
     """
     N = len(label_names) # Length of the colormap
-    cax, _ = make_axes(ax, location='right', fraction=.15,
+    cax, _ = pltcb.make_axes(ax, location='right', fraction=.15,
                         shrink=.5, pad=.0, aspect=10.)
-    norm = Normalize(vmin=0, vmax=cmap.N)
+    norm = pltc.Normalize(vmin=0, vmax=cmap.N)
     ticks = np.arange(0,N)+0.5
     bounds = np.arange(0,N+1)
-    proxy_mappable = ScalarMappable(cmap=cmap, norm=norm)
+    proxy_mappable = pltcm.ScalarMappable(cmap=cmap, norm=norm)
     cbar = plt.colorbar(
         proxy_mappable, cax=cax, ticks=ticks,
         boundaries=bounds, spacing='proportional',
@@ -790,12 +788,12 @@ def _colorbar_func(
         ticks = np.linspace(cscale[0], cscale[1], nb_ticks)
 
     # set up colorbar
-    cax, kw = make_axes(ax, location='right', fraction=.15,
+    cax, kw = pltcb.make_axes(ax, location='right', fraction=.15,
                         shrink=.5, pad=.0, aspect=10.)
     bounds = np.linspace(cscale[0], cscale[1], cmap.N)
-    norm = Normalize(vmin=cscale[0], vmax=cscale[1])
+    norm = pltc.Normalize(vmin=cscale[0], vmax=cscale[1])
 
-    proxy_mappable = ScalarMappable(cmap=cmap, norm=norm)
+    proxy_mappable = pltcm.ScalarMappable(cmap=cmap, norm=norm)
     cbar = plt.colorbar(
         proxy_mappable, cax=cax, ticks=ticks,
         boundaries=bounds, spacing='proportional',
