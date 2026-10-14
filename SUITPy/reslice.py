@@ -49,7 +49,7 @@ def reslice_image(
     if type(deformation) == str:
         deformation = nib.load(deformation)
 
-    if mask != None:
+    if mask is not None:
         if type(mask) == str:
             mask = nib.load(mask)
 
@@ -124,11 +124,14 @@ def reslice_img(img,
     ym = coord_def[:,:,:,1]
     zm = coord_def[:,:,:,2]
     data = ntv.sample_image(img, xm, ym, zm, interp)
-    if mask != None:
+    if mask is not None:
         maskData = ntv.sample_image(mask, xm, ym, zm, interp)
         if mask_thr is not None:
             maskData = (maskData >= mask_thr).astype(np.float32)
-        data = np.multiply(data,maskData)
+        # Source with extra dims (e.g. 4D timeseries): broadcast 3D mask over trailing axes
+        if data.ndim > maskData.ndim:
+            maskData = maskData.reshape(maskData.shape + (1,) * (data.ndim - maskData.ndim))
+        data = np.multiply(data, maskData)
 
     # if replace_nan, replace nan with zero
     if replace_nan:
