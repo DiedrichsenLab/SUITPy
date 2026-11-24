@@ -363,14 +363,13 @@ def plot(data,
             faces = mapfac, cscale=cscale,
             cmap=cmap, threshold=threshold)
     elif overlay_type=='rgb':
-        if mapfac is not None:
-            data  = _map_to_face(data,mapfac)
-        if data.shape[1]==3:
-            overlay_color = np.c_[data,np.ones(data.shape[0],1)]
-
+        face_data  = _map_to_face(data,mapfac)
+        if face_data.shape[1]==3:
+            alpha = np.ones((face_data.shape[0],1))
+            overlay_color = np.c_[face_data,alpha]
         elif data.shape[1]==4:
-            overlay_color = data[:,0:4]
-            alpha = data[:,3:4]
+            overlay_color = face_data
+            alpha = face_data[:,3]
         else:
             raise(NameError('for RGB(A), the data needs to have 3 or 4 columns'))
 
@@ -436,7 +435,7 @@ def plot(data,
 
 def _map_to_face(data,faces):
     numFaces = faces.shape[0]
-    face_value = np.zeros((3,numFaces,4),dtype = data.dtype)
+    face_value = np.zeros((3,numFaces,data.shape[1]),dtype = data.dtype)
     for i in range(3):
         face_value[i,:,:] = data[faces[:,i],:]
     with warnings.catch_warnings():
