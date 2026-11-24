@@ -29,7 +29,7 @@ def test_plot_rgba(render='plotly'):
     nvert = 28935
     data = np.zeros((nvert,4))
     for i,f in enumerate(fname):
-        A = nb.load('docs/source/notebooks/'+f)
+        A = nb.load('docs/source/tutorials/'+f)
         data[:,i]=np.nan_to_num(A.darrays[0].data)
         data[:,i]=data[:,i]/np.max(data[:,i])
         data[data[:,i]<0.3,i]=0
@@ -38,9 +38,8 @@ def test_plot_rgba(render='plotly'):
     ax = flatmap.plot(data,
                       overlay_type='rgb',
                         bordersize=3,bordercolor='k',backgroundcolor='w',render=render)
-    ax.show()
-    # ax = flatmap.plot('docs/source/notebooks/Buckner_17Networks.label.gii',overlay_type='label',new_figure=True, colorbar=False,render='plotly')
-    # ax.show()
+    if render=='plotly':
+        ax.show()
     pass
 
 def make_atlas_plots(atlas,map):
@@ -54,11 +53,11 @@ if __name__ == '__main__':
     # make_shapes()
     # make_atlas_plots('Diedrichsen_2009','atl-Anatom')
     # make_atlas_plots('King_2019','atl-MDTB10')
-    make_atlas_plots('Xue_2021','atl-Xue10Sub1')
-    make_atlas_plots('Ji_2019','atl-Ji10')
-    make_atlas_plots('Nettekoven_2024','atl-NettekovenSym32')
+    # make_atlas_plots('Xue_2021','atl-Xue10Sub1')
+    # make_atlas_plots('Ji_2019','atl-Ji10')
+    # make_atlas_plots('Nettekoven_2024','atl-NettekovenSym32')
     # make_atlas_plots('Buckner_2011','atl-Buckner17')
     # test_flatmap_plot(render='matplotlib')
     # test_plot_label(render='matplotlib')
-    # test_plot_rgba(render='matplotlib')
+    test_plot_rgba(render='matplotlib')
     pass
